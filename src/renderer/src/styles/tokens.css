@@ -1,0 +1,63 @@
+/*
+ * Design tokens read off the Figma mockup. Values here are the single source
+ * of truth — components reference the variables, never raw hex.
+ */
+:root {
+  --bg: #0e0f11;
+  --bg-elevated: #17181b;
+  --surface: #2c2d30;
+  --surface-hover: #35363a;
+  --control: #232427;
+  --border: #303136;
+
+  --text: #e8e8ea;
+  --text-muted: #8b8d93;
+  --text-dim: #5f6167;
+
+  --accent: #a78bfa;
+  --accent-contrast: #1a1130;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+
+  --topbar-height: 40px;
+  --gutter: 28px;
+
+  --poster-ratio: 2 / 3;
+  --backdrop-ratio: 16 / 9;
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI Variable Display', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+/* The frameless title bar doubles as a drag handle. */
+.titlebar-drag {
+  -webkit-app-region: drag;
+}
+.titlebar-drag button,
+.titlebar-drag input,
+.titlebar-drag select {
+  -webkit-app-region: no-drag;
+}
