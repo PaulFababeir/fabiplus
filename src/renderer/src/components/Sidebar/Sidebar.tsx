@@ -71,10 +71,10 @@ export function Sidebar({ item, profileState }: SidebarProps): React.JSX.Element
       <div className={styles.posterBlock}>
         <div className={styles.posterFrame}>
           {poster && <img className={styles.posterImage} src={toMovieUrl(poster)} alt="" />}
-          {posters.length > 1 && (
+          {posters.length > 0 && (
             <button type="button" className={styles.swap} onClick={() => setPicking((v) => !v)}>
               <Icon name="swap" size={12} />
-              Change poster
+              {posters.length > 1 ? `Change poster (${posters.length})` : 'Poster options'}
             </button>
           )}
         </div>
