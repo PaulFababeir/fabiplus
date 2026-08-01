@@ -1,0 +1,51 @@
+/*
+ * Poppins, bundled rather than linked.
+ *
+ * The app is offline-only and the CSP forbids remote stylesheets, so Google
+ * Fonts is not an option — and Poppins is not installed system-wide, meaning
+ * naming it alone would silently fall back to Segoe UI. Only the latin subset
+ * is shipped (44 KB across five weights); film titles and English metadata
+ * never need devanagari.
+ *
+ * Licensed under the SIL Open Font License 1.1.
+ */
+
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url('../assets/fonts/poppins-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Poppins';
+  font-style: italic;
+  font-weight: 400;
+  font-display: block;
+  src: url('../assets/fonts/poppins-400-italic.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 500;
+  font-display: block;
+  src: url('../assets/fonts/poppins-500.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 600;
+  font-display: block;
+  src: url('../assets/fonts/poppins-600.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 700;
+  font-display: block;
+  src: url('../assets/fonts/poppins-700.woff2') format('woff2');
+}
