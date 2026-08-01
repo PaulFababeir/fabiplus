@@ -152,6 +152,37 @@ describe('TmdbProvider.fetchDetails', () => {
     assert.ok(calls[0]!.url.includes('append_to_response=credits%2Cimages'));
   });
 
+  /**
+   * Regression: filtering to "en,null" left Solanin with a single poster,
+   * because its artwork is tagged "ja". Ranking happens client-side instead.
+   */
+  it('does not filter artwork by language at the API', async () => {
+    const { fetch: f, calls } = stub([details]);
+    await new TmdbProvider('k', f).fetchDetails(157336);
+    assert.ok(!calls[0]!.url.includes('include_image_language'));
+  });
+
+  it('keeps foreign-language posters rather than discarding them', async () => {
+    const { fetch: f } = stub([
+      {
+        ...details,
+        images: {
+          posters: [
+            { file_path: '/ja1.jpg', width: 500, height: 750, vote_average: 6, iso_639_1: 'ja' },
+            { file_path: '/only-en.jpg', width: 500, height: 750, vote_average: 2, iso_639_1: 'en' },
+            { file_path: '/ja2.jpg', width: 500, height: 750, vote_average: 8, iso_639_1: 'ja' }
+          ],
+          backdrops: []
+        }
+      }
+    ]);
+    const d = await new TmdbProvider('k', f).fetchDetails(45580);
+
+    assert.equal(d.posters.length, 3, 'foreign posters must survive');
+    assert.equal(d.posters[0]?.path, '/only-en.jpg', 'English still ranks first');
+    assert.equal(d.posters[1]?.path, '/ja2.jpg', 'higher-voted foreign poster next');
+  });
+
   it('keeps key crew jobs and drops the rest', async () => {
     const { fetch: f } = stub([details]);
     const d = await new TmdbProvider('k', f).fetchDetails(157336);

@@ -188,9 +188,13 @@ export class TmdbProvider implements MetadataProvider {
 
   /** One request pulls details, credits and artwork together. */
   async fetchDetails(remoteId: number): Promise<ProviderDetails> {
+    // Deliberately NOT filtered with `include_image_language`. Restricting to
+    // "en,null" starves non-English films: Solanin (ソラニン) has exactly one
+    // untagged poster and the rest are tagged "ja", so the picker had nothing
+    // to offer. Fetching every language and ranking client-side in
+    // `rankImages` keeps English first without discarding the alternatives.
     const d = await this.#get<TmdbDetails>(`/movie/${remoteId}`, {
-      append_to_response: 'credits,images',
-      include_image_language: 'en,null'
+      append_to_response: 'credits,images'
     });
 
     const cast: CastMember[] = (d.credits?.cast ?? [])
