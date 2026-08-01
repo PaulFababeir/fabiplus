@@ -1,0 +1,18 @@
+node_modules/
+dist/
+out/
+.vite/
+*.log
+npm-debug.log*
+
+# Local env / secrets — the TMDB key lives in %APPDATA%/movie-app/config.json,
+# never in the repo.
+.env
+.env.local
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Scan/debug output
+/tmp-reports/
