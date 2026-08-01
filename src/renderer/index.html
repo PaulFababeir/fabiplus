@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      Locked down: no remote script, no inline script, images from the local
+      movie:// scheme only. Metadata images are cached to disk before display,
+      so the renderer never talks to the network directly.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; img-src 'self' movie: data:; media-src 'self' movie:; style-src 'self' 'unsafe-inline'; script-src 'self'"
+    />
+    <title>Movie Library</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
