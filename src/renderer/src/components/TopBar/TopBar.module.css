@@ -1,0 +1,246 @@
+/*
+ * `titleBarOverlay` paints the native minimise/maximise/close buttons over the
+ * top-right of the window. Electron exposes the usable strip through the
+ * titlebar-area env vars, so the bar is sized to that rather than to the full
+ * window — otherwise the profile menu ends up underneath the controls.
+ */
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: var(--topbar-height);
+  width: env(titlebar-area-width, 100%);
+  padding: 0 12px 0 var(--gutter);
+  position: relative;
+  z-index: 30;
+  flex: 0 0 auto;
+}
+
+/* --- Movies / Series selector --------------------------------------------- */
+
+.kind {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 10px 0 14px;
+  min-width: 132px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--control);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.kind:hover {
+  background: var(--surface-hover);
+}
+
+.kindLabel {
+  flex: 1;
+  text-align: left;
+}
+
+/* --- Search --------------------------------------------------------------- */
+
+.search {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 30px;
+  padding: 0 16px;
+  border-radius: var(--radius-pill);
+  background: var(--control);
+  color: var(--text-muted);
+  transition: background 120ms var(--ease-out);
+}
+
+.search:focus-within {
+  background: var(--surface-hover);
+}
+
+.searchInput {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+}
+
+.searchInput::placeholder {
+  color: var(--text-dim);
+}
+
+.clear {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.clear:hover {
+  color: var(--text);
+}
+
+/* --- Profile -------------------------------------------------------------- */
+
+.profileWrap {
+  position: relative;
+}
+
+.profile {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 8px 0 4px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--control);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.profile:hover {
+  background: var(--surface-hover);
+}
+
+.avatar {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  color: var(--accent-contrast);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 240px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  box-shadow: 0 18px 40px rgb(0 0 0 / 55%);
+  z-index: 40;
+}
+
+.menuRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 8px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.menuRow:hover {
+  background: var(--surface);
+}
+
+.menuRow[data-active='true'] {
+  background: var(--surface);
+}
+
+.menuName {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Delete hugs the right edge of the row, per the spec. */
+.delete {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  margin-left: auto;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  opacity: 0;
+}
+
+.menuRow:hover .delete,
+.delete:focus-visible {
+  opacity: 1;
+}
+
+.delete:hover {
+  background: rgb(220 70 70 / 18%);
+  color: #ff8080;
+}
+
+.confirm {
+  padding: 8px;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.confirmActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.divider {
+  height: 1px;
+  margin: 6px 4px;
+  background: var(--border);
+}
+
+.addRow {
+  display: flex;
+  gap: 6px;
+  padding: 4px;
+}
+
+.addInput {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--control);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+}
+
+.addInput:focus {
+  border-color: var(--accent);
+}
+
+.limit {
+  padding: 6px 8px;
+  color: var(--text-dim);
+  font-size: 11.5px;
+}
