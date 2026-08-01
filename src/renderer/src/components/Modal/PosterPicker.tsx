@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 
 import { toMovieUrl } from '@shared/media-url';
-import type { LibraryItem } from '@shared/types';
+import { POSTERS_PER_MOVIE, type LibraryItem } from '@shared/types';
 import { displayTitle } from '@renderer/lib/selectors';
 import { useProfile } from '@renderer/state/useProfile';
 import { Icon } from '@renderer/components/ui/Icon';
@@ -73,10 +73,11 @@ export function PosterPicker({ item, chosenIndex, onClose }: PosterPickerProps):
                 ))}
               </div>
 
-              {posters.length < 4 && (
+              {posters.length < POSTERS_PER_MOVIE && (
                 <p className={styles.note}>
-                  Only {posters.length} cached. Run <strong>Refetch all</strong> in Settings to pull
-                  the full set — this film was enriched when the app kept just three.
+                  {posters.length} of up to {POSTERS_PER_MOVIE} cached. Run{' '}
+                  <strong>Refetch all</strong> in Settings to pull the rest — films enriched under
+                  an older limit, or before foreign-language artwork was included, will have fewer.
                 </p>
               )}
             </>

@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { access, mkdir, rename, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import type { CachedImage } from '@shared/types';
+import { POSTERS_PER_MOVIE, type CachedImage } from '@shared/types';
 import { imageCacheDir } from './config.js';
 import type { RemoteImage } from './metadata/provider.js';
 
@@ -12,12 +12,7 @@ import type { RemoteImage } from './metadata/provider.js';
  * genuinely offline rather than merely offline-tolerant.
  */
 
-/**
- * How many posters to cache per film. The picker shows all of them, so this is
- * the ceiling on choice. Ten w500 posters is roughly 700KB per film — cheap
- * next to the video files sitting beside them.
- */
-export const POSTERS_PER_MOVIE = 10;
+export { POSTERS_PER_MOVIE };
 
 type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
 

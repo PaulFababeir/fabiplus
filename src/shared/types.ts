@@ -163,6 +163,13 @@ export interface ScanResult {
 // Enrichment
 // ---------------------------------------------------------------------------
 
+/**
+ * How many posters to cache per film. Shared so the picker's "only N cached"
+ * hint cannot drift from what the cacher actually stores. Twenty w500 posters
+ * is roughly 1.4MB per film — negligible beside the video sitting next to it.
+ */
+export const POSTERS_PER_MOVIE = 20;
+
 /** Streamed to the renderer while a metadata pass runs. */
 export interface EnrichmentProgress {
   done: number;
