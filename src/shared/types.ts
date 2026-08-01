@@ -160,6 +160,48 @@ export interface ScanResult {
 }
 
 // ---------------------------------------------------------------------------
+// Enrichment
+// ---------------------------------------------------------------------------
+
+/** Streamed to the renderer while a metadata pass runs. */
+export interface EnrichmentProgress {
+  done: number;
+  total: number;
+  /** Title currently being looked up. */
+  current: string;
+  matched: number;
+  needsReview: number;
+  failed: number;
+}
+
+/** One low-confidence match, offered to the user in the re-match dialog. */
+export interface ReviewCandidate {
+  remoteId: number;
+  title: string;
+  year: number | null;
+  score: number;
+}
+
+export interface ReviewItem {
+  movieId: string;
+  folderName: string;
+  parsedTitle: string;
+  parsedYear: number | null;
+  candidates: ReviewCandidate[];
+}
+
+export interface EnrichmentSummary {
+  total: number;
+  matched: number;
+  needsReview: number;
+  failed: number;
+  durationMs: number;
+  review: ReviewItem[];
+  /** Set when the run stopped early, e.g. a bad API key. */
+  fatalError: string | null;
+}
+
+// ---------------------------------------------------------------------------
 // Profiles and watch state
 // ---------------------------------------------------------------------------
 
