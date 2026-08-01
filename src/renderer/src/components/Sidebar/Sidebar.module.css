@@ -128,6 +128,13 @@
   height: 100%;
   padding: 0 22px 0 18px;
   overflow-y: auto;
+  /*
+   * Without a reserved gutter the content box narrows by the scrollbar width
+   * whenever a tab overflows, and the poster — sized as a percentage of it —
+   * visibly changes size between tabs. Reserving it always keeps the layout
+   * identical whether the panel scrolls or not.
+   */
+  scrollbar-gutter: stable;
   transition: width 320ms var(--ease-out);
   /*
    * Deliberately no background. A scrim here would start at the panel's top
