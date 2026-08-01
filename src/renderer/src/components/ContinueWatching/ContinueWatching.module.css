@@ -1,0 +1,191 @@
+.section {
+  margin: 4px 0 0;
+}
+
+.heading {
+  margin: 0 0 12px;
+  color: var(--text-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+/*
+ * The deck: the active card sits in front, with two peeking behind offset up
+ * and to the right, matching the stacked treatment in the design.
+ */
+.deck {
+  position: relative;
+  aspect-ratio: var(--backdrop-ratio);
+  max-height: 460px;
+  /* Room for the offset cards behind. */
+  margin-right: 26px;
+}
+
+.card {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  transition:
+    transform 320ms var(--ease-out),
+    opacity 320ms var(--ease-out);
+  will-change: transform;
+}
+
+/* Behind-cards are pure decoration. */
+.ghost {
+  pointer-events: none;
+}
+
+.front {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.backdrop {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgb(6 7 9 / 88%) 0%,
+    rgb(6 7 9 / 45%) 38%,
+    rgb(6 7 9 / 5%) 72%
+  );
+}
+
+.content {
+  position: absolute;
+  right: 30px;
+  bottom: 26px;
+  left: 30px;
+  display: flex;
+  align-items: flex-end;
+  gap: 20px;
+}
+
+.info {
+  flex: 1;
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(24px, 3.4vw, 42px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+}
+
+.sub {
+  margin-top: 8px;
+  color: rgb(255 255 255 / 72%);
+  font-size: 12.5px;
+}
+
+.play {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border: 1px solid rgb(255 255 255 / 55%);
+  border-radius: 50%;
+  background: rgb(255 255 255 / 10%);
+  color: #fff;
+  padding-left: 4px;
+  transition:
+    background 160ms var(--ease-out),
+    transform 160ms var(--ease-out);
+}
+
+.front:hover .play {
+  background: rgb(255 255 255 / 92%);
+  color: #101114;
+  transform: scale(1.06);
+}
+
+.progressTrack {
+  position: absolute;
+  right: 30px;
+  bottom: 14px;
+  left: 30px;
+  height: 3px;
+  border-radius: 2px;
+  background: rgb(255 255 255 / 25%);
+}
+
+.progressFill {
+  height: 100%;
+  border-radius: 2px;
+  background: #fff;
+}
+
+/* Dots double as the deck pager. */
+.dots {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  margin-top: 14px;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--border);
+  cursor: pointer;
+  transition: background 160ms var(--ease-out);
+}
+
+.dot[data-active='true'] {
+  background: var(--text);
+}
+
+.nav {
+  position: absolute;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  transform: translateY(-50%);
+  border: none;
+  border-radius: 50%;
+  background: rgb(10 11 13 / 70%);
+  color: #fff;
+  opacity: 0;
+  cursor: pointer;
+  transition: opacity 160ms var(--ease-out);
+}
+
+.deck:hover .nav {
+  opacity: 1;
+}
+
+.navPrev {
+  left: 14px;
+}
+
+.navNext {
+  right: 14px;
+}
