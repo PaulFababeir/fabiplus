@@ -287,9 +287,13 @@ function createWindow(): void {
     backgroundColor: '#0e0f11',
     // The design has no OS title bar; keep the native window controls only.
     titleBarStyle: 'hidden',
-    // Height must match --titlebar-strip in tokens.css, or the backdrop layer
-    // and the painted overlay disagree and a seam shows around the buttons.
-    titleBarOverlay: { color: '#0e0f11', symbolColor: '#e8e8ea', height: 38 },
+    /*
+     * A fully transparent overlay lets the window buttons sit directly on
+     * whatever is behind them, so they blend into the sidebar backdrop instead
+     * of being boxed in by a painted rectangle. Height must match
+     * --titlebar-strip in tokens.css.
+     */
+    titleBarOverlay: { color: '#00000000', symbolColor: '#e8e8ea', height: 38 },
     webPreferences: {
       preload: join(import.meta.dirname, '../preload/index.mjs'),
       sandbox: false,
