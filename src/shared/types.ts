@@ -99,7 +99,7 @@ export interface Metadata {
   rating: number | null;
   cast: CastMember[];
   crew: CrewMember[];
-  /** Up to 3, ranked by provider vote count. */
+  /** Up to POSTERS_PER_MOVIE, ranked English-first then by provider vote. */
   posters: CachedImage[];
   backdrop: CachedImage | null;
   fetchedAt: string;
@@ -180,6 +180,9 @@ export interface ReviewCandidate {
   title: string;
   year: number | null;
   score: number;
+  /** Absolute thumbnail URL, or null when the provider has no poster. */
+  posterUrl: string | null;
+  overview: string;
 }
 
 export interface ReviewItem {

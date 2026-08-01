@@ -11,6 +11,7 @@ const API_BASE = 'https://api.themoviedb.org/3';
 const IMAGE_BASE = 'https://image.tmdb.org/t/p';
 
 const POSTER_SIZE = 'w500';
+const THUMB_SIZE = 'w154';
 const BACKDROP_SIZE = 'w1280';
 
 /** Crew jobs worth showing in the sidebar; the full list runs to hundreds. */
@@ -38,6 +39,8 @@ interface TmdbSearchResult {
   original_title?: string;
   release_date?: string;
   popularity?: number;
+  poster_path?: string | null;
+  overview?: string;
 }
 
 interface TmdbImage {
@@ -177,7 +180,9 @@ export class TmdbProvider implements MetadataProvider {
       title: r.title ?? r.original_title ?? '',
       originalTitle: r.original_title ?? r.title ?? '',
       year: yearOf(r.release_date),
-      popularity: r.popularity ?? 0
+      popularity: r.popularity ?? 0,
+      posterPath: r.poster_path ?? null,
+      overview: r.overview ?? ''
     }));
   }
 
@@ -227,8 +232,9 @@ export class TmdbProvider implements MetadataProvider {
     };
   }
 
-  imageUrl(path: string, kind: 'poster' | 'backdrop'): string {
-    const size = kind === 'poster' ? POSTER_SIZE : BACKDROP_SIZE;
+  imageUrl(path: string, kind: 'poster' | 'backdrop' | 'thumb'): string {
+    const size =
+      kind === 'poster' ? POSTER_SIZE : kind === 'backdrop' ? BACKDROP_SIZE : THUMB_SIZE;
     return `${IMAGE_BASE}/${size}${path}`;
   }
 }

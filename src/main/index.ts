@@ -213,7 +213,11 @@ function registerIpc(): void {
           remoteId: scored.candidate.id,
           title: scored.candidate.title,
           year: scored.candidate.year,
-          score: scored.score
+          score: scored.score,
+          posterUrl: scored.candidate.posterPath
+            ? provider.imageUrl(scored.candidate.posterPath, 'thumb')
+            : null,
+          overview: scored.candidate.overview ?? ''
         }));
     }
   );

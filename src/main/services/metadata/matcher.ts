@@ -23,6 +23,10 @@ export interface Candidate {
   year: number | null;
   /** Provider popularity, used only to break ties. */
   popularity: number;
+  /** Provider-side poster path. Display only — scoring ignores it. */
+  posterPath?: string | null;
+  /** Short synopsis, shown in the re-match dialog to disambiguate. */
+  overview?: string;
 }
 
 export interface ScoredCandidate {

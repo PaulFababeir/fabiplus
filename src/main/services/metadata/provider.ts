@@ -42,8 +42,12 @@ export interface MetadataProvider {
   readonly id: string;
   search(title: string, year: number | null): Promise<Candidate[]>;
   fetchDetails(remoteId: number): Promise<ProviderDetails>;
-  /** Absolute URL for a remote image at the size this app wants. */
-  imageUrl(path: string, kind: 'poster' | 'backdrop'): string;
+  /**
+   * Absolute URL for a remote image. `thumb` is the small size used by the
+   * re-match dialog, which streams straight from the provider rather than
+   * caching candidates the user may never pick.
+   */
+  imageUrl(path: string, kind: 'poster' | 'backdrop' | 'thumb'): string;
 }
 
 export class ProviderError extends Error {

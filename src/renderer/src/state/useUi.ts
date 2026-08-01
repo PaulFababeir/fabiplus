@@ -14,6 +14,12 @@ interface UiStore {
   sidebarOpen: boolean;
   settingsOpen: boolean;
   rematchOpen: boolean;
+  /**
+   * When set, the re-match dialog shows only this film. Opening it from the
+   * sidebar scopes it to what you are looking at; opening it from the review
+   * banner leaves it null and lists everything outstanding.
+   */
+  rematchTargetId: string | null;
 
   setKind: (kind: MediaKind) => void;
   setSearch: (search: string) => void;
@@ -22,7 +28,7 @@ interface UiStore {
   select: (id: string | null) => void;
   setSidebarOpen: (open: boolean) => void;
   toggleSettings: () => void;
-  setRematchOpen: (open: boolean) => void;
+  setRematchOpen: (open: boolean, targetId?: string | null) => void;
 }
 
 export const useUi = create<UiStore>((set) => ({
@@ -35,6 +41,7 @@ export const useUi = create<UiStore>((set) => ({
   sidebarOpen: false,
   settingsOpen: false,
   rematchOpen: false,
+  rematchTargetId: null,
 
   setKind: (kind) => set({ kind, genre: null }),
   setSearch: (search) => set({ search }),
@@ -45,5 +52,6 @@ export const useUi = create<UiStore>((set) => ({
   select: (selectedId) => set({ selectedId, sidebarOpen: selectedId !== null }),
   setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
   toggleSettings: () => set((s) => ({ settingsOpen: !s.settingsOpen })),
-  setRematchOpen: (rematchOpen) => set({ rematchOpen })
+  setRematchOpen: (rematchOpen, targetId = null) =>
+    set({ rematchOpen, rematchTargetId: rematchOpen ? targetId : null })
 }));

@@ -1,36 +1,49 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import type { LibraryItem, ReviewCandidate } from '@shared/types';
 import { AUTO_ACCEPT_UI } from '@renderer/lib/constants';
-import { needsReviewItems } from '@renderer/lib/selectors';
+import { displayTitle, needsReviewItems } from '@renderer/lib/selectors';
 import { useLibrary } from '@renderer/state/useLibrary';
 import { useUi } from '@renderer/state/useUi';
 import { Icon } from '@renderer/components/ui/Icon';
 import styles from './Modal.module.css';
 
 /**
- * Fixes matches the scorer got wrong. The list is derived from the stored
- * catalog rather than the last enrichment run, so a bad match stays fixable
- * across restarts. Picking a candidate pins that provider id permanently.
+ * Fixes matches the scorer got wrong.
+ *
+ * Opened from the sidebar it targets one film — including a confidently but
+ * wrongly matched one, which never appears in the review list. Opened from the
+ * review banner it lists everything still outstanding.
  */
 export function RematchDialog(): React.JSX.Element {
-  const setRematchOpen = useUi((s) => s.setRematchOpen);
+  const { rematchTargetId, setRematchOpen } = useUi();
   const { catalog, busy, rematch } = useLibrary();
 
-  const pending = needsReviewItems(catalog?.items ?? [], AUTO_ACCEPT_UI);
+  const items = catalog?.items ?? [];
+  const target = rematchTargetId ? items.find((i) => i.id === rematchTargetId) : undefined;
+  const listed = target ? [target] : needsReviewItems(items, AUTO_ACCEPT_UI);
+
   const close = (): void => setRematchOpen(false);
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') close();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  });
+
   return (
-    <div className={styles.scrim} onMouseDown={close} data-interactive>
+    <div className={styles.scrim} onMouseDown={close}>
       <div
         className={styles.dialog}
         role="dialog"
-        aria-label="Confirm matches"
+        aria-label="Fix match"
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className={styles.head}>
           <h2 className={styles.heading}>
-            Confirm matches{pending.length > 0 && ` (${pending.length})`}
+            {target ? `Fix match — ${displayTitle(target)}` : `Confirm matches (${listed.length})`}
           </h2>
           <button type="button" className={styles.close} aria-label="Close" onClick={close}>
             <Icon name="close" size={15} />
@@ -38,15 +51,19 @@ export function RematchDialog(): React.JSX.Element {
         </div>
 
         <div className={styles.body}>
-          {pending.length === 0 ? (
+          {listed.length === 0 ? (
             <p className={styles.emptyReview}>Every film has a confident match.</p>
           ) : (
-            pending.map((item) => (
+            listed.map((item) => (
               <ReviewRow
                 key={item.id}
                 item={item}
                 busy={busy}
-                onPick={(remoteId) => void rematch(item.id, remoteId)}
+                soloed={target !== undefined}
+                onPick={(remoteId) => {
+                  void rematch(item.id, remoteId);
+                  if (target) close();
+                }}
               />
             ))
           )}
@@ -59,90 +76,119 @@ export function RematchDialog(): React.JSX.Element {
 interface ReviewRowProps {
   item: LibraryItem;
   busy: boolean;
+  soloed: boolean;
   onPick: (remoteId: number) => void;
 }
 
-function ReviewRow({ item, busy, onPick }: ReviewRowProps): React.JSX.Element {
+function ReviewRow({ item, busy, soloed, onPick }: ReviewRowProps): React.JSX.Element {
   const [query, setQuery] = useState(item.parsed.searchTitle);
+  const [year, setYear] = useState<string>(item.parsed.year ? String(item.parsed.year) : '');
   const [results, setResults] = useState<ReviewCandidate[]>([]);
   const [searching, setSearching] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  // Seed with a search on the parsed title so the common case needs no typing.
-  useEffect(() => {
-    let cancelled = false;
+  const runSearch = async (title: string, withYear: number | null): Promise<void> => {
     setSearching(true);
-    window.api
-      .searchProvider(item.parsed.searchTitle, item.parsed.year)
-      .then((found) => {
-        if (!cancelled) setResults(found);
-      })
-      .finally(() => {
-        if (!cancelled) setSearching(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [item.parsed.searchTitle, item.parsed.year]);
-
-  const runSearch = async (): Promise<void> => {
-    setSearching(true);
+    setError(null);
     try {
-      // Drop the year filter on a manual search — the folder's year is often
-      // exactly what was wrong.
-      setResults(await window.api.searchProvider(query, null));
+      setResults(await window.api.searchProvider(title, withYear));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setSearching(false);
     }
   };
 
+  // Seed with the parsed title so the common case needs no typing.
+  useEffect(() => {
+    void runSearch(item.parsed.searchTitle, item.parsed.year);
+    if (soloed) inputRef.current?.focus();
+    // Keyed on the film alone on purpose. Including `query` here would fire a
+    // provider request on every keystroke; searching is explicit.
+  }, [item.id]);
+
+  const currentRemoteId = item.metadata?.remoteId ?? null;
+
   return (
     <div className={styles.reviewItem}>
       <div className={styles.reviewHead}>
-        {item.metadata ? `Currently: ${item.metadata.title}` : 'No match found'}
+        {item.metadata ? `Currently matched to: ${item.metadata.title}` : 'No match yet'}
         <div className={styles.reviewFolder}>{item.folderName}</div>
       </div>
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+      <div className={styles.searchRow}>
         <input
+          ref={inputRef}
           className={styles.input}
           value={query}
-          placeholder="Search by title"
+          placeholder="Film title"
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') void runSearch();
+            if (e.key === 'Enter') void runSearch(query, year ? Number(year) : null);
+          }}
+        />
+        <input
+          className={`${styles.input} ${styles.yearInput}`}
+          value={year}
+          placeholder="Year"
+          inputMode="numeric"
+          maxLength={4}
+          onChange={(e) => setYear(e.target.value.replace(/\D/g, ''))}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') void runSearch(query, year ? Number(year) : null);
           }}
         />
         <button
           type="button"
           className={styles.button}
           disabled={searching || !query.trim()}
-          onClick={() => void runSearch()}
+          onClick={() => void runSearch(query, year ? Number(year) : null)}
         >
           Search
         </button>
       </div>
 
-      {searching && <p className={styles.note} style={{ marginTop: 0 }}>Searching…</p>}
+      {searching && <p className={styles.note}>Searching…</p>}
+      {error && <p className={styles.error}>{error}</p>}
 
-      {!searching && results.length === 0 && (
-        <p className={styles.note} style={{ marginTop: 0 }}>
-          No results. Try the film&apos;s real title — the folder name may be misspelled.
+      {!searching && !error && results.length === 0 && (
+        <p className={styles.note}>
+          No results. Try the film&apos;s real title, or clear the year — release folders often
+          carry the wrong one.
         </p>
       )}
 
-      {results.map((candidate) => (
-        <button
-          key={candidate.remoteId}
-          type="button"
-          className={styles.candidate}
-          disabled={busy}
-          onClick={() => onPick(candidate.remoteId)}
-        >
-          <span>{candidate.title}</span>
-          <span className={styles.candidateYear}>{candidate.year ?? '—'}</span>
-          <span className={styles.score}>{Math.round(candidate.score * 100)}%</span>
-        </button>
-      ))}
+      {!searching &&
+        results.map((candidate) => (
+          <button
+            key={candidate.remoteId}
+            type="button"
+            className={styles.candidate}
+            data-current={candidate.remoteId === currentRemoteId}
+            disabled={busy}
+            onClick={() => onPick(candidate.remoteId)}
+          >
+            <span className={styles.candidateThumb}>
+              {candidate.posterUrl && <img src={candidate.posterUrl} alt="" loading="lazy" />}
+            </span>
+
+            <span className={styles.candidateBody}>
+              <span className={styles.candidateTitle}>
+                {candidate.title}
+                <span className={styles.candidateYear}>{candidate.year ?? '—'}</span>
+                {candidate.remoteId === currentRemoteId && (
+                  <span className={styles.currentBadge}>current</span>
+                )}
+              </span>
+              {candidate.overview && (
+                <span className={styles.candidateOverview}>{candidate.overview}</span>
+              )}
+            </span>
+
+            <span className={styles.score}>{Math.round(candidate.score * 100)}%</span>
+          </button>
+        ))}
     </div>
   );
 }

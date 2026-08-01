@@ -176,7 +176,11 @@ export async function enrichLibrary(
             remoteId: a.candidate.id,
             title: a.candidate.title,
             year: a.candidate.year,
-            score: a.score
+            score: a.score,
+            posterUrl: a.candidate.posterPath
+              ? provider.imageUrl(a.candidate.posterPath, 'thumb')
+              : null,
+            overview: a.candidate.overview ?? ''
           }))
         });
         byId.set(item.id, {
@@ -214,7 +218,11 @@ export async function enrichLibrary(
             remoteId: a.candidate.id,
             title: a.candidate.title,
             year: a.candidate.year,
-            score: a.score
+            score: a.score,
+            posterUrl: a.candidate.posterPath
+              ? provider.imageUrl(a.candidate.posterPath, 'thumb')
+              : null,
+            overview: a.candidate.overview ?? ''
           }))
         });
       }

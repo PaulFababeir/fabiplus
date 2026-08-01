@@ -4,13 +4,15 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!--
-      Locked down: no remote script, no inline script, images from the local
-      movie:// scheme only. Metadata images are cached to disk before display,
-      so the renderer never talks to the network directly.
+      Locked down: no remote script, no inline script. Artwork is cached to
+      disk and served over movie://, so the library renders with no network.
+      The one exception is image.tmdb.org, which supplies candidate thumbnails
+      in the re-match dialog — that flow needs the network anyway, and caching
+      posters the user may never pick would be wasteful.
     -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; img-src 'self' movie: data:; media-src 'self' movie:; style-src 'self' 'unsafe-inline'; script-src 'self'"
+      content="default-src 'self'; img-src 'self' movie: data: https://image.tmdb.org; media-src 'self' movie:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'"
     />
     <title>Movie Library</title>
   </head>
