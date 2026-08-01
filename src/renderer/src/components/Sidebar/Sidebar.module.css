@@ -1,0 +1,357 @@
+/*
+ * The backdrop is a fixed layer *behind* the grid, not an overlay on top of
+ * it. Masking the image itself is what produces a seamless fade into the
+ * movie list — a gradient painted over the top would leave a visible edge.
+ */
+.backdropLayer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 64%;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 420ms var(--ease-out);
+}
+
+.backdropLayer[data-visible='true'] {
+  opacity: 1;
+}
+
+.backdropImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  mask-image: linear-gradient(to right, transparent 0%, rgb(0 0 0 / 30%) 26%, #000 66%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, rgb(0 0 0 / 30%) 26%, #000 66%);
+}
+
+/* Softens the top and bottom so the plate never meets a hard page edge. */
+.backdropFade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    var(--bg) 0%,
+    rgb(14 15 17 / 35%) 22%,
+    rgb(14 15 17 / 55%) 62%,
+    var(--bg) 100%
+  );
+}
+
+/* --- Panel ---------------------------------------------------------------- */
+
+.panel {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  width: clamp(320px, 27vw, 430px);
+  height: 100%;
+  padding: 4px 26px 0 18px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  transition: width 320ms var(--ease-out);
+  /*
+   * A light backdrop can leave this text unreadable. A soft vertical scrim
+   * sits behind the panel only — the grid keeps the untouched image.
+   */
+  background: linear-gradient(
+    to bottom,
+    rgb(14 15 17 / 30%) 0%,
+    rgb(14 15 17 / 55%) 40%,
+    rgb(14 15 17 / 82%) 100%
+  );
+}
+
+.panel::-webkit-scrollbar {
+  width: 8px;
+}
+
+.panel::-webkit-scrollbar-thumb {
+  border-radius: 4px;
+  background: var(--border);
+}
+
+/* Collapsed: a narrow rail keeping the poster reachable, per the spec. */
+.rail {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex: 0 0 auto;
+  justify-content: flex-end;
+  width: 82px;
+  padding: 12px 18px 0 0;
+}
+
+.railPoster {
+  width: 54px;
+  aspect-ratio: var(--poster-ratio);
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 45%);
+  transition: transform 200ms var(--ease-out);
+}
+
+.railPoster:hover {
+  transform: translateY(-3px);
+}
+
+.railImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* --- Poster --------------------------------------------------------------- */
+
+.posterBlock {
+  display: flex;
+  justify-content: center;
+  padding: 18px 0 20px;
+}
+
+.posterFrame {
+  position: relative;
+  width: 62%;
+  min-width: 170px;
+  aspect-ratio: var(--poster-ratio);
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: 0 20px 46px rgb(0 0 0 / 60%);
+}
+
+.posterImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.swap {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: rgb(10 11 13 / 78%);
+  color: #fff;
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 160ms var(--ease-out);
+}
+
+.posterFrame:hover .swap {
+  opacity: 1;
+}
+
+.swap:hover {
+  background: rgb(10 11 13 / 92%);
+}
+
+.posterChoices {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  padding-bottom: 16px;
+}
+
+.choice {
+  width: 46px;
+  aspect-ratio: var(--poster-ratio);
+  padding: 0;
+  overflow: hidden;
+  border: 2px solid transparent;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.choice[data-active='true'] {
+  border-color: var(--accent);
+}
+
+.choiceImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* --- Text ----------------------------------------------------------------- */
+
+.header {
+  text-align: center;
+}
+
+.title {
+  margin: 0;
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+.year {
+  margin-left: 6px;
+  color: var(--text-muted);
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.metaLine {
+  margin-top: 6px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.tagline {
+  margin: 14px 0 0;
+  color: var(--text-muted);
+  font-size: 12.5px;
+  font-style: italic;
+  text-align: center;
+}
+
+.overview {
+  margin: 16px 0 0;
+  color: rgb(232 232 234 / 88%);
+  font-size: 13px;
+  line-height: 1.62;
+}
+
+/* --- Tabs ----------------------------------------------------------------- */
+
+.tabs {
+  display: flex;
+  gap: 16px;
+  margin: 22px 0 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.tab {
+  padding: 0 0 4px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -9px;
+  background: transparent;
+  /* Sits over artwork, so it needs more contrast than a normal muted label. */
+  color: rgb(232 232 234 / 62%);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  text-shadow: 0 1px 3px rgb(0 0 0 / 55%);
+}
+
+.tab:hover {
+  color: rgb(232 232 234 / 85%);
+}
+
+.tab[data-active='true'] {
+  border-bottom-color: var(--accent);
+  color: var(--text);
+}
+
+.tabBody {
+  padding: 16px 0 0;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.chip {
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: rgb(255 255 255 / 3%);
+  color: var(--text);
+  font-size: 12px;
+}
+
+.chipRole {
+  color: var(--text-dim);
+}
+
+.detailRow {
+  display: flex;
+  gap: 12px;
+  padding: 7px 0;
+  border-bottom: 1px solid rgb(48 49 54 / 55%);
+  font-size: 12.5px;
+}
+
+.detailKey {
+  flex: 0 0 104px;
+  color: var(--text-dim);
+}
+
+.detailValue {
+  flex: 1;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.moreButton {
+  margin-top: 10px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+/* --- Footer --------------------------------------------------------------- */
+
+.footer {
+  margin-top: auto;
+  padding: 26px 0 20px;
+  color: var(--text-dim);
+  font-size: 10.5px;
+  line-height: 1.5;
+}
+
+.rematchLink {
+  display: block;
+  margin-top: 8px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 11px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.reviewNotice {
+  margin: 14px 0 0;
+  padding: 10px 12px;
+  border: 1px solid rgb(217 164 65 / 45%);
+  border-radius: var(--radius-sm);
+  background: rgb(217 164 65 / 10%);
+  color: #e8c179;
+  font-size: 11.5px;
+  line-height: 1.5;
+}
