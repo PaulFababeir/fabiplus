@@ -1,18 +1,38 @@
+# Dependencies
 node_modules/
+
+# Build output
 dist/
 out/
+build/
+release/
 .vite/
-*.log
-npm-debug.log*
+*.tsbuildinfo
+
+# Design sources — Figma is the source of truth, the .fig export is a binary
+# snapshot that bloats history and never merges.
+*.fig
 
 # Local env / secrets — the TMDB key lives in %APPDATA%/movie-app/config.json,
 # never in the repo.
 .env
-.env.local
+.env.*
+*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editors
+.vscode/
+.idea/
+*.swp
 
 # OS
 Thumbs.db
+desktop.ini
 .DS_Store
 
-# Scan/debug output
+# Test / scan output
+coverage/
 /tmp-reports/
