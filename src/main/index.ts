@@ -14,7 +14,14 @@ import type {
 } from '@shared/types';
 import { imageCacheDir, loadConfig, saveConfig } from './services/config.js';
 import { applyManualMatch, enrichLibrary } from './services/enrichment.js';
-import { loadLibrary, mergeScan, saveLibrary } from './services/library.js';
+import {
+  backupLibrary,
+  loadLibrary,
+  loadLibraryForDisplay,
+  mergeScan,
+  saveLibrary,
+  wouldDestroyMetadata
+} from './services/library.js';
 import { rankCandidates } from './services/metadata/matcher.js';
 import { TmdbProvider } from './services/metadata/tmdb.js';
 import {
@@ -102,12 +109,21 @@ function registerIpc(): void {
     return saveConfig({ ...config, lastProfileId: typeof id === 'string' ? id : null });
   });
 
-  ipcMain.handle(IPC.libraryGet, async (): Promise<LibraryCatalog> => loadLibrary());
+  ipcMain.handle(IPC.libraryGet, async (): Promise<LibraryCatalog> => loadLibraryForDisplay());
 
   ipcMain.handle(IPC.libraryScan, async (): Promise<LibraryCatalog> => {
     const config = await loadConfig();
+    // Throws if library.json exists but is unreadable, rather than treating
+    // it as empty and overwriting an enriched catalog with a bare scan.
+    const existing = await loadLibrary();
     const scan = await scanRoots(config.movieRoots, 'movie');
-    const merged = mergeScan(await loadLibrary(), scan, config.movieRoots);
+    const merged = mergeScan(existing, scan, config.movieRoots);
+
+    if (wouldDestroyMetadata(existing, merged)) {
+      console.error('[library] rescan would drop all metadata; keeping the stored catalog');
+      return existing;
+    }
+
     await saveLibrary(merged);
     return merged;
   });
@@ -150,9 +166,9 @@ function registerIpc(): void {
         return { ...summary, fatalError: `Metadata was fetched but could not be saved: ${detail}` };
       }
 
-      console.log(
-        `[library] saved ${items.filter((i) => i.metadata).length}/${items.length} enriched items`
-      );
+      const enriched = items.filter((i) => i.metadata).length;
+      await backupLibrary();
+      console.log(`[library] saved ${enriched}/${items.length} enriched items (backup written)`);
       return summary;
     }
   );
@@ -267,7 +283,9 @@ function createWindow(): void {
     backgroundColor: '#0e0f11',
     // The design has no OS title bar; keep the native window controls only.
     titleBarStyle: 'hidden',
-    titleBarOverlay: { color: '#0e0f11', symbolColor: '#e8e8ea', height: 40 },
+    // Height must match --titlebar-strip in tokens.css, or the backdrop layer
+    // and the painted overlay disagree and a seam shows around the buttons.
+    titleBarOverlay: { color: '#0e0f11', symbolColor: '#e8e8ea', height: 38 },
     webPreferences: {
       preload: join(import.meta.dirname, '../preload/index.mjs'),
       sandbox: false,

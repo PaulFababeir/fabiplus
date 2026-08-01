@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, before, describe, it } from 'node:test';
 
-import { readJsonSafe, writeJsonAtomic } from './atomic-json.js';
+import { JsonReadError, readJsonOrFail, readJsonSafe, writeJsonAtomic } from './atomic-json.js';
 
 let dir: string;
 
@@ -73,5 +73,27 @@ describe('readJsonSafe', () => {
     const path = join(dir, 'corrupt.json');
     await writeFile(path, '{ not json', 'utf8');
     assert.equal(await readJsonSafe(path, 'fallback'), 'fallback');
+  });
+});
+
+describe('readJsonOrFail', () => {
+  it('returns the fallback when the file is missing', async () => {
+    assert.equal(await readJsonOrFail(join(dir, 'absent.json'), 'fallback'), 'fallback');
+  });
+
+  it('reads a present file normally', async () => {
+    const path = join(dir, 'present.json');
+    await writeJsonAtomic(path, { v: 7 });
+    assert.deepEqual(await readJsonOrFail(path, null), { v: 7 });
+  });
+
+  /**
+   * The distinction that matters: a corrupt file must NOT look like an empty
+   * one, or callers will happily write fresh data over it.
+   */
+  it('throws when the file exists but is corrupt', async () => {
+    const path = join(dir, 'broken.json');
+    await writeFile(path, '{ truncated', 'utf8');
+    await assert.rejects(() => readJsonOrFail(path, 'fallback'), JsonReadError);
   });
 });

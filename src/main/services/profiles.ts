@@ -3,7 +3,7 @@ import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import { MAX_PROFILES, type Profile, type ProfileState, type WatchEntry } from '@shared/types';
-import { readJsonSafe, writeJsonAtomic } from './atomic-json.js';
+import { readJsonOrFail, writeJsonAtomic } from './atomic-json.js';
 import { userDataDir } from './config.js';
 
 /**
@@ -35,7 +35,9 @@ export function profileStatePath(id: string): string {
 }
 
 export async function loadProfiles(): Promise<Profile[]> {
-  const list = await readJsonSafe<Profile[]>(profilesPath(), []);
+  // Throws if the file exists but is unreadable — returning [] there would let
+  // ensureProfile() create a duplicate and orphan the real one.
+  const list = await readJsonOrFail<Profile[]>(profilesPath(), []);
   return Array.isArray(list) ? list : [];
 }
 
@@ -86,12 +88,30 @@ export async function renameProfile(id: string, name: string): Promise<Profile[]
 /**
  * Guarantees at least one profile exists, so the UI never has to render an
  * empty profile menu on a fresh install.
+ *
+ * Serialised behind a shared promise: React StrictMode double-invokes effects,
+ * so two `listProfiles()` calls can land concurrently. Without this both see an
+ * empty list, both create a profile, and the second write to profiles.json wins
+ * while the first profile's state file is orphaned — taking any poster choices
+ * or watch history written against it.
  */
+let ensureInFlight: Promise<Profile[]> | null = null;
+
 export async function ensureProfile(): Promise<Profile[]> {
-  const profiles = await loadProfiles();
-  if (profiles.length > 0) return profiles;
-  await createProfile('Me');
-  return loadProfiles();
+  if (ensureInFlight) return ensureInFlight;
+
+  ensureInFlight = (async () => {
+    const profiles = await loadProfiles();
+    if (profiles.length > 0) return profiles;
+    await createProfile('Me');
+    return loadProfiles();
+  })();
+
+  try {
+    return await ensureInFlight;
+  } finally {
+    ensureInFlight = null;
+  }
 }
 
 function emptyState(profileId: string): ProfileState {
@@ -99,7 +119,7 @@ function emptyState(profileId: string): ProfileState {
 }
 
 export async function loadProfileState(id: string): Promise<ProfileState> {
-  const loaded = await readJsonSafe<ProfileState | null>(profileStatePath(id), null);
+  const loaded = await readJsonOrFail<ProfileState | null>(profileStatePath(id), null);
   if (!loaded || loaded.schemaVersion !== SCHEMA_VERSION) return emptyState(id);
   return {
     ...emptyState(id),
