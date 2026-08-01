@@ -2,7 +2,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  margin: 22px 0 18px;
+  margin: 26px 0 22px;
 }
 
 .track {
@@ -21,14 +21,14 @@
 
 .pill {
   flex: 0 0 auto;
-  height: 30px;
-  padding: 0 16px;
+  height: var(--pill-height);
+  padding: 0 20px;
   border: 1px solid var(--border);
   border-radius: var(--radius-pill);
   background: transparent;
   color: var(--text-muted);
   font: inherit;
-  font-size: 12.5px;
+  font-size: 13px;
   white-space: nowrap;
   cursor: pointer;
   transition:
@@ -54,8 +54,8 @@
   display: grid;
   flex: 0 0 auto;
   place-items: center;
-  width: 30px;
-  height: 30px;
+  width: var(--pill-height);
+  height: var(--pill-height);
   border: 1px solid var(--border);
   border-radius: 50%;
   background: transparent;
@@ -79,14 +79,14 @@
   flex: 0 0 auto;
   align-items: center;
   gap: 8px;
-  height: 30px;
-  padding: 0 12px;
+  height: var(--pill-height);
+  padding: 0 16px;
   border: 1px solid var(--border);
   border-radius: var(--radius-pill);
   background: transparent;
   color: var(--text-muted);
   font: inherit;
-  font-size: 12.5px;
+  font-size: 13px;
   cursor: pointer;
 }
 

@@ -1,14 +1,20 @@
 /*
- * The backdrop is a fixed layer *behind* the grid, not an overlay on top of
- * it. Masking the image itself is what produces a seamless fade into the
- * movie list — a gradient painted over the top would leave a visible edge.
+ * The backdrop plate is confined to the sidebar column so it never reaches
+ * past the movie list's scrollbar — the grid keeps a plain background.
+ * It is still a layer *behind* the panel, and the fade is a mask on the image
+ * itself rather than a gradient painted over it, so no hard edge appears.
  */
 .backdropLayer {
   position: fixed;
-  top: 0;
+  /*
+   * Starts below the window-button strip. `titleBarOverlay` paints that strip
+   * in an opaque colour, so letting artwork run underneath it draws a visible
+   * rectangle around the buttons.
+   */
+  top: var(--titlebar-strip);
   right: 0;
-  bottom: 0;
-  width: 64%;
+  width: var(--sidebar-width);
+  height: 55%;
   z-index: 0;
   pointer-events: none;
   opacity: 0;
@@ -19,24 +25,82 @@
   opacity: 1;
 }
 
+/*
+ * Two masks intersected: fade out to the left so the plate dissolves before
+ * the scrollbar, and fade out downward well above the poster so the title,
+ * synopsis and tabs sit on flat colour — the Letterboxd treatment.
+ */
+/*
+ * Both masks use many stops rather than two. A two-stop linear ramp reads as a
+ * visible band edge where it terminates — which is exactly what showed above
+ * the sidebar. The extra stops approximate an ease-out falloff so there is no
+ * point where the eye can find the boundary.
+ */
 .backdropImage {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  mask-image: linear-gradient(to right, transparent 0%, rgb(0 0 0 / 30%) 26%, #000 66%);
-  -webkit-mask-image: linear-gradient(to right, transparent 0%, rgb(0 0 0 / 30%) 26%, #000 66%);
+  object-position: center top;
+  mask-image:
+    linear-gradient(
+      to right,
+      transparent 0%,
+      rgb(0 0 0 / 12%) 18%,
+      rgb(0 0 0 / 38%) 36%,
+      rgb(0 0 0 / 70%) 56%,
+      rgb(0 0 0 / 92%) 74%,
+      #000 88%
+    ),
+    linear-gradient(
+      to bottom,
+      #000 0%,
+      rgb(0 0 0 / 96%) 26%,
+      rgb(0 0 0 / 78%) 42%,
+      rgb(0 0 0 / 52%) 58%,
+      rgb(0 0 0 / 26%) 72%,
+      rgb(0 0 0 / 8%) 86%,
+      transparent 100%
+    );
+  mask-composite: intersect;
+  -webkit-mask-image:
+    linear-gradient(
+      to right,
+      transparent 0%,
+      rgb(0 0 0 / 12%) 18%,
+      rgb(0 0 0 / 38%) 36%,
+      rgb(0 0 0 / 70%) 56%,
+      rgb(0 0 0 / 92%) 74%,
+      #000 88%
+    ),
+    linear-gradient(
+      to bottom,
+      #000 0%,
+      rgb(0 0 0 / 96%) 26%,
+      rgb(0 0 0 / 78%) 42%,
+      rgb(0 0 0 / 52%) 58%,
+      rgb(0 0 0 / 26%) 72%,
+      rgb(0 0 0 / 8%) 86%,
+      transparent 100%
+    );
+  -webkit-mask-composite: source-in;
 }
 
-/* Softens the top and bottom so the plate never meets a hard page edge. */
+/*
+ * Darkens the plate under the title bar so artwork never runs bright into the
+ * window edge. Graduated for the same reason as the masks above.
+ */
 .backdropFade {
   position: absolute;
   inset: 0;
   background: linear-gradient(
     to bottom,
-    var(--bg) 0%,
-    rgb(14 15 17 / 35%) 22%,
-    rgb(14 15 17 / 55%) 62%,
-    var(--bg) 100%
+    rgb(14 15 17 / 72%) 0%,
+    rgb(14 15 17 / 60%) 8%,
+    rgb(14 15 17 / 44%) 18%,
+    rgb(14 15 17 / 28%) 30%,
+    rgb(14 15 17 / 14%) 44%,
+    rgb(14 15 17 / 5%) 60%,
+    transparent 76%
   );
 }
 
@@ -48,31 +112,49 @@
   display: flex;
   flex: 0 0 auto;
   flex-direction: column;
-  width: clamp(320px, 27vw, 430px);
+  width: var(--sidebar-width);
   height: 100%;
-  padding: 4px 26px 0 18px;
+  padding: 4px 22px 0 18px;
   overflow-y: auto;
-  scrollbar-width: thin;
   transition: width 320ms var(--ease-out);
   /*
-   * A light backdrop can leave this text unreadable. A soft vertical scrim
-   * sits behind the panel only — the grid keeps the untouched image.
+   * Only the strip that actually overlaps the backdrop needs a scrim, and it
+   * has to fade out on the same curve as the plate behind it — a shorter or
+   * harder ramp shows up as a seam.
    */
   background: linear-gradient(
     to bottom,
-    rgb(14 15 17 / 30%) 0%,
-    rgb(14 15 17 / 55%) 40%,
-    rgb(14 15 17 / 82%) 100%
+    rgb(14 15 17 / 46%) 0%,
+    rgb(14 15 17 / 38%) 12%,
+    rgb(14 15 17 / 26%) 24%,
+    rgb(14 15 17 / 14%) 36%,
+    rgb(14 15 17 / 5%) 48%,
+    transparent 62%
   );
 }
 
+/*
+ * `scrollbar-width` is deliberately absent: setting it makes Chromium ignore
+ * every ::-webkit-scrollbar rule and fall back to a solid light bar.
+ */
 .panel::-webkit-scrollbar {
-  width: 8px;
+  width: 10px;
+}
+
+.panel::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .panel::-webkit-scrollbar-thumb {
-  border-radius: 4px;
-  background: var(--border);
+  border: 3px solid transparent;
+  border-radius: var(--radius-pill);
+  background: rgb(255 255 255 / 9%);
+  background-clip: content-box;
+}
+
+.panel::-webkit-scrollbar-thumb:hover {
+  background: rgb(255 255 255 / 20%);
+  background-clip: content-box;
 }
 
 /* Collapsed: a narrow rail keeping the poster reachable, per the spec. */

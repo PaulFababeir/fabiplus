@@ -1,16 +1,14 @@
 /*
- * `titleBarOverlay` paints the native minimise/maximise/close buttons over the
- * top-right of the window. Electron exposes the usable strip through the
- * titlebar-area env vars, so the bar is sized to that rather than to the full
- * window — otherwise the profile menu ends up underneath the controls.
+ * The native window buttons occupy their own strip above this bar (see
+ * `.titlebarStrip` in App.module.css), so the bar can span the full width
+ * without anything landing underneath the close button.
  */
 .bar {
   display: flex;
   align-items: center;
   gap: 12px;
   height: var(--topbar-height);
-  width: env(titlebar-area-width, 100%);
-  padding: 0 12px 0 var(--gutter);
+  padding: 0 var(--gutter);
   position: relative;
   z-index: 30;
   flex: 0 0 auto;
@@ -22,15 +20,15 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  height: 30px;
-  padding: 0 10px 0 14px;
-  min-width: 132px;
+  height: var(--control-height);
+  padding: 0 14px 0 18px;
+  min-width: 158px;
   border: none;
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-control);
   background: var(--control);
   color: var(--text);
   font: inherit;
-  font-size: 13px;
+  font-size: 14px;
   cursor: pointer;
 }
 
@@ -49,10 +47,10 @@
   flex: 1;
   display: flex;
   align-items: center;
-  gap: 10px;
-  height: 30px;
-  padding: 0 16px;
-  border-radius: var(--radius-pill);
+  gap: 12px;
+  height: var(--control-height);
+  padding: 0 20px;
+  border-radius: var(--radius-control);
   background: var(--control);
   color: var(--text-muted);
   transition: background 120ms var(--ease-out);
@@ -69,7 +67,7 @@
   background: transparent;
   color: var(--text);
   font: inherit;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .searchInput::placeholder {
@@ -101,15 +99,15 @@
 .profile {
   display: flex;
   align-items: center;
-  gap: 8px;
-  height: 30px;
-  padding: 0 8px 0 4px;
+  gap: 10px;
+  height: var(--profile-height);
+  padding: 0 14px 0 6px;
   border: none;
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-control);
   background: var(--control);
   color: var(--text);
   font: inherit;
-  font-size: 13px;
+  font-size: 14px;
   cursor: pointer;
 }
 
@@ -120,11 +118,11 @@
 .avatar {
   display: grid;
   place-items: center;
-  width: 22px;
-  height: 22px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   color: var(--accent-contrast);
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 700;
 }
 

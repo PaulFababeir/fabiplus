@@ -44,17 +44,14 @@ export function ContinueWatching({
       <h2 className={styles.heading}>Continue watching</h2>
 
       <div className={styles.deck}>
-        {/* Decorative cards behind, drawn back-to-front. */}
+        {/* Decorative cards behind, drawn back-to-front. Offsets live in CSS. */}
         {Array.from({ length: Math.min(GHOST_COUNT, deck.length - 1) }, (_, i) => {
           const depth = Math.min(GHOST_COUNT, deck.length - 1) - i;
           return (
             <div
               key={`ghost-${depth}`}
               className={`${styles.card} ${styles.ghost}`}
-              style={{
-                transform: `translate(${depth * 13}px, ${depth * -11}px) scale(${1 - depth * 0.018})`,
-                opacity: 0.45 - depth * 0.12
-              }}
+              data-depth={depth}
               aria-hidden="true"
             />
           );
@@ -119,20 +116,22 @@ function CardFace({ entry }: { entry: ContinueEntry }): React.JSX.Element {
       <span className={styles.scrim} />
 
       <span className={styles.content}>
-        <span className={styles.info}>
-          <h3 className={styles.title}>{displayTitle(item)}</h3>
-          <span className={styles.sub}>
-            {displayYear(item) ?? '—'}
-            {remaining && ` · ${remaining} left`}
+        <span className={styles.contentRow}>
+          <span className={styles.info}>
+            <h3 className={styles.title}>{displayTitle(item)}</h3>
+            <span className={styles.sub}>
+              {displayYear(item) ?? '—'}
+              {remaining && ` · ${remaining} left`}
+            </span>
+          </span>
+          <span className={styles.play}>
+            <Icon name="play" size={22} />
           </span>
         </span>
-        <span className={styles.play}>
-          <Icon name="play" size={22} />
-        </span>
-      </span>
 
-      <span className={styles.progressTrack}>
-        <span className={styles.progressFill} style={{ width: `${progress * 100}%` }} />
+        <span className={styles.progressTrack}>
+          <span className={styles.progressFill} style={{ width: `${progress * 100}%` }} />
+        </span>
       </span>
     </>
   );

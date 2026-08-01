@@ -66,6 +66,7 @@ export default function App(): React.JSX.Element {
     <div className={styles.app} onClick={onBackgroundClick}>
       <BackdropLayer item={sidebarOpen ? selected : null} />
 
+      <div className={`${styles.titlebarStrip} titlebar-drag`} />
       <TopBar />
 
       <div className={styles.body}>

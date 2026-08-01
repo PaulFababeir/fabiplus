@@ -1,9 +1,13 @@
+/*
+ * The design lands ~4 columns in the movie column, i.e. posters around
+ * 230px rather than the 160px the first pass used.
+ */
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(158px, 1fr));
-  gap: 22px 18px;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 28px 24px;
   margin: 0;
-  padding: 0 0 40px;
+  padding: 0 0 48px;
   list-style: none;
 }
 

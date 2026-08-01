@@ -11,20 +11,25 @@
 }
 
 /*
- * The deck: the active card sits in front, with two peeking behind offset up
- * and to the right, matching the stacked treatment in the design.
+ * The deck: the front card occupies 78% of the row, with two smaller cards
+ * peeking out to its right. Sizes come from the Figma frame, where the
+ * ghosts extend nearly to the edge of the movie column rather than sitting
+ * just behind the hero.
  */
 .deck {
   position: relative;
-  aspect-ratio: var(--backdrop-ratio);
-  max-height: 460px;
-  /* Room for the offset cards behind. */
-  margin-right: 26px;
+  width: 100%;
+  /* 78% width at 3:2 ⇒ height is 0.52 × width, so the row is ~1.92:1. */
+  aspect-ratio: 1.92 / 1;
+  max-height: 470px;
 }
 
 .card {
   position: absolute;
-  inset: 0;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 78%;
   overflow: hidden;
   border: 1px solid rgb(255 255 255 / 12%);
   border-radius: var(--radius-lg);
@@ -33,6 +38,17 @@
     transform 320ms var(--ease-out),
     opacity 320ms var(--ease-out);
   will-change: transform;
+}
+
+/* Translations are relative to the card's own width, not the deck's. */
+.ghost[data-depth='1'] {
+  transform: translateX(18%) scale(0.87);
+  opacity: 0.5;
+}
+
+.ghost[data-depth='2'] {
+  transform: translateX(38%) scale(0.78);
+  opacity: 0.28;
 }
 
 /* Behind-cards are pure decoration. */
@@ -71,11 +87,15 @@
   );
 }
 
+/* Title bottom-left, play glyph right, progress rule spanning beneath both. */
 .content {
   position: absolute;
   right: 30px;
-  bottom: 26px;
+  bottom: 24px;
   left: 30px;
+}
+
+.contentRow {
   display: flex;
   align-items: flex-end;
   gap: 20px;
@@ -123,11 +143,8 @@
 }
 
 .progressTrack {
-  position: absolute;
-  right: 30px;
-  bottom: 14px;
-  left: 30px;
-  height: 3px;
+  height: 2px;
+  margin-top: 16px;
   border-radius: 2px;
   background: rgb(255 255 255 / 25%);
 }

@@ -6,6 +6,18 @@
   overflow: hidden;
 }
 
+/*
+ * Reserved row for the native window buttons. Nothing renders here — it just
+ * keeps the app's controls clear of the close button and gives the whole strip
+ * to window dragging.
+ */
+.titlebarStrip {
+  height: var(--titlebar-strip);
+  flex: 0 0 auto;
+  position: relative;
+  z-index: 40;
+}
+
 .body {
   display: flex;
   flex: 1;
@@ -17,18 +29,41 @@
 .content {
   flex: 1;
   min-width: 0;
-  padding: 0 0 0 var(--gutter);
+  padding: 0 6px 0 var(--gutter);
   overflow-y: auto;
-  scrollbar-width: thin;
 }
 
+/*
+ * Note the absence of `scrollbar-width`. Specifying it switches Chromium to
+ * the standard scrollbar and makes it ignore every rule below, which is what
+ * produced the plain light bar.
+ *
+ * The thumb is drawn inside a transparent border via background-clip, so it
+ * reads as a floating capsule rather than a filled gutter.
+ */
 .content::-webkit-scrollbar {
-  width: 10px;
+  width: 12px;
+}
+
+.content::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .content::-webkit-scrollbar-thumb {
-  border-radius: 5px;
-  background: var(--border);
+  border: 4px solid transparent;
+  border-radius: var(--radius-pill);
+  background: rgb(255 255 255 / 8%);
+  background-clip: content-box;
+  transition: background 160ms var(--ease-out);
+}
+
+.content::-webkit-scrollbar-thumb:hover {
+  background: rgb(255 255 255 / 22%);
+  background-clip: content-box;
+}
+
+.content::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 .status {

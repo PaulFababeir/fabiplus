@@ -22,11 +22,32 @@
   --radius-lg: 16px;
   --radius-pill: 999px;
 
-  --topbar-height: 40px;
-  --gutter: 28px;
+  /*
+   * Control heights measured off the Figma frame (~1540x1266) and scaled to
+   * CSS px. The first pass ran everything at 30px, which read as too thin
+   * against the design.
+   */
+  /*
+   * The native minimise/maximise/close buttons get a row to themselves; the
+   * app's own controls start below it so nothing can collide with them.
+   */
+  --titlebar-strip: 38px;
+  --topbar-height: 60px;
+  --control-height: 44px;
+  --profile-height: 44px;
+  --pill-height: 38px;
+  --gutter: 40px;
+
+  /* Top-bar controls are deliberately less round than the genre pills. */
+  --radius-control: 12px;
 
   --poster-ratio: 2 / 3;
+  /* The hero card in the design is nearer 3:2 than a 16:9 backdrop crop. */
+  --hero-ratio: 3 / 2;
   --backdrop-ratio: 16 / 9;
+
+  /* Sidebar and the backdrop plate behind it share one width. */
+  --sidebar-width: clamp(340px, 27vw, 440px);
 
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 }
