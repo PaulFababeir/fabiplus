@@ -4,8 +4,11 @@ import { join, resolve as resolvePath, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { IPC } from '@shared/ipc';
-import type { AppConfig, ScanResult } from '@shared/types';
+import type { AppConfig, EnrichmentSummary, LibraryCatalog } from '@shared/types';
 import { imageCacheDir, loadConfig, saveConfig } from './services/config.js';
+import { enrichLibrary } from './services/enrichment.js';
+import { loadLibrary, mergeScan, saveLibrary } from './services/library.js';
+import { TmdbProvider } from './services/metadata/tmdb.js';
 import { scanRoots } from './services/scanner.js';
 
 const isDev = !app.isPackaged;
@@ -75,10 +78,48 @@ function registerIpc(): void {
     return saveConfig({ ...config, tmdbApiKey: value });
   });
 
-  ipcMain.handle(IPC.libraryScan, async (): Promise<ScanResult> => {
+  ipcMain.handle(IPC.libraryGet, async (): Promise<LibraryCatalog> => loadLibrary());
+
+  ipcMain.handle(IPC.libraryScan, async (): Promise<LibraryCatalog> => {
     const config = await loadConfig();
-    return scanRoots(config.movieRoots, 'movie');
+    const scan = await scanRoots(config.movieRoots, 'movie');
+    const merged = mergeScan(await loadLibrary(), scan, config.movieRoots);
+    await saveLibrary(merged);
+    return merged;
   });
+
+  ipcMain.handle(
+    IPC.libraryEnrich,
+    async (event, force: unknown): Promise<EnrichmentSummary> => {
+      const config = await loadConfig();
+      if (!config.tmdbApiKey) {
+        return {
+          total: 0,
+          matched: 0,
+          needsReview: 0,
+          failed: 0,
+          durationMs: 0,
+          review: [],
+          fatalError: 'No TMDB API key set. Add one in Settings.'
+        };
+      }
+
+      const catalog = await loadLibrary();
+      const provider = new TmdbProvider(config.tmdbApiKey);
+
+      const { items, summary } = await enrichLibrary(catalog.items, provider, {
+        force: force === true,
+        onProgress: (progress) => {
+          if (!event.sender.isDestroyed()) {
+            event.sender.send(IPC.libraryEnrichProgress, progress);
+          }
+        }
+      });
+
+      await saveLibrary({ ...catalog, items });
+      return summary;
+    }
+  );
 }
 
 function createWindow(): void {
