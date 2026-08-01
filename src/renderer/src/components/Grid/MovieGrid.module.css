@@ -41,8 +41,13 @@
   box-shadow: 0 14px 32px rgb(0 0 0 / 55%);
 }
 
-.card[data-selected='true'] .posterWrap {
-  outline: 2px solid var(--accent);
+/*
+ * Hover only. A persistent ring on the selected card competed with the
+ * sidebar, which already tells you what is open.
+ */
+.card:hover .posterWrap,
+.card:focus-visible .posterWrap {
+  outline: 2px solid rgb(255 255 255 / 55%);
   outline-offset: 2px;
 }
 
