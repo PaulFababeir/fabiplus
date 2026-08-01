@@ -18,12 +18,18 @@
   z-index: 40;
 }
 
+/*
+ * The gap under the top bar lives here, on the non-scrolling row, rather than
+ * as padding inside the scroll area — otherwise it scrolls away and posters
+ * run straight into the search bar.
+ */
 .body {
   display: flex;
   flex: 1;
   min-height: 0;
   position: relative;
   z-index: 10;
+  padding-top: var(--titlebar-strip);
 }
 
 .content {

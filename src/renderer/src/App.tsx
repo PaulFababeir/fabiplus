@@ -25,7 +25,6 @@ export default function App(): React.JSX.Element {
     sidebarOpen,
     settingsOpen,
     rematchOpen,
-    setSidebarOpen,
     setRematchOpen
   } = useUi();
 
@@ -47,23 +46,13 @@ export default function App(): React.JSX.Element {
     [items, selectedId]
   );
 
-  /**
-   * Clicking empty space collapses the sidebar. Anything meaningful carries
-   * `data-interactive`, so this only fires on genuine background clicks.
-   */
-  const onBackgroundClick = (event: React.MouseEvent<HTMLDivElement>): void => {
-    if (!sidebarOpen) return;
-    if ((event.target as HTMLElement).closest('[data-interactive]')) return;
-    setSidebarOpen(false);
-  };
-
   const pendingReview = useMemo(
     () => needsReviewItems(items, AUTO_ACCEPT_UI).length,
     [items]
   );
 
   return (
-    <div className={styles.app} onClick={onBackgroundClick}>
+    <div className={styles.app}>
       <BackdropLayer item={sidebarOpen ? selected : null} />
 
       <div className={`${styles.titlebarStrip} titlebar-drag`} />
@@ -74,7 +63,7 @@ export default function App(): React.JSX.Element {
           {error && <p className={styles.error}>{error}</p>}
 
           {pendingReview > 0 && (
-            <div className={styles.reviewBanner} data-interactive>
+            <div className={styles.reviewBanner}>
               <span>
                 {pendingReview} {pendingReview === 1 ? 'film needs' : 'films need'} a match
                 confirmed.

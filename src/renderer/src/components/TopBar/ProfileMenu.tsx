@@ -55,7 +55,7 @@ export function ProfileMenu(): React.JSX.Element {
   };
 
   return (
-    <div className={styles.profileWrap} ref={wrapRef} data-interactive>
+    <div className={styles.profileWrap} ref={wrapRef}>
       <button
         type="button"
         className={styles.profile}

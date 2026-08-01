@@ -22,7 +22,6 @@ export function TopBar(): React.JSX.Element {
       <button
         type="button"
         className={styles.kind}
-        data-interactive
         // Series has no library root yet, so this toggles but stays on movies.
         onClick={() => setKind(kind === 'movie' ? 'series' : 'movie')}
       >
@@ -30,7 +29,7 @@ export function TopBar(): React.JSX.Element {
         <Icon name="chevron-down" size={14} />
       </button>
 
-      <div className={styles.search} data-interactive>
+      <div className={styles.search}>
         <Icon name="search" size={14} />
         <input
           className={styles.searchInput}
@@ -57,7 +56,6 @@ export function TopBar(): React.JSX.Element {
         type="button"
         className={styles.kind}
         style={{ minWidth: 0, padding: '0 10px' }}
-        data-interactive
         aria-label="Settings"
         onClick={toggleSettings}
       >

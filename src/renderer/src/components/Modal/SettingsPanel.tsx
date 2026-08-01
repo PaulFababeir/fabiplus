@@ -56,7 +56,7 @@ export function SettingsPanel(): React.JSX.Element {
   };
 
   return (
-    <div className={styles.scrim} onMouseDown={toggleSettings} data-interactive>
+    <div className={styles.scrim} onMouseDown={toggleSettings}>
       <div
         className={styles.dialog}
         role="dialog"

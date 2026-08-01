@@ -40,7 +40,7 @@ export function ContinueWatching({
   };
 
   return (
-    <section className={styles.section} data-interactive>
+    <section className={styles.section}>
       <h2 className={styles.heading}>Continue watching</h2>
 
       <div className={styles.deck}>

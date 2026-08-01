@@ -35,7 +35,6 @@ export function MovieGrid({ items, profileState }: MovieGridProps): React.JSX.El
             <button
               type="button"
               className={styles.card}
-              data-interactive
               data-selected={item.id === selectedId}
               onClick={() => select(item.id)}
             >

@@ -5,7 +5,7 @@ import type { LibraryItem, ProfileState } from '@shared/types';
 import { TMDB_ATTRIBUTION } from '@renderer/lib/attribution';
 import { AUTO_ACCEPT_UI } from '@renderer/lib/constants';
 import { displayTitle, displayYear, posterFor, runtimeLabel } from '@renderer/lib/selectors';
-import { useProfile } from '@renderer/state/useProfile';
+import { PosterPicker } from '@renderer/components/Modal/PosterPicker';
 import { useUi } from '@renderer/state/useUi';
 import { Icon } from '@renderer/components/ui/Icon';
 import styles from './Sidebar.module.css';
@@ -38,33 +38,18 @@ export function BackdropLayer({ item }: { item: LibraryItem | null }): React.JSX
 }
 
 export function Sidebar({ item, profileState }: SidebarProps): React.JSX.Element | null {
-  const { sidebarOpen, setSidebarOpen, setRematchOpen } = useUi();
-  const choosePoster = useProfile((s) => s.choosePoster);
+  const { sidebarOpen, select, setRematchOpen } = useUi();
   const [tab, setTab] = useState<Tab>('cast');
   const [showAllCast, setShowAllCast] = useState(false);
   const [picking, setPicking] = useState(false);
 
-  if (!item) return null;
+  // Collapsing removes the panel outright — nothing peeks in from the edge.
+  // Picking any film in the grid brings it back.
+  if (!item || !sidebarOpen) return null;
 
   const poster = posterFor(item, profileState);
   const posters = item.metadata?.posters ?? [];
   const chosenIndex = profileState?.posterChoice[item.id] ?? 0;
-
-  // Collapsed: leave the poster as the way back in.
-  if (!sidebarOpen) {
-    return (
-      <aside className={styles.rail} data-interactive>
-        <button
-          type="button"
-          className={styles.railPoster}
-          aria-label={`Open details for ${displayTitle(item)}`}
-          onClick={() => setSidebarOpen(true)}
-        >
-          {poster && <img className={styles.railImage} src={toMovieUrl(poster)} alt="" />}
-        </button>
-      </aside>
-    );
-  }
 
   const meta = item.metadata;
   const director = meta?.crew.find((c) => c.job === 'Director')?.name ?? null;
@@ -73,7 +58,16 @@ export function Sidebar({ item, profileState }: SidebarProps): React.JSX.Element
     item.match !== null && !item.match.correctedByUser && item.match.confidence < AUTO_ACCEPT_UI;
 
   return (
-    <aside className={styles.panel} data-interactive>
+    <aside className={styles.panel}>
+      <button
+        type="button"
+        className={styles.close}
+        aria-label="Close details"
+        onClick={() => select(null)}
+      >
+        <Icon name="close" size={16} />
+      </button>
+
       <div className={styles.posterBlock}>
         <div className={styles.posterFrame}>
           {poster && <img className={styles.posterImage} src={toMovieUrl(poster)} alt="" />}
@@ -85,23 +79,6 @@ export function Sidebar({ item, profileState }: SidebarProps): React.JSX.Element
           )}
         </div>
       </div>
-
-      {picking && posters.length > 1 && (
-        <div className={styles.posterChoices}>
-          {posters.map((option, i) => (
-            <button
-              key={option.remotePath}
-              type="button"
-              className={styles.choice}
-              data-active={i === chosenIndex}
-              aria-label={`Use poster ${i + 1}`}
-              onClick={() => void choosePoster(item.id, i)}
-            >
-              <img className={styles.choiceImage} src={toMovieUrl(option.localPath)} alt="" />
-            </button>
-          ))}
-        </div>
-      )}
 
       <div className={styles.header}>
         <h2 className={styles.title}>
@@ -207,9 +184,17 @@ export function Sidebar({ item, profileState }: SidebarProps): React.JSX.Element
         </>
       )}
 
+      {picking && (
+        <PosterPicker item={item} chosenIndex={chosenIndex} onClose={() => setPicking(false)} />
+      )}
+
       <div className={styles.footer}>
-        <button type="button" className={styles.rematchLink} onClick={() => setRematchOpen(true)}>
-          Wrong film? Search again
+        <button
+          type="button"
+          className={styles.rematchLink}
+          onClick={() => setRematchOpen(true, item.id)}
+        >
+          Wrong film or details? Search again
         </button>
         <p style={{ margin: '10px 0 0' }}>{TMDB_ATTRIBUTION}</p>
       </div>

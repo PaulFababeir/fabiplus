@@ -62,7 +62,7 @@ export function FilterRow({ genres }: FilterRowProps): React.JSX.Element {
   };
 
   return (
-    <div className={styles.row} data-interactive>
+    <div className={styles.row}>
       <div className={styles.track} ref={trackRef}>
         <button
           type="button"
