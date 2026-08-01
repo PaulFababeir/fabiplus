@@ -92,6 +92,25 @@ function toMetadata(
   };
 }
 
+/**
+ * Applies a match the user picked by hand, bypassing the scorer entirely.
+ * Marked `correctedByUser` so a later re-enrichment never overrides it.
+ */
+export async function applyManualMatch(
+  item: LibraryItem,
+  provider: MetadataProvider,
+  remoteId: number
+): Promise<LibraryItem> {
+  const details = await withRetry(() => provider.fetchDetails(remoteId));
+  const { posters, backdrop } = await cacheArtwork(details, provider);
+
+  return {
+    ...item,
+    metadata: toMetadata(details, provider.id, posters, backdrop),
+    match: { strategy: 'manual', confidence: 1, correctedByUser: true }
+  };
+}
+
 /** Runs `worker` over `items` with a bounded number in flight. */
 async function pool<T>(items: T[], limit: number, worker: (item: T) => Promise<void>): Promise<void> {
   let cursor = 0;
@@ -132,6 +151,15 @@ export async function enrichLibrary(
     if (signal?.aborted || fatalError) return;
 
     try {
+      // A match the user fixed by hand is authoritative. On a forced refresh
+      // we re-pull its metadata by id rather than re-running the search,
+      // so the correction survives but the data still updates.
+      if (item.match?.correctedByUser && item.metadata) {
+        byId.set(item.id, await applyManualMatch(item, provider, item.metadata.remoteId));
+        matched += 1;
+        return;
+      }
+
       const candidates = await withRetry(() =>
         provider.search(item.parsed.searchTitle, item.parsed.year)
       );

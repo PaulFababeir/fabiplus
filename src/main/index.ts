@@ -4,11 +4,30 @@ import { join, resolve as resolvePath, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { IPC } from '@shared/ipc';
-import type { AppConfig, EnrichmentSummary, LibraryCatalog } from '@shared/types';
+import type {
+  AppConfig,
+  EnrichmentSummary,
+  LibraryCatalog,
+  Profile,
+  ProfileState,
+  ReviewCandidate
+} from '@shared/types';
 import { imageCacheDir, loadConfig, saveConfig } from './services/config.js';
-import { enrichLibrary } from './services/enrichment.js';
+import { applyManualMatch, enrichLibrary } from './services/enrichment.js';
 import { loadLibrary, mergeScan, saveLibrary } from './services/library.js';
+import { rankCandidates } from './services/metadata/matcher.js';
 import { TmdbProvider } from './services/metadata/tmdb.js';
+import {
+  clearWatchProgress,
+  createProfile,
+  deleteProfile,
+  ensureProfile,
+  loadProfiles,
+  loadProfileState,
+  renameProfile,
+  setPosterChoice,
+  setWatchProgress
+} from './services/profiles.js';
 import { scanRoots } from './services/scanner.js';
 
 const isDev = !app.isPackaged;
@@ -78,6 +97,11 @@ function registerIpc(): void {
     return saveConfig({ ...config, tmdbApiKey: value });
   });
 
+  ipcMain.handle(IPC.configSetLastProfile, async (_event, id: unknown): Promise<AppConfig> => {
+    const config = await loadConfig();
+    return saveConfig({ ...config, lastProfileId: typeof id === 'string' ? id : null });
+  });
+
   ipcMain.handle(IPC.libraryGet, async (): Promise<LibraryCatalog> => loadLibrary());
 
   ipcMain.handle(IPC.libraryScan, async (): Promise<LibraryCatalog> => {
@@ -116,9 +140,120 @@ function registerIpc(): void {
         }
       });
 
-      await saveLibrary({ ...catalog, items });
+      // A failed save silently discards a whole enrichment run, so surface it
+      // rather than returning a summary that claims success.
+      try {
+        await saveLibrary({ ...catalog, items });
+      } catch (err) {
+        const detail = err instanceof Error ? err.message : String(err);
+        console.error('[library] failed to save catalog after enrichment:', detail);
+        return { ...summary, fatalError: `Metadata was fetched but could not be saved: ${detail}` };
+      }
+
+      console.log(
+        `[library] saved ${items.filter((i) => i.metadata).length}/${items.length} enriched items`
+      );
       return summary;
     }
+  );
+
+  ipcMain.handle(
+    IPC.libraryRematch,
+    async (_event, movieId: unknown, remoteId: unknown): Promise<LibraryCatalog> => {
+      const config = await loadConfig();
+      const catalog = await loadLibrary();
+      if (!config.tmdbApiKey || typeof movieId !== 'string' || typeof remoteId !== 'number') {
+        return catalog;
+      }
+
+      const target = catalog.items.find((item) => item.id === movieId);
+      if (!target) return catalog;
+
+      const provider = new TmdbProvider(config.tmdbApiKey);
+      const updated = await applyManualMatch(target, provider, remoteId);
+      const next: LibraryCatalog = {
+        ...catalog,
+        items: catalog.items.map((item) => (item.id === movieId ? updated : item))
+      };
+
+      await saveLibrary(next);
+      return next;
+    }
+  );
+
+  ipcMain.handle(
+    IPC.librarySearchProvider,
+    async (_event, query: unknown, year: unknown): Promise<ReviewCandidate[]> => {
+      const config = await loadConfig();
+      if (!config.tmdbApiKey || typeof query !== 'string' || query.trim() === '') return [];
+
+      const parsedYear = typeof year === 'number' ? year : null;
+      const provider = new TmdbProvider(config.tmdbApiKey);
+      const candidates = await provider.search(query.trim(), parsedYear);
+
+      return rankCandidates(query.trim(), parsedYear, candidates)
+        .slice(0, 8)
+        .map((scored) => ({
+          remoteId: scored.candidate.id,
+          title: scored.candidate.title,
+          year: scored.candidate.year,
+          score: scored.score
+        }));
+    }
+  );
+
+  // -- Profiles ------------------------------------------------------------
+
+  ipcMain.handle(IPC.profilesList, async (): Promise<Profile[]> => ensureProfile());
+
+  ipcMain.handle(IPC.profileCreate, async (_event, name: unknown): Promise<Profile[]> => {
+    await createProfile(typeof name === 'string' ? name : '');
+    return loadProfiles();
+  });
+
+  ipcMain.handle(IPC.profileDelete, async (_event, id: unknown): Promise<Profile[]> => {
+    if (typeof id !== 'string') return loadProfiles();
+    await deleteProfile(id);
+    // Never leave the app with zero profiles to switch to.
+    return ensureProfile();
+  });
+
+  ipcMain.handle(
+    IPC.profileRename,
+    async (_event, id: unknown, name: unknown): Promise<Profile[]> => {
+      if (typeof id !== 'string' || typeof name !== 'string') return loadProfiles();
+      return renameProfile(id, name);
+    }
+  );
+
+  ipcMain.handle(IPC.profileStateGet, async (_event, id: unknown): Promise<ProfileState> => {
+    return loadProfileState(String(id));
+  });
+
+  // -- Watch state ---------------------------------------------------------
+
+  ipcMain.handle(
+    IPC.watchSet,
+    async (
+      _event,
+      profileId: unknown,
+      movieId: unknown,
+      positionSec: unknown,
+      durationSec: unknown
+    ): Promise<ProfileState> =>
+      setWatchProgress(String(profileId), String(movieId), Number(positionSec), Number(durationSec))
+  );
+
+  ipcMain.handle(
+    IPC.watchClear,
+    async (_event, profileId: unknown, movieId: unknown): Promise<ProfileState> =>
+      clearWatchProgress(String(profileId), String(movieId))
+  );
+
+  ipcMain.handle(
+    IPC.posterChoiceSet,
+    async (_event, profileId: unknown, movieId: unknown, index: unknown): Promise<ProfileState> =>
+      setPosterChoice(String(profileId), String(movieId), Number(index))
   );
 }
 
@@ -151,15 +286,32 @@ function createWindow(): void {
   }
 }
 
-void app.whenReady().then(() => {
-  registerMovieProtocol();
-  registerIpc();
-  createWindow();
-
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+/**
+ * All state lives in plain JSON files with no locking, so a second instance
+ * would race the first and silently clobber it — that is how a profile ends
+ * up orphaned. Refuse to start twice; focus the existing window instead.
+ */
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    const [existing] = BrowserWindow.getAllWindows();
+    if (existing) {
+      if (existing.isMinimized()) existing.restore();
+      existing.focus();
+    }
   });
-});
+
+  void app.whenReady().then(() => {
+    registerMovieProtocol();
+    registerIpc();
+    createWindow();
+
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    });
+  });
+}
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
