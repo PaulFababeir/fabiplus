@@ -162,14 +162,31 @@ describe('TmdbProvider.fetchDetails', () => {
     assert.ok(!jobs.includes('Best Boy Grip'));
   });
 
-  it('ranks text-free artwork above English, and English above other languages', async () => {
+  it('ranks posters English-first so the title art is kept', async () => {
     const { fetch: f } = stub([details]);
     const d = await new TmdbProvider('k', f).fetchDetails(157336);
 
-    assert.equal(d.posters[0]?.path, '/best.jpg', 'null-language poster first');
-    assert.equal(d.posters[1]?.path, '/good-en.jpg', 'higher-voted English next');
-    assert.equal(d.posters[2]?.path, '/low.jpg');
+    assert.equal(d.posters[0]?.path, '/good-en.jpg', 'highest-voted English poster first');
+    assert.equal(d.posters[1]?.path, '/low.jpg', 'lower-voted English still beats textless');
+    assert.equal(d.posters[2]?.path, '/best.jpg', 'textless is the fallback');
     assert.equal(d.posters[3]?.path, '/fr.jpg', 'foreign-language last despite top vote');
+  });
+
+  it('ranks backdrops by vote without penalising textless plates', async () => {
+    const { fetch: f } = stub([
+      {
+        ...details,
+        images: {
+          posters: [],
+          backdrops: [
+            { file_path: '/bd-en.jpg', width: 1280, height: 720, vote_average: 4, iso_639_1: 'en' },
+            { file_path: '/bd-clean.jpg', width: 1280, height: 720, vote_average: 9, iso_639_1: null }
+          ]
+        }
+      }
+    ]);
+    const d = await new TmdbProvider('k', f).fetchDetails(157336);
+    assert.equal(d.backdrops[0]?.path, '/bd-clean.jpg');
   });
 
   it('survives a response with no credits or images', async () => {

@@ -72,11 +72,20 @@ function yearOf(releaseDate: string | undefined): number | null {
 }
 
 /**
- * Ranks artwork: text-free or English first, then by provider vote. TMDB
- * returns posters in many languages and the localized ones are usually not
- * what you want in an English UI.
+ * Ranks artwork English-first.
+ *
+ * TMDB tags posters with no text at all as `iso_639_1: null`. Those look
+ * bare in a grid — the title treatment is part of what makes a poster
+ * readable at thumbnail size — so English artwork wins, textless is the
+ * fallback, and other languages come last.
  */
-function rankImages(images: TmdbImage[]): RemoteImage[] {
+function rankImages(images: TmdbImage[], preferText: boolean): RemoteImage[] {
+  const langRank = (l: string | null): number => {
+    if (l === 'en') return 0;
+    if (l === null) return preferText ? 1 : 0;
+    return 2;
+  };
+
   return images
     .map((img) => ({
       path: img.file_path,
@@ -86,7 +95,6 @@ function rankImages(images: TmdbImage[]): RemoteImage[] {
       language: img.iso_639_1 ?? null
     }))
     .sort((a, b) => {
-      const langRank = (l: string | null): number => (l === null ? 0 : l === 'en' ? 1 : 2);
       const byLang = langRank(a.language) - langRank(b.language);
       return byLang !== 0 ? byLang : b.voteAverage - a.voteAverage;
     });
@@ -212,8 +220,10 @@ export class TmdbProvider implements MetadataProvider {
       rating: typeof d.vote_average === 'number' ? d.vote_average : null,
       cast,
       crew,
-      posters: rankImages(d.images?.posters ?? []),
-      backdrops: rankImages(d.images?.backdrops ?? [])
+      // Posters want the title art; backdrops sit behind the sidebar's own
+      // text, so a clean textless plate is preferable there.
+      posters: rankImages(d.images?.posters ?? [], true),
+      backdrops: rankImages(d.images?.backdrops ?? [], false)
     };
   }
 
