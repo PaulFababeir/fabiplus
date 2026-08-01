@@ -1,3 +1,5 @@
+@import './fonts.css';
+
 /*
  * Design tokens read off the Figma mockup. Values here are the single source
  * of truth — components reference the variables, never raw hex.
@@ -47,7 +49,7 @@
   --backdrop-ratio: 16 / 9;
 
   /* Sidebar and the backdrop plate behind it share one width. */
-  --sidebar-width: clamp(340px, 27vw, 440px);
+  --sidebar-width: clamp(380px, 30vw, 500px);
 
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -66,9 +68,10 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font-family: 'Segoe UI Variable Display', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-family: Poppins, 'Segoe UI Variable Display', 'Segoe UI', system-ui, sans-serif;
   font-size: 14px;
   line-height: 1.5;
+  letter-spacing: -0.005em;
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
 }
