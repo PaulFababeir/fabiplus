@@ -1,0 +1,77 @@
+.app {
+  position: relative;
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  z-index: 10;
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
+  padding: 0 0 0 var(--gutter);
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.content::-webkit-scrollbar {
+  width: 10px;
+}
+
+.content::-webkit-scrollbar-thumb {
+  border-radius: 5px;
+  background: var(--border);
+}
+
+.status {
+  padding: 40px 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.error {
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border: 1px solid rgb(255 107 107 / 35%);
+  border-radius: var(--radius-sm);
+  background: rgb(255 107 107 / 10%);
+  color: #ff9c9c;
+  font-size: 12.5px;
+}
+
+.reviewBanner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border: 1px solid rgb(217 164 65 / 40%);
+  border-radius: var(--radius-sm);
+  background: rgb(217 164 65 / 9%);
+  color: #e8c179;
+  font-size: 12.5px;
+}
+
+.reviewAction {
+  margin-left: auto;
+  padding: 5px 11px;
+  border: 1px solid rgb(217 164 65 / 45%);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: #e8c179;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.reviewAction:hover {
+  background: rgb(217 164 65 / 16%);
+}
