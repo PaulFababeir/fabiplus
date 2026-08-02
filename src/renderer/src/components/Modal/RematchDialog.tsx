@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { LibraryItem, ReviewCandidate } from '@shared/types';
-import { AUTO_ACCEPT_UI } from '@renderer/lib/constants';
+import { AUTO_ACCEPT } from '@shared/constants';
 import { displayTitle, needsReviewItems } from '@renderer/lib/selectors';
 import { useLibrary } from '@renderer/state/useLibrary';
+import { useOnEscape } from '@renderer/lib/useDismiss';
 import { useUi } from '@renderer/state/useUi';
 import { Icon } from '@renderer/components/ui/Icon';
 import styles from './Modal.module.css';
@@ -21,17 +22,10 @@ export function RematchDialog(): React.JSX.Element {
 
   const items = catalog?.items ?? [];
   const target = rematchTargetId ? items.find((i) => i.id === rematchTargetId) : undefined;
-  const listed = target ? [target] : needsReviewItems(items, AUTO_ACCEPT_UI);
+  const listed = target ? [target] : needsReviewItems(items, AUTO_ACCEPT);
 
-  const close = (): void => setRematchOpen(false);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') close();
-    };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  });
+  const close = useCallback(() => setRematchOpen(false), [setRematchOpen]);
+  useOnEscape(close);
 
   return (
     <div className={styles.scrim} onMouseDown={close}>

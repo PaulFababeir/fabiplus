@@ -242,10 +242,3 @@ export class TmdbProvider implements MetadataProvider {
     return `${IMAGE_BASE}/${size}${path}`;
   }
 }
-
-/**
- * TMDB asks that applications using the free tier display this alongside
- * their logo. Rendered in the sidebar footer.
- */
-export const TMDB_ATTRIBUTION =
-  'This product uses the TMDB API but is not endorsed or certified by TMDB.';

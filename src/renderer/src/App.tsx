@@ -9,7 +9,7 @@ import { SettingsPanel } from '@renderer/components/Modal/SettingsPanel';
 import { Player } from '@renderer/components/Player/Player';
 import { BackdropLayer, Sidebar } from '@renderer/components/Sidebar/Sidebar';
 import { TopBar } from '@renderer/components/TopBar/TopBar';
-import { AUTO_ACCEPT_UI } from '@renderer/lib/constants';
+import { AUTO_ACCEPT } from '@shared/constants';
 import { filterAndSort, genresOf, needsReviewItems } from '@renderer/lib/selectors';
 import { useLibrary } from '@renderer/state/useLibrary';
 import { useProfile } from '@renderer/state/useProfile';
@@ -68,7 +68,7 @@ export default function App(): React.JSX.Element {
   }, [playing, profileState]);
 
   const pendingReview = useMemo(
-    () => needsReviewItems(items, AUTO_ACCEPT_UI).length,
+    () => needsReviewItems(items, AUTO_ACCEPT).length,
     [items]
   );
 

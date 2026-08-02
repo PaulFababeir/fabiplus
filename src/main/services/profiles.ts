@@ -2,7 +2,8 @@ import { randomUUID } from 'node:crypto';
 import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import { MAX_PROFILES, type Profile, type ProfileState, type WatchEntry } from '@shared/types';
+import { MAX_PROFILES } from '@shared/constants';
+import type { Profile, ProfileState, WatchEntry } from '@shared/types';
 import { readJsonOrFail, writeJsonAtomic } from './atomic-json.js';
 import { userDataDir } from './config.js';
 

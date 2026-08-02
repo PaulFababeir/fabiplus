@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
 /**
  * Hover-scrub thumbnails, generated on the fly.
@@ -15,13 +15,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 export function useScrubPreview(src: string): {
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
   requestFrame: (time: number) => void;
-  ready: boolean;
 } {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const pendingRef = useRef<number | null>(null);
   const seekingRef = useRef(false);
-  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     // Never attached to the DOM; it exists purely as a frame source.
@@ -51,20 +49,15 @@ export function useScrubPreview(src: string): {
       }
     };
 
-    const onLoaded = (): void => setReady(true);
-
     video.addEventListener('seeked', draw);
-    video.addEventListener('loadeddata', onLoaded);
 
     return () => {
       video.removeEventListener('seeked', draw);
-      video.removeEventListener('loadeddata', onLoaded);
       video.removeAttribute('src');
       video.load();
       videoRef.current = null;
       pendingRef.current = null;
       seekingRef.current = false;
-      setReady(false);
     };
   }, [src]);
 
@@ -80,5 +73,5 @@ export function useScrubPreview(src: string): {
     video.currentTime = time;
   }, []);
 
-  return { canvasRef, requestFrame, ready };
+  return { canvasRef, requestFrame };
 }

@@ -30,7 +30,8 @@ function defaults(): AppConfig {
     seriesRoots: [],
     tmdbApiKey: null,
     lastProfileId: null,
-    translucentBackground: true
+    translucentBackground: true,
+    videoBrightness: 1
   };
 }
 

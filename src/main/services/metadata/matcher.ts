@@ -1,3 +1,4 @@
+import { AUTO_ACCEPT, REJECT_BELOW } from '@shared/constants';
 import type { MatchStrategy } from '@shared/types';
 
 /**
@@ -6,11 +7,6 @@ import type { MatchStrategy } from '@shared/types';
  * Kept free of any network or filesystem access so it can be tested against
  * the real library's problem cases offline.
  */
-
-/** At or above this, the match is accepted without asking the user. */
-export const AUTO_ACCEPT = 0.75;
-/** Below this, we treat it as no match at all rather than guessing. */
-export const REJECT_BELOW = 0.45;
 
 const TITLE_WEIGHT = 0.75;
 const YEAR_WEIGHT = 0.25;

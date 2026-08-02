@@ -69,14 +69,6 @@ export async function backupLibrary(): Promise<void> {
   }
 }
 
-/** Restores the backup over the live catalog. Returns false if none exists. */
-export async function restoreLibraryBackup(): Promise<LibraryCatalog | null> {
-  const backup = await readJsonOrFail<LibraryCatalog | null>(libraryBackupPath(), null);
-  if (!isUsable(backup)) return null;
-  await saveLibrary(backup);
-  return backup;
-}
-
 /**
  * Folds a fresh disk scan into the stored catalog.
  *

@@ -19,6 +19,8 @@
   display: block;
   object-fit: contain;
   background: #000;
+  /* 1 by default, so the filter is a no-op unless the user raises it. */
+  filter: brightness(var(--video-brightness, 1));
 }
 
 /*

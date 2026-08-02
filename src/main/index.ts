@@ -41,10 +41,19 @@ import { scanRoots } from './services/scanner.js';
 const isDev = !app.isPackaged;
 
 /**
+ * Chromium colour-manages video into the display's ICC profile; VLC and most
+ * desktop players do not. On a wide-gamut or non-sRGB monitor that transform
+ * is what makes the same file look noticeably darker here than in VLC.
+ * Pinning the target to sRGB skips it, so playback matches.
+ *
+ * Must run before `app.whenReady`.
+ */
+app.commandLine.appendSwitch('force-color-profile', 'srgb');
+
+/**
  * Local files are served through a custom scheme rather than file:// so the
  * renderer can stay sandboxed and every request passes the containment check
- * in `resolveAllowedPath`. `stream: true` is what makes video seeking work
- * once the player lands in Phase 2.
+ * in `resolveAllowedPath`. `stream: true` is what lets the player seek.
  */
 protocol.registerSchemesAsPrivileged([
   {
@@ -119,6 +128,18 @@ function registerIpc(): void {
     for (const win of BrowserWindow.getAllWindows()) applyBackdrop(win, enabled);
     return saveConfig({ ...config, translucentBackground: enabled });
   });
+
+  ipcMain.handle(
+    IPC.configSetVideoBrightness,
+    async (_event, value: unknown): Promise<AppConfig> => {
+      const config = await loadConfig();
+      // Clamped so a bad value cannot render playback unwatchable.
+      const next = typeof value === 'number' && Number.isFinite(value)
+        ? Math.min(2, Math.max(0.5, value))
+        : 1;
+      return saveConfig({ ...config, videoBrightness: next });
+    }
+  );
 
   ipcMain.handle(IPC.libraryGet, async (): Promise<LibraryCatalog> => loadLibraryForDisplay());
 

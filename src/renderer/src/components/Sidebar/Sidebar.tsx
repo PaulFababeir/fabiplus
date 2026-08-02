@@ -2,8 +2,7 @@ import { useState } from 'react';
 
 import { toMovieUrl } from '@shared/media-url';
 import type { LibraryItem, ProfileState } from '@shared/types';
-import { TMDB_ATTRIBUTION } from '@renderer/lib/attribution';
-import { AUTO_ACCEPT_UI } from '@renderer/lib/constants';
+import { AUTO_ACCEPT, TMDB_ATTRIBUTION } from '@shared/constants';
 import { displayTitle, displayYear, posterFor, runtimeLabel } from '@renderer/lib/selectors';
 import { PosterPicker } from '@renderer/components/Modal/PosterPicker';
 import { PosterLightbox } from './PosterLightbox';
@@ -58,7 +57,7 @@ export function Sidebar({ item, profileState }: SidebarProps): React.JSX.Element
   const director = meta?.crew.find((c) => c.job === 'Director')?.name ?? null;
   const runtime = runtimeLabel(meta?.runtimeMin ?? null);
   const needsReview =
-    item.match !== null && !item.match.correctedByUser && item.match.confidence < AUTO_ACCEPT_UI;
+    item.match !== null && !item.match.correctedByUser && item.match.confidence < AUTO_ACCEPT;
 
   return (
     <aside className={styles.panel}>

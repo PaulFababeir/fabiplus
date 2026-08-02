@@ -21,6 +21,8 @@ const api: RendererApi = {
   setLastProfile: (id) => ipcRenderer.invoke(IPC.configSetLastProfile, id) as Promise<AppConfig>,
   setTranslucent: (enabled) =>
     ipcRenderer.invoke(IPC.configSetTranslucent, enabled) as Promise<AppConfig>,
+  setVideoBrightness: (value) =>
+    ipcRenderer.invoke(IPC.configSetVideoBrightness, value) as Promise<AppConfig>,
 
   getLibrary: () => ipcRenderer.invoke(IPC.libraryGet) as Promise<LibraryCatalog>,
   scanLibrary: () => ipcRenderer.invoke(IPC.libraryScan) as Promise<LibraryCatalog>,

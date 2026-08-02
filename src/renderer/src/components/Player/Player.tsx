@@ -7,6 +7,7 @@ import { displayTitle, displayYear } from '@renderer/lib/selectors';
 import { useProfile } from '@renderer/state/useProfile';
 import { useUi } from '@renderer/state/useUi';
 import { Icon } from '@renderer/components/ui/Icon';
+import { useOnClickOutside } from '@renderer/lib/useDismiss';
 import { useScrubPreview } from './useScrubPreview';
 import styles from './Player.module.css';
 
@@ -22,6 +23,7 @@ const FORCE_HIDE_RELEASE_PX = 14;
 const OSD_MS = 1500;
 
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2] as const;
+const BRIGHTNESS = [1, 1.1, 1.2, 1.3] as const;
 
 function formatTime(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
@@ -72,7 +74,13 @@ export function Player({ item, startAt }: PlayerProps): React.JSX.Element {
   const [error, setError] = useState<string | null>(null);
 
   /** Transient notice, VLC-style, so a blind cycle still tells you where it landed. */
-  const [osd, setOsd] = useState<{ text: string; at: number } | null>(null);
+  const [osd, setOsd] = useState<string | null>(null);
+  const [brightness, setBrightness] = useState(1);
+
+  // Persisted, so it is set once rather than per film.
+  useEffect(() => {
+    void window.api.getConfig().then((config) => setBrightness(config.videoBrightness));
+  }, []);
 
   const [hoverTime, setHoverTime] = useState<number | null>(null);
   const [hoverX, setHoverX] = useState(0);
@@ -120,22 +128,15 @@ export function Player({ item, startAt }: PlayerProps): React.JSX.Element {
   }, [activeTrack, tracks]);
 
   /**
-   * Any click outside the menu dismisses it. Recorded on mousedown so the
-   * subsequent click on the video can tell it was only closing the menu and
-   * skip toggling playback.
+   * Records that the gesture began with the menu open, so the video's click
+   * handler can tell it merely dismissed the menu and skip toggling playback.
    */
-  useEffect(() => {
-    if (!menuOpen) return;
+  const dismissMenu = useCallback(() => {
+    menuWasOpen.current = true;
+    setMenuOpen(false);
+  }, []);
 
-    const onDown = (event: MouseEvent): void => {
-      if (menuRef.current?.contains(event.target as Node)) return;
-      menuWasOpen.current = true;
-      setMenuOpen(false);
-    };
-
-    document.addEventListener('mousedown', onDown);
-    return () => document.removeEventListener('mousedown', onDown);
-  }, [menuOpen]);
+  useOnClickOutside(menuRef, dismissMenu, menuOpen);
 
   // --- Persistence --------------------------------------------------------
 
@@ -213,7 +214,7 @@ export function Player({ item, startAt }: PlayerProps): React.JSX.Element {
     setActiveTrack((current) => {
       const next = current + 1 >= tracks.length ? -1 : current + 1;
       const label = next === -1 ? 'Subtitles off' : (tracks[next]?.label ?? 'Subtitles');
-      setOsd({ text: label, at: Date.now() });
+      setOsd(label);
       return next;
     });
   }, [tracks]);
@@ -375,6 +376,7 @@ export function Player({ item, startAt }: PlayerProps): React.JSX.Element {
       <video
         ref={videoRef}
         className={styles.video}
+        style={{ '--video-brightness': brightness } as React.CSSProperties}
         src={src}
         autoPlay
         onClick={() => {
@@ -430,15 +432,14 @@ export function Player({ item, startAt }: PlayerProps): React.JSX.Element {
 
       {waiting && !error && <div className={styles.spinner} />}
 
-      {osd && <div className={styles.osd}>{osd.text}</div>}
+      {osd && <div className={styles.osd}>{osd}</div>}
 
       {error && (
         <div className={styles.error}>
           {error}
           <div className={styles.errorHint}>
-            Phase 2 will bundle mpv for the formats Chromium cannot decode — chiefly .mkv and
-            10-bit HEVC.
-          </div>
+            Bundling mpv would cover the formats Chromium cannot decode: .mkv and
+            10-bit HEVC.</div>
         </div>
       )}
 
@@ -611,6 +612,26 @@ export function Player({ item, startAt }: PlayerProps): React.JSX.Element {
                         </button>
                       ))
                     )}
+
+                    <div className={styles.menuDivider} />
+                    <div className={styles.menuLabel}>Brightness</div>
+                    {BRIGHTNESS.map((value) => (
+                      <button
+                        key={value}
+                        type="button"
+                        className={styles.menuItem}
+                        data-active={brightness === value}
+                        onClick={() => {
+                          setBrightness(value);
+                          void window.api.setVideoBrightness(value);
+                        }}
+                      >
+                        <span className={styles.menuItemLabel}>
+                          {value === 1 ? 'Default' : `+${Math.round((value - 1) * 100)}%`}
+                        </span>
+                        <Icon name="check" size={14} className={styles.menuCheck} />
+                      </button>
+                    ))}
 
                     <div className={styles.menuDivider} />
                     <div className={styles.menuLabel}>Speed</div>

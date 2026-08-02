@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
-import { MAX_PROFILES } from '@shared/types';
+import { MAX_PROFILES } from '@shared/constants';
 import { useProfile } from '@renderer/state/useProfile';
+import { useOnClickOutside, useOnEscape } from '@renderer/lib/useDismiss';
 import { Icon } from '@renderer/components/ui/Icon';
 import styles from './TopBar.module.css';
 
@@ -21,31 +22,15 @@ export function ProfileMenu(): React.JSX.Element {
   const active = profiles.find((p) => p.id === activeId) ?? profiles[0] ?? null;
   const atLimit = profiles.length >= MAX_PROFILES;
 
-  // Close on an outside click or Escape.
-  useEffect(() => {
-    if (!open) return;
-
-    const onPointerDown = (event: MouseEvent): void => {
-      if (!wrapRef.current?.contains(event.target as Node)) reset();
-    };
-    const onKeyDown = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') reset();
-    };
-
-    document.addEventListener('mousedown', onPointerDown);
-    document.addEventListener('keydown', onKeyDown);
-    return () => {
-      document.removeEventListener('mousedown', onPointerDown);
-      document.removeEventListener('keydown', onKeyDown);
-    };
-  }, [open]);
-
-  const reset = (): void => {
+  const reset = useCallback((): void => {
     setOpen(false);
     setAdding(false);
     setName('');
     setConfirmingId(null);
-  };
+  }, []);
+
+  useOnClickOutside(wrapRef, reset, open);
+  useOnEscape(reset, open);
 
   const submitNew = async (): Promise<void> => {
     if (!name.trim()) return;

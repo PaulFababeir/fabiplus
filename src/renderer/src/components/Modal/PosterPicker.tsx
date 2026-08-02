@@ -1,8 +1,9 @@
-import { useEffect } from 'react';
 
 import { toMovieUrl } from '@shared/media-url';
-import { POSTERS_PER_MOVIE, type LibraryItem } from '@shared/types';
+import { POSTERS_PER_MOVIE } from '@shared/constants';
+import type { LibraryItem } from '@shared/types';
 import { displayTitle } from '@renderer/lib/selectors';
+import { useOnEscape } from '@renderer/lib/useDismiss';
 import { useProfile } from '@renderer/state/useProfile';
 import { Icon } from '@renderer/components/ui/Icon';
 import styles from './Modal.module.css';
@@ -25,13 +26,7 @@ export function PosterPicker({ item, chosenIndex, onClose }: PosterPickerProps):
   const choosePoster = useProfile((s) => s.choosePoster);
   const posters = item.metadata?.posters ?? [];
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') onClose();
-    };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  useOnEscape(onClose);
 
   return (
     <div className={styles.scrim} onMouseDown={onClose}>

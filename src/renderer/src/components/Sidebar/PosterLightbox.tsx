@@ -1,5 +1,4 @@
-import { useEffect } from 'react';
-
+import { useOnEscape } from '@renderer/lib/useDismiss';
 import { Icon } from '@renderer/components/ui/Icon';
 import styles from './PosterLightbox.module.css';
 
@@ -13,13 +12,7 @@ interface PosterLightboxProps {
  * real detail worth seeing at a size the sidebar column cannot give it.
  */
 export function PosterLightbox({ src, onClose }: PosterLightboxProps): React.JSX.Element {
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') onClose();
-    };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  useOnEscape(onClose);
 
   return (
     <div className={styles.scrim} onMouseDown={onClose} role="dialog" aria-label="Poster">

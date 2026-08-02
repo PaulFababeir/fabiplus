@@ -1,7 +1,7 @@
 import { toMovieUrl } from '@shared/media-url';
 import { progressOf } from '@shared/continue-watching';
 import type { LibraryItem, ProfileState } from '@shared/types';
-import { AUTO_ACCEPT_UI } from '@renderer/lib/constants';
+import { AUTO_ACCEPT } from '@shared/constants';
 import { displayTitle, displayYear, posterFor } from '@renderer/lib/selectors';
 import { useUi } from '@renderer/state/useUi';
 import { Icon } from '@renderer/components/ui/Icon';
@@ -28,7 +28,7 @@ export function MovieGrid({ items, profileState }: MovieGridProps): React.JSX.El
         const needsReview =
           item.match !== null &&
           !item.match.correctedByUser &&
-          item.match.confidence < AUTO_ACCEPT_UI;
+          item.match.confidence < AUTO_ACCEPT;
 
         return (
           <li key={item.id}>

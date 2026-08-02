@@ -9,11 +9,12 @@ import styles from './Modal.module.css';
 /** Library maintenance: the TMDB key, rescanning, and metadata refresh. */
 export function SettingsPanel(): React.JSX.Element {
   const { toggleSettings, translucent, setTranslucent } = useUi();
-  const { catalog, busy, error, progress, summary, rescan, enrich } = useLibrary();
-  const { state: profileState, setProgress, clearProgress } = useProfile();
+  const { busy, error, progress, summary, rescan, enrich } = useLibrary();
+  const { state: profileState, clearProgress } = useProfile();
 
   const [hasKey, setHasKey] = useState(false);
   const [keyDraft, setKeyDraft] = useState('');
+  const [confirmingClear, setConfirmingClear] = useState(false);
 
   useEffect(() => {
     void window.api.getConfig().then((config) => setHasKey(config.tmdbApiKey !== null));
@@ -33,26 +34,14 @@ export function SettingsPanel(): React.JSX.Element {
   const percent =
     progress && progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0;
 
-  /**
-   * Fakes watch history across a spread of films so the Continue Watching deck
-   * has something to render. Removed once the Phase 2 player exists.
-   */
-  const seedDemoProgress = async (): Promise<void> => {
-    const picks = (catalog?.items ?? []).filter((item) => item.metadata?.backdrop).slice(0, 8);
+  const watched = Object.keys(profileState?.watch ?? {}).length;
 
-    // Written in order, so each successive write carries a later timestamp and
-    // the deck ends up ordered most-recent-first.
-    for (const [i, item] of picks.entries()) {
-      const runtimeSec = (item.metadata?.runtimeMin ?? 120) * 60;
-      const fraction = 0.15 + ((i * 0.09) % 0.6);
-      await setProgress(item.id, Math.round(runtimeSec * fraction), runtimeSec);
-    }
-  };
-
-  const clearDemoProgress = async (): Promise<void> => {
+  /** Wipes this profile's watch history. Irreversible, so it confirms first. */
+  const clearHistory = async (): Promise<void> => {
     for (const movieId of Object.keys(profileState?.watch ?? {})) {
       await clearProgress(movieId);
     }
+    setConfirmingClear(false);
   };
 
   return (
@@ -160,31 +149,34 @@ export function SettingsPanel(): React.JSX.Element {
             </button>
           </div>
 
-          {import.meta.env.DEV && (
-            <>
-              <p className={styles.note} style={{ marginBottom: 0 }}>
-                Dev only — there is no player yet, so nothing can generate watch progress. This
-                fakes some so the Continue Watching deck can be worked on.
-              </p>
-              <div className={styles.actions}>
+          {watched > 0 && (
+            <div className={styles.actions}>
+              {confirmingClear ? (
+                <>
+                  <span style={{ alignSelf: 'center', color: 'var(--text-muted)', fontSize: 12.5 }}>
+                    Clear {watched} {watched === 1 ? 'entry' : 'entries'}? This cannot be undone.
+                  </span>
+                  <button type="button" className={styles.button} onClick={() => void clearHistory()}>
+                    Clear
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.button}
+                    onClick={() => setConfirmingClear(false)}
+                  >
+                    Cancel
+                  </button>
+                </>
+              ) : (
                 <button
                   type="button"
                   className={styles.button}
-                  disabled={busy}
-                  onClick={() => void seedDemoProgress()}
+                  onClick={() => setConfirmingClear(true)}
                 >
-                  Seed demo progress
+                  Clear watch history
                 </button>
-                <button
-                  type="button"
-                  className={styles.button}
-                  disabled={busy}
-                  onClick={() => void clearDemoProgress()}
-                >
-                  Clear progress
-                </button>
-              </div>
-            </>
+              )}
+            </div>
           )}
 
           {progress && (

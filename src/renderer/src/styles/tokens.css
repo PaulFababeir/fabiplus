@@ -44,9 +44,6 @@
   --radius-control: 12px;
 
   --poster-ratio: 2 / 3;
-  /* The hero card in the design is nearer 3:2 than a 16:9 backdrop crop. */
-  --hero-ratio: 3 / 2;
-  --backdrop-ratio: 16 / 9;
 
   /* Sidebar and the backdrop plate behind it share one width. */
   --sidebar-width: clamp(380px, 30vw, 500px);

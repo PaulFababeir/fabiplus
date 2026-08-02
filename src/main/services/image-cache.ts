@@ -2,7 +2,8 @@ import { createHash } from 'node:crypto';
 import { access, mkdir, rename, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import { POSTERS_PER_MOVIE, type CachedImage } from '@shared/types';
+import { POSTERS_PER_MOVIE } from '@shared/constants';
+import type { CachedImage } from '@shared/types';
 import { imageCacheDir } from './config.js';
 import type { RemoteImage } from './metadata/provider.js';
 
@@ -11,8 +12,6 @@ import type { RemoteImage } from './metadata/provider.js';
  * network after the first enrichment pass. This is what makes the app
  * genuinely offline rather than merely offline-tolerant.
  */
-
-export { POSTERS_PER_MOVIE };
 
 type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
 
@@ -77,4 +76,3 @@ export async function cacheImage(
   }
 }
 
-export { toMovieUrl } from '@shared/media-url';

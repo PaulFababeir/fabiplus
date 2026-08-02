@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { AUTO_ACCEPT, decideMatch, normalizeTitle, type Candidate } from './matcher.js';
+import { AUTO_ACCEPT } from '@shared/constants';
+import { decideMatch, normalizeTitle, type Candidate } from './matcher.js';
 
 function candidate(
   title: string,

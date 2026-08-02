@@ -14,6 +14,7 @@ export const IPC = {
   configSetTmdbKey: 'config:set-tmdb-key',
   configSetLastProfile: 'config:set-last-profile',
   configSetTranslucent: 'config:set-translucent',
+  configSetVideoBrightness: 'config:set-video-brightness',
 
   libraryGet: 'library:get',
   libraryScan: 'library:scan',
@@ -42,6 +43,7 @@ export interface RendererApi {
   setLastProfile(profileId: string | null): Promise<AppConfig>;
   /** Applies immediately — no restart needed. */
   setTranslucent(enabled: boolean): Promise<AppConfig>;
+  setVideoBrightness(value: number): Promise<AppConfig>;
 
   /** Reads the stored catalog without touching the disk scan. */
   getLibrary(): Promise<LibraryCatalog>;

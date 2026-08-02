@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-import type { EnrichmentProgress, EnrichmentSummary, LibraryCatalog, LibraryItem } from '@shared/types';
+import type { EnrichmentProgress, EnrichmentSummary, LibraryCatalog } from '@shared/types';
 
 interface LibraryStore {
   catalog: LibraryCatalog | null;
@@ -92,5 +92,3 @@ export const useLibrary = create<LibraryStore>((set, get) => ({
   setProgress: (progress) => set({ progress }),
   dismissSummary: () => set({ summary: null })
 }));
-
-export const selectItems = (state: LibraryStore): LibraryItem[] => state.catalog?.items ?? [];

@@ -6,7 +6,8 @@ import type {
   Metadata,
   ReviewItem
 } from '@shared/types';
-import { cacheImage, POSTERS_PER_MOVIE } from './image-cache.js';
+import { POSTERS_PER_MOVIE } from '@shared/constants';
+import { cacheImage } from './image-cache.js';
 import { decideMatch } from './metadata/matcher.js';
 import { ProviderError, type MetadataProvider, type ProviderDetails } from './metadata/provider.js';
 
@@ -24,7 +25,6 @@ export interface EnrichOptions {
   /** Re-fetch items that already have metadata. */
   force?: boolean;
   onProgress?: (progress: EnrichmentProgress) => void;
-  signal?: AbortSignal;
 }
 
 function delay(ms: number): Promise<void> {
@@ -131,7 +131,7 @@ export async function enrichLibrary(
   options: EnrichOptions = {}
 ): Promise<{ items: LibraryItem[]; summary: EnrichmentSummary }> {
   const started = Date.now();
-  const { force = false, onProgress, signal } = options;
+  const { force = false, onProgress } = options;
 
   const byId = new Map(items.map((item) => [item.id, item]));
   const targets = items.filter((item) => force || item.metadata === null);
@@ -148,7 +148,7 @@ export async function enrichLibrary(
   };
 
   await pool(targets, CONCURRENCY, async (item) => {
-    if (signal?.aborted || fatalError) return;
+    if (fatalError) return;
 
     try {
       // A match the user fixed by hand is authoritative. On a forced refresh

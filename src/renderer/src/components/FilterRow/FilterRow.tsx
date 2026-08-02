@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { SortKey } from '@shared/types';
 import { useUi } from '@renderer/state/useUi';
+import { useOnClickOutside } from '@renderer/lib/useDismiss';
 import { Icon } from '@renderer/components/ui/Icon';
 import styles from './FilterRow.module.css';
 
@@ -45,14 +46,8 @@ export function FilterRow({ genres }: FilterRowProps): React.JSX.Element {
     };
   }, [genres]);
 
-  useEffect(() => {
-    if (!sortOpen) return;
-    const onDown = (event: MouseEvent): void => {
-      if (!sortRef.current?.contains(event.target as Node)) setSortOpen(false);
-    };
-    document.addEventListener('mousedown', onDown);
-    return () => document.removeEventListener('mousedown', onDown);
-  }, [sortOpen]);
+  const closeSort = useCallback(() => setSortOpen(false), []);
+  useOnClickOutside(sortRef, closeSort, sortOpen);
 
   /** Scrolls by most of a viewport width, leaving a little overlap. */
   const page = (direction: -1 | 1): void => {

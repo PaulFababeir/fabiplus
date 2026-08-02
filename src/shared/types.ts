@@ -163,13 +163,6 @@ export interface ScanResult {
 // Enrichment
 // ---------------------------------------------------------------------------
 
-/**
- * How many posters to cache per film. Shared so the picker's "only N cached"
- * hint cannot drift from what the cacher actually stores. Twenty w500 posters
- * is roughly 1.4MB per film — negligible beside the video sitting next to it.
- */
-export const POSTERS_PER_MOVIE = 20;
-
 /** Streamed to the renderer while a metadata pass runs. */
 export interface EnrichmentProgress {
   done: number;
@@ -215,8 +208,6 @@ export interface EnrichmentSummary {
 // Profiles and watch state
 // ---------------------------------------------------------------------------
 
-export const MAX_PROFILES = 5;
-
 export interface Profile {
   id: string;
   name: string;
@@ -249,7 +240,7 @@ export interface ProfileState {
 
 export interface AppConfig {
   schemaVersion: number;
-  /** Library roots. Phase 1 wires movies only. */
+  /** Series has no scanner support yet, so only movieRoots are read. */
   movieRoots: string[];
   seriesRoots: string[];
   /** TMDB key. Lives in userData, never in the repo. */
@@ -260,6 +251,12 @@ export interface AppConfig {
    * it. Off means a solid background.
    */
   translucentBackground: boolean;
+  /**
+   * Multiplier applied to video playback, 1 = untouched. Pinning the colour
+   * profile to sRGB fixes most of the gap against VLC; this covers displays
+   * where a little more is still wanted.
+   */
+  videoBrightness: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -268,9 +265,3 @@ export interface AppConfig {
 
 export type SortKey = 'alphabetical' | 'release-date' | 'recently-added';
 
-export interface LibraryQuery {
-  kind: MediaKind;
-  search: string;
-  genre: string | null;
-  sort: SortKey;
-}
