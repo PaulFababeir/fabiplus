@@ -113,6 +113,13 @@ function registerIpc(): void {
     return saveConfig({ ...config, lastProfileId: typeof id === 'string' ? id : null });
   });
 
+  ipcMain.handle(IPC.configSetTranslucent, async (_event, on: unknown): Promise<AppConfig> => {
+    const config = await loadConfig();
+    const enabled = on === true;
+    for (const win of BrowserWindow.getAllWindows()) applyBackdrop(win, enabled);
+    return saveConfig({ ...config, translucentBackground: enabled });
+  });
+
   ipcMain.handle(IPC.libraryGet, async (): Promise<LibraryCatalog> => loadLibraryForDisplay());
 
   ipcMain.handle(IPC.libraryScan, async (): Promise<LibraryCatalog> => {
@@ -297,14 +304,31 @@ function registerIpc(): void {
   );
 }
 
-function createWindow(): void {
+/**
+ * Windows 11 acrylic. The window's own background must be fully transparent
+ * for the material to show at all — an opaque colour paints straight over it.
+ * Falls back silently on anything that does not support the material.
+ */
+function applyBackdrop(win: BrowserWindow, enabled: boolean): void {
+  try {
+    win.setBackgroundColor(enabled ? '#00000000' : '#0e0f11');
+    win.setBackgroundMaterial(enabled ? 'acrylic' : 'none');
+  } catch {
+    // Older Windows, or a platform without the API — solid background stands.
+  }
+}
+
+async function createWindow(): Promise<void> {
+  const config = await loadConfig();
+  const translucent = config.translucentBackground;
   const win = new BrowserWindow({
     width: 1540,
     height: 1024,
     minWidth: 1100,
     minHeight: 720,
     show: false,
-    backgroundColor: '#0e0f11',
+    backgroundColor: translucent ? '#00000000' : '#0e0f11',
+    backgroundMaterial: translucent ? 'acrylic' : 'none',
     // The design has no OS title bar; keep the native window controls only.
     titleBarStyle: 'hidden',
     /*
@@ -351,10 +375,10 @@ if (!app.requestSingleInstanceLock()) {
   void app.whenReady().then(() => {
     registerMovieProtocol();
     registerIpc();
-    createWindow();
+    void createWindow();
 
     app.on('activate', () => {
-      if (BrowserWindow.getAllWindows().length === 0) createWindow();
+      if (BrowserWindow.getAllWindows().length === 0) void createWindow();
     });
   });
 }

@@ -8,7 +8,7 @@ import styles from './Modal.module.css';
 
 /** Library maintenance: the TMDB key, rescanning, and metadata refresh. */
 export function SettingsPanel(): React.JSX.Element {
-  const toggleSettings = useUi((s) => s.toggleSettings);
+  const { toggleSettings, translucent, setTranslucent } = useUi();
   const { catalog, busy, error, progress, summary, rescan, enrich } = useLibrary();
   const { state: profileState, setProgress, clearProgress } = useProfile();
 
@@ -110,6 +110,26 @@ export function SettingsPanel(): React.JSX.Element {
             Stored in config.json under your app data folder — never in the project. It is used
             only to fetch metadata and artwork, which are cached locally so the app runs offline
             afterwards.
+          </p>
+
+          <div className={styles.actions}>
+            <button
+              type="button"
+              className={styles.button}
+              aria-pressed={translucent}
+              onClick={() => {
+                const next = !translucent;
+                setTranslucent(next);
+                void window.api.setTranslucent(next);
+              }}
+            >
+              {translucent ? 'Translucent window: on' : 'Translucent window: off'}
+            </button>
+          </div>
+
+          <p className={styles.note}>
+            Blurs the desktop behind the window (Windows 11 acrylic). Applies straight away. Turn
+            it off if it costs you readability or frame rate.
           </p>
 
           <div className={styles.actions}>

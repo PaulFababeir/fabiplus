@@ -29,7 +29,8 @@ function defaults(): AppConfig {
     movieRoots: ['D:/Movies'],
     seriesRoots: [],
     tmdbApiKey: null,
-    lastProfileId: null
+    lastProfileId: null,
+    translucentBackground: true
   };
 }
 

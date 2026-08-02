@@ -18,6 +18,8 @@ const IDLE_MS = 2600;
 const SAVE_EVERY_MS = 5000;
 /** How far the pointer must travel to release a forced hide. */
 const FORCE_HIDE_RELEASE_PX = 14;
+/** How long an on-screen notice lingers. */
+const OSD_MS = 1500;
 
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2] as const;
 
@@ -68,6 +70,9 @@ export function Player({ item, startAt }: PlayerProps): React.JSX.Element {
   /** Chrome pinned shut by the hide button, independent of the idle timer. */
   const [forcedHidden, setForcedHidden] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  /** Transient notice, VLC-style, so a blind cycle still tells you where it landed. */
+  const [osd, setOsd] = useState<{ text: string; at: number } | null>(null);
 
   const [hoverTime, setHoverTime] = useState<number | null>(null);
   const [hoverX, setHoverX] = useState(0);
@@ -191,7 +196,27 @@ export function Player({ item, startAt }: PlayerProps): React.JSX.Element {
     };
   }, [wake]);
 
+  useEffect(() => {
+    if (!osd) return;
+    const timer = setTimeout(() => setOsd(null), OSD_MS);
+    return () => clearTimeout(timer);
+  }, [osd]);
+
   // --- Controls -----------------------------------------------------------
+
+  /**
+   * Steps Off → track 1 → track 2 → … → Off, matching VLC's `v`.
+   * Declared with the tracks in scope so the wrap point follows what actually
+   * loaded rather than a stale count.
+   */
+  const cycleSubtitle = useCallback(() => {
+    setActiveTrack((current) => {
+      const next = current + 1 >= tracks.length ? -1 : current + 1;
+      const label = next === -1 ? 'Subtitles off' : (tracks[next]?.label ?? 'Subtitles');
+      setOsd({ text: label, at: Date.now() });
+      return next;
+    });
+  }, [tracks]);
 
   const togglePlay = useCallback(() => {
     const video = videoRef.current;
@@ -251,6 +276,9 @@ export function Player({ item, startAt }: PlayerProps): React.JSX.Element {
         case 'm':
           setMuted((v) => !v);
           break;
+        case 'v':
+          cycleSubtitle();
+          break;
         case 'f':
           toggleFullscreen();
           break;
@@ -266,7 +294,7 @@ export function Player({ item, startAt }: PlayerProps): React.JSX.Element {
 
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [skip, stopPlaying, toggleFullscreen, togglePlay, wake]);
+  }, [cycleSubtitle, skip, stopPlaying, toggleFullscreen, togglePlay, wake]);
 
   // --- Volume applied to the element --------------------------------------
 
@@ -401,6 +429,8 @@ export function Player({ item, startAt }: PlayerProps): React.JSX.Element {
       </video>
 
       {waiting && !error && <div className={styles.spinner} />}
+
+      {osd && <div className={styles.osd}>{osd.text}</div>}
 
       {error && (
         <div className={styles.error}>

@@ -52,6 +52,18 @@
   --sidebar-width: clamp(380px, 30vw, 500px);
 
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Opaque by default; the acrylic build swaps in a translucent veil. */
+  --bg-veil: var(--bg);
+}
+
+/*
+ * With acrylic behind the window the page itself must let light through.
+ * The veil stays high enough that text keeps its contrast — the desktop
+ * should read as a hint, not as a competing image.
+ */
+:root[data-translucent='true'] {
+  --bg-veil: rgb(14 15 17 / 86%);
 }
 
 * {
@@ -66,7 +78,7 @@ body,
 
 body {
   margin: 0;
-  background: var(--bg);
+  background: var(--bg-veil);
   color: var(--text);
   font-family: Poppins, 'Segoe UI Variable Display', 'Segoe UI', system-ui, sans-serif;
   font-size: 14px;

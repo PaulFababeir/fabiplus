@@ -22,6 +22,8 @@ interface UiStore {
   rematchTargetId: string | null;
   /** Film currently in the player; null means the library view. */
   playingId: string | null;
+  /** Mirrors config.translucentBackground for the CSS veil. */
+  translucent: boolean;
 
   setKind: (kind: MediaKind) => void;
   setSearch: (search: string) => void;
@@ -31,6 +33,7 @@ interface UiStore {
   setSidebarOpen: (open: boolean) => void;
   toggleSettings: () => void;
   setRematchOpen: (open: boolean, targetId?: string | null) => void;
+  setTranslucent: (enabled: boolean) => void;
   play: (id: string) => void;
   stopPlaying: () => void;
 }
@@ -47,6 +50,7 @@ export const useUi = create<UiStore>((set) => ({
   rematchOpen: false,
   rematchTargetId: null,
   playingId: null,
+  translucent: true,
 
   setKind: (kind) => set({ kind, genre: null }),
   setSearch: (search) => set({ search }),
@@ -59,6 +63,8 @@ export const useUi = create<UiStore>((set) => ({
   toggleSettings: () => set((s) => ({ settingsOpen: !s.settingsOpen })),
   setRematchOpen: (rematchOpen, targetId = null) =>
     set({ rematchOpen, rematchTargetId: rematchOpen ? targetId : null }),
+
+  setTranslucent: (translucent) => set({ translucent }),
 
   // Playing also selects, so returning to the library lands on that film.
   play: (id) => set({ playingId: id, selectedId: id, sidebarOpen: false }),

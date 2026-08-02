@@ -255,6 +255,11 @@ export interface AppConfig {
   /** TMDB key. Lives in userData, never in the repo. */
   tmdbApiKey: string | null;
   lastProfileId: string | null;
+  /**
+   * Windows 11 acrylic behind the window, so a hint of the desktop shows
+   * through. Off means a solid background.
+   */
+  translucentBackground: boolean;
 }
 
 // ---------------------------------------------------------------------------

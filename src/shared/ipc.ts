@@ -13,6 +13,7 @@ export const IPC = {
   configGet: 'config:get',
   configSetTmdbKey: 'config:set-tmdb-key',
   configSetLastProfile: 'config:set-last-profile',
+  configSetTranslucent: 'config:set-translucent',
 
   libraryGet: 'library:get',
   libraryScan: 'library:scan',
@@ -39,6 +40,8 @@ export interface RendererApi {
   /** Returns the updated config; the key itself is never read back out. */
   setTmdbKey(key: string | null): Promise<AppConfig>;
   setLastProfile(profileId: string | null): Promise<AppConfig>;
+  /** Applies immediately — no restart needed. */
+  setTranslucent(enabled: boolean): Promise<AppConfig>;
 
   /** Reads the stored catalog without touching the disk scan. */
   getLibrary(): Promise<LibraryCatalog>;
