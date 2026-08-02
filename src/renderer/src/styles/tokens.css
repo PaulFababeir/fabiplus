@@ -59,11 +59,19 @@
 
 /*
  * With acrylic behind the window the page itself must let light through.
- * The veil stays high enough that text keeps its contrast — the desktop
- * should read as a hint, not as a competing image.
+ * Lower veil, more desktop. Below roughly 55% the grid captions start losing
+ * contrast against bright wallpaper, which is why `strong` stops where it does.
  */
-:root[data-translucent='true'] {
-  --bg-veil: rgb(14 15 17 / 86%);
+:root[data-translucency='subtle'] {
+  --bg-veil: rgb(14 15 17 / 84%);
+}
+
+:root[data-translucency='medium'] {
+  --bg-veil: rgb(14 15 17 / 66%);
+}
+
+:root[data-translucency='strong'] {
+  --bg-veil: rgb(14 15 17 / 48%);
 }
 
 * {

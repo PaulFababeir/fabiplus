@@ -5,7 +5,8 @@ import type {
   LibraryCatalog,
   Profile,
   ProfileState,
-  ReviewCandidate
+  ReviewCandidate,
+  TranslucencyLevel
 } from './types.js';
 
 /** IPC channel names. Kept in one place so main and preload cannot drift. */
@@ -41,7 +42,7 @@ export interface RendererApi {
   setTmdbKey(key: string | null): Promise<AppConfig>;
   setLastProfile(profileId: string | null): Promise<AppConfig>;
   /** Applies immediately — no restart needed. */
-  setTranslucent(enabled: boolean): Promise<AppConfig>;
+  setTranslucency(level: TranslucencyLevel): Promise<AppConfig>;
 
   /** Reads the stored catalog without touching the disk scan. */
   getLibrary(): Promise<LibraryCatalog>;

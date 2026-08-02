@@ -19,8 +19,8 @@ const api: RendererApi = {
   getConfig: () => ipcRenderer.invoke(IPC.configGet) as Promise<AppConfig>,
   setTmdbKey: (key) => ipcRenderer.invoke(IPC.configSetTmdbKey, key) as Promise<AppConfig>,
   setLastProfile: (id) => ipcRenderer.invoke(IPC.configSetLastProfile, id) as Promise<AppConfig>,
-  setTranslucent: (enabled) =>
-    ipcRenderer.invoke(IPC.configSetTranslucent, enabled) as Promise<AppConfig>,
+  setTranslucency: (level) =>
+    ipcRenderer.invoke(IPC.configSetTranslucent, level) as Promise<AppConfig>,
 
   getLibrary: () => ipcRenderer.invoke(IPC.libraryGet) as Promise<LibraryCatalog>,
   scanLibrary: () => ipcRenderer.invoke(IPC.libraryScan) as Promise<LibraryCatalog>,

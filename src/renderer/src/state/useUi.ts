@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-import type { MediaKind, SortKey } from '@shared/types';
+import type { MediaKind, SortKey, TranslucencyLevel } from '@shared/types';
 
 interface UiStore {
   kind: MediaKind;
@@ -22,8 +22,8 @@ interface UiStore {
   rematchTargetId: string | null;
   /** Film currently in the player; null means the library view. */
   playingId: string | null;
-  /** Mirrors config.translucentBackground for the CSS veil. */
-  translucent: boolean;
+  /** Mirrors config.translucency, driving the CSS veil. */
+  translucency: TranslucencyLevel;
 
   setKind: (kind: MediaKind) => void;
   setSearch: (search: string) => void;
@@ -33,7 +33,7 @@ interface UiStore {
   setSidebarOpen: (open: boolean) => void;
   toggleSettings: () => void;
   setRematchOpen: (open: boolean, targetId?: string | null) => void;
-  setTranslucent: (enabled: boolean) => void;
+  setTranslucency: (level: TranslucencyLevel) => void;
   play: (id: string) => void;
   stopPlaying: () => void;
 }
@@ -50,7 +50,7 @@ export const useUi = create<UiStore>((set) => ({
   rematchOpen: false,
   rematchTargetId: null,
   playingId: null,
-  translucent: true,
+  translucency: 'medium',
 
   setKind: (kind) => set({ kind, genre: null }),
   setSearch: (search) => set({ search }),
@@ -64,7 +64,7 @@ export const useUi = create<UiStore>((set) => ({
   setRematchOpen: (rematchOpen, targetId = null) =>
     set({ rematchOpen, rematchTargetId: rematchOpen ? targetId : null }),
 
-  setTranslucent: (translucent) => set({ translucent }),
+  setTranslucency: (translucency) => set({ translucency }),
 
   // Playing also selects, so returning to the library lands on that film.
   play: (id) => set({ playingId: id, selectedId: id, sidebarOpen: false }),

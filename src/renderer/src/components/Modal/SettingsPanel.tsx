@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 
+import { TRANSLUCENCY_LEVELS } from '@shared/types';
 import { useLibrary } from '@renderer/state/useLibrary';
 import { useProfile } from '@renderer/state/useProfile';
 import { useUi } from '@renderer/state/useUi';
@@ -8,7 +9,7 @@ import styles from './Modal.module.css';
 
 /** Library maintenance: the TMDB key, rescanning, and metadata refresh. */
 export function SettingsPanel(): React.JSX.Element {
-  const { toggleSettings, translucent, setTranslucent } = useUi();
+  const { toggleSettings, translucency, setTranslucency } = useUi();
   const { catalog, busy, error, progress, summary, rescan, enrich } = useLibrary();
   const { state: profileState, setProgress, clearProgress } = useProfile();
 
@@ -112,24 +113,28 @@ export function SettingsPanel(): React.JSX.Element {
             afterwards.
           </p>
 
-          <div className={styles.actions}>
-            <button
-              type="button"
-              className={styles.button}
-              aria-pressed={translucent}
-              onClick={() => {
-                const next = !translucent;
-                setTranslucent(next);
-                void window.api.setTranslucent(next);
-              }}
-            >
-              {translucent ? 'Translucent window: on' : 'Translucent window: off'}
-            </button>
+          <label className={styles.label}>Window translucency</label>
+          <div className={styles.actions} style={{ marginTop: 0 }}>
+            {TRANSLUCENCY_LEVELS.map((level) => (
+              <button
+                key={level}
+                type="button"
+                className={`${styles.button} ${translucency === level ? styles.primary : ''}`}
+                aria-pressed={translucency === level}
+                onClick={() => {
+                  setTranslucency(level);
+                  void window.api.setTranslucency(level);
+                }}
+              >
+                {level === 'off' ? 'Off' : level[0]!.toUpperCase() + level.slice(1)}
+              </button>
+            ))}
           </div>
 
           <p className={styles.note}>
-            Blurs the desktop behind the window (Windows 11 acrylic). Applies straight away. Turn
-            it off if it costs you readability or frame rate.
+            Blurs the desktop behind the window (Windows 11 acrylic). Applies straight away. If
+            nothing changes, check Windows Settings → Personalisation → Colours → Transparency
+            effects, which Electron follows.
           </p>
 
           <div className={styles.actions}>
