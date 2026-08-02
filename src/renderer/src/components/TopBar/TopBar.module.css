@@ -264,3 +264,22 @@
   color: var(--text-dim);
   font-size: 11.5px;
 }
+
+/*
+ * With the page translucent, solid control chips look pasted on. Frosting them
+ * keeps the glass reading consistent from the window down to the controls.
+ */
+:global(:root[data-translucent='true']) .kind,
+:global(:root[data-translucent='true']) .search,
+:global(:root[data-translucent='true']) .iconButton,
+:global(:root[data-translucent='true']) .profile {
+  background: rgb(255 255 255 / 7%);
+  backdrop-filter: blur(14px) saturate(140%);
+}
+
+:global(:root[data-translucent='true']) .kind:hover,
+:global(:root[data-translucent='true']) .iconButton:hover,
+:global(:root[data-translucent='true']) .profile:hover,
+:global(:root[data-translucent='true']) .search:focus-within {
+  background: rgb(255 255 255 / 13%);
+}

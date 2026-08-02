@@ -63,7 +63,7 @@
  * competing with the posters.
  */
 :root[data-translucent='true'] {
-  --bg-veil: rgb(14 15 17 / 82%);
+  --bg-veil: rgb(14 15 17 / 68%);
 }
 
 * {
