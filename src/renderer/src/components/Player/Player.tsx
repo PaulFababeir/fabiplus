@@ -16,6 +16,8 @@ const SKIP = 10;
 const IDLE_MS = 2600;
 /** Progress is persisted at most this often — every frame would thrash disk. */
 const SAVE_EVERY_MS = 5000;
+/** How far the pointer must travel to release a forced hide. */
+const FORCE_HIDE_RELEASE_PX = 14;
 
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2] as const;
 
@@ -44,6 +46,11 @@ export function Player({ item, startAt }: PlayerProps): React.JSX.Element {
   const rootRef = useRef<HTMLDivElement>(null);
   const scrubRef = useRef<HTMLDivElement>(null);
   const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  /** True while a click gesture began with the menu open. */
+  const menuWasOpen = useRef(false);
+  /** Pointer position when chrome was force-hidden, to ignore jitter. */
+  const hiddenAt = useRef<{ x: number; y: number } | null>(null);
   const lastSave = useRef(0);
   const resumed = useRef(false);
 
@@ -58,6 +65,8 @@ export function Player({ item, startAt }: PlayerProps): React.JSX.Element {
   const [fullscreen, setFullscreen] = useState(false);
   const [idle, setIdle] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  /** Chrome pinned shut by the hide button, independent of the idle timer. */
+  const [forcedHidden, setForcedHidden] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [hoverTime, setHoverTime] = useState<number | null>(null);
@@ -105,6 +114,24 @@ export function Player({ item, startAt }: PlayerProps): React.JSX.Element {
     }
   }, [activeTrack, tracks]);
 
+  /**
+   * Any click outside the menu dismisses it. Recorded on mousedown so the
+   * subsequent click on the video can tell it was only closing the menu and
+   * skip toggling playback.
+   */
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    const onDown = (event: MouseEvent): void => {
+      if (menuRef.current?.contains(event.target as Node)) return;
+      menuWasOpen.current = true;
+      setMenuOpen(false);
+    };
+
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [menuOpen]);
+
   // --- Persistence --------------------------------------------------------
 
   const persist = useCallback(
@@ -125,10 +152,36 @@ export function Player({ item, startAt }: PlayerProps): React.JSX.Element {
 
   // --- Idle chrome --------------------------------------------------------
 
-  const wake = useCallback(() => {
+  /**
+   * Brings the chrome back and restarts the idle countdown. A force-hide is
+   * only released once the pointer has genuinely moved — otherwise the mouse
+   * still resting on the hide button would undo it immediately.
+   */
+  const wake = useCallback((event?: React.MouseEvent) => {
+    if (hiddenAt.current) {
+      // Pointer movement must clear the threshold, but a keypress (no event)
+      // always counts as intent — otherwise the controls would stay pinned
+      // shut while the user is clearly interacting.
+      if (event) {
+        const dx = event.clientX - hiddenAt.current.x;
+        const dy = event.clientY - hiddenAt.current.y;
+        if (Math.hypot(dx, dy) < FORCE_HIDE_RELEASE_PX) return;
+      }
+      hiddenAt.current = null;
+      setForcedHidden(false);
+    }
+
     setIdle(false);
     if (idleTimer.current) clearTimeout(idleTimer.current);
     idleTimer.current = setTimeout(() => setIdle(true), IDLE_MS);
+  }, []);
+
+  const hideChrome = useCallback((event: React.MouseEvent): void => {
+    hiddenAt.current = { x: event.clientX, y: event.clientY };
+    setMenuOpen(false);
+    setForcedHidden(true);
+    setIdle(true);
+    if (idleTimer.current) clearTimeout(idleTimer.current);
   }, []);
 
   useEffect(() => {
@@ -263,6 +316,9 @@ export function Player({ item, startAt }: PlayerProps): React.JSX.Element {
     };
   }, [scrubbing, seekTo, timeFromPointer]);
 
+  // Forced hide wins outright; otherwise chrome only fades while playing.
+  const chromeHidden = forcedHidden || (idle && playing);
+
   const progressPct = duration > 0 ? (current / duration) * 100 : 0;
   const bufferedPct = duration > 0 ? (buffered / duration) * 100 : 0;
 
@@ -283,8 +339,8 @@ export function Player({ item, startAt }: PlayerProps): React.JSX.Element {
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 1.03 }}
       transition={{ duration: 0.26, ease: [0.16, 1, 0.3, 1] }}
-      data-idle={idle && playing}
-      data-chrome={!idle || !playing}
+      data-idle={chromeHidden}
+      data-chrome={!chromeHidden}
       onMouseMove={wake}
       onDoubleClick={toggleFullscreen}
     >
@@ -293,7 +349,14 @@ export function Player({ item, startAt }: PlayerProps): React.JSX.Element {
         className={styles.video}
         src={src}
         autoPlay
-        onClick={togglePlay}
+        onClick={() => {
+          // A click that merely dismissed the menu should not also pause.
+          if (menuWasOpen.current) {
+            menuWasOpen.current = false;
+            return;
+          }
+          togglePlay();
+        }}
         onLoadedMetadata={(e) => {
           const video = e.currentTarget;
           setDuration(video.duration);
@@ -349,7 +412,7 @@ export function Player({ item, startAt }: PlayerProps): React.JSX.Element {
         </div>
       )}
 
-      <div className={styles.chrome} data-visible={!idle || !playing}>
+      <div className={styles.chrome} data-visible={!chromeHidden}>
         <div className={styles.header}>
           <button type="button" className={styles.back} aria-label="Back" onClick={stopPlaying}>
             <Icon name="chevron-left" size={22} />
@@ -461,13 +524,23 @@ export function Player({ item, startAt }: PlayerProps): React.JSX.Element {
               <button
                 type="button"
                 className={styles.ctrl}
+                aria-label="Hide controls"
+                title="Hide controls"
+                onClick={hideChrome}
+              >
+                <Icon name="chevron-down" size={20} />
+              </button>
+
+              <button
+                type="button"
+                className={styles.ctrl}
                 aria-label={fullscreen ? 'Exit fullscreen' : 'Fullscreen'}
                 onClick={toggleFullscreen}
               >
                 <Icon name={fullscreen ? 'collapse' : 'expand'} size={18} />
               </button>
 
-              <div className={styles.menuWrap}>
+              <div className={styles.menuWrap} ref={menuRef}>
                 <button
                   type="button"
                   className={styles.ctrl}
