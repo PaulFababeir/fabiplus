@@ -21,6 +21,36 @@
   background: #000;
 }
 
+/*
+ * Cue styling. The UA default paints an opaque black box behind each line,
+ * which reads as a slab over the picture — a text shadow carries legibility
+ * just as well without covering the frame.
+ */
+.video::cue {
+  background: transparent;
+  color: #fff;
+  font-family: Poppins, 'Segoe UI', sans-serif;
+  font-size: 88%;
+  line-height: 1.35;
+  text-shadow:
+    0 1px 3px rgb(0 0 0 / 92%),
+    0 0 10px rgb(0 0 0 / 70%);
+}
+
+/*
+ * Lifts cues clear of the control bar. WebVTT `line` settings would be the
+ * portable way, but the source files carry no positioning, so the whole track
+ * container is nudged instead.
+ */
+.video::-webkit-media-text-track-container {
+  transform: translateY(-6%);
+}
+
+/* Sit higher still while the controls are on screen. */
+.root[data-chrome='true'] .video::-webkit-media-text-track-container {
+  transform: translateY(-11%);
+}
+
 /* Chrome fades out together while the pointer is idle. */
 .chrome {
   position: absolute;
@@ -32,14 +62,19 @@
 
 .chrome[data-visible='false'] {
   opacity: 0;
+  /*
+   * Hidden only once the fade has finished. Flipping pointer-events the
+   * instant the flag changes left the controls visible but dead for 260ms,
+   * which is why hovering the back button worked only sometimes.
+   */
+  visibility: hidden;
+  transition:
+    opacity 260ms var(--ease-out),
+    visibility 0s linear 260ms;
 }
 
 .chrome > * {
   pointer-events: auto;
-}
-
-.chrome[data-visible='false'] > * {
-  pointer-events: none;
 }
 
 /* --- Header --------------------------------------------------------------- */
@@ -60,19 +95,22 @@
   display: grid;
   flex: 0 0 auto;
   place-items: center;
-  width: 34px;
-  height: 34px;
-  margin-top: 2px;
+  width: 42px;
+  height: 42px;
+  margin: -2px 0 0 -8px;
   border: none;
   border-radius: 50%;
   background: transparent;
   color: rgb(255 255 255 / 85%);
   cursor: pointer;
-  transition: background 140ms var(--ease-out);
+  transition:
+    background 140ms var(--ease-out),
+    color 140ms var(--ease-out);
 }
 
-.back:hover {
-  background: rgb(255 255 255 / 14%);
+.back:hover,
+.back:focus-visible {
+  background: rgb(255 255 255 / 22%);
   color: #fff;
 }
 
@@ -109,7 +147,6 @@
   border-radius: 50%;
   background: rgb(0 0 0 / 45%);
   color: #fff;
-  padding-left: 5px;
   cursor: pointer;
   backdrop-filter: blur(4px);
 }
@@ -248,11 +285,15 @@
   pointer-events: none;
 }
 
+/*
+ * No forced aspect-ratio: the canvas is sized from the video's own dimensions,
+ * so letting height follow intrinsic size avoids the pillar/letterboxing that
+ * a hard 16:9 box produced on anything wider or narrower.
+ */
 .previewCanvas {
   display: block;
   width: 100%;
-  aspect-ratio: var(--backdrop-ratio);
-  object-fit: cover;
+  height: auto;
 }
 
 .previewTime {

@@ -35,7 +35,13 @@ const PATHS: Record<IconName, string> = {
   'chevron-down': 'm6 9 6 6 6-6',
   'chevron-left': 'm15 6-6 6 6 6',
   'chevron-right': 'm9 6 6 6-6 6',
-  play: 'M8 5v14l11-7z',
+  /*
+   * Spans x 7→18, so the bounding box centres on 12.5 — a hair right of the
+   * viewBox centre, which is where a right-pointing triangle needs to sit to
+   * look centred. The old path ran 8→19 and had to be nudged by hand at every
+   * call site, each with a different value.
+   */
+  play: 'M7 5v14l11-7z',
   plus: 'M12 5v14M5 12h14',
   trash: 'M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3',
   close: 'M6 6l12 12M18 6 6 18',

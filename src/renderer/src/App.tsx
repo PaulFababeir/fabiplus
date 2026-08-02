@@ -1,4 +1,5 @@
 import { useEffect, useMemo } from 'react';
+import { AnimatePresence } from 'motion/react';
 
 import { ContinueWatching } from '@renderer/components/ContinueWatching/ContinueWatching';
 import { FilterRow } from '@renderer/components/FilterRow/FilterRow';
@@ -104,7 +105,9 @@ export default function App(): React.JSX.Element {
         <Sidebar item={selected} profileState={profileState} />
       </div>
 
-      {playing && <Player key={playing.id} item={playing} startAt={resumeAt} />}
+      <AnimatePresence>
+        {playing && <Player key={playing.id} item={playing} startAt={resumeAt} />}
+      </AnimatePresence>
 
       {settingsOpen && <SettingsPanel />}
       {rematchOpen && <RematchDialog />}

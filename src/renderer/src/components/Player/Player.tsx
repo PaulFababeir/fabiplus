@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { motion } from 'motion/react';
 
 import { toMovieUrl } from '@shared/media-url';
 import type { LibraryItem } from '@shared/types';
@@ -273,10 +274,17 @@ export function Player({ item, startAt }: PlayerProps): React.JSX.Element {
       : [displayYear(item), item.metadata?.genres.slice(0, 2).join(', ')].filter(Boolean).join('  ·  ');
 
   return (
-    <div
+    <motion.div
       ref={rootRef}
       className={styles.root}
+      // Fades and settles on the way in, and reverses on exit so returning to
+      // the library is a transition rather than a hard cut.
+      initial={{ opacity: 0, scale: 1.04 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 1.03 }}
+      transition={{ duration: 0.26, ease: [0.16, 1, 0.3, 1] }}
       data-idle={idle && playing}
+      data-chrome={!idle || !playing}
       onMouseMove={wake}
       onDoubleClick={toggleFullscreen}
     >
@@ -524,6 +532,6 @@ export function Player({ item, startAt }: PlayerProps): React.JSX.Element {
           </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

@@ -90,6 +90,28 @@
   color: var(--text);
 }
 
+/* Square, so it reads as a box rather than a shrunken pill. */
+.iconButton {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: var(--control-height);
+  height: var(--control-height);
+  border: none;
+  border-radius: var(--radius-control);
+  background: var(--control);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition:
+    background 120ms var(--ease-out),
+    color 120ms var(--ease-out);
+}
+
+.iconButton:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
 /* --- Profile -------------------------------------------------------------- */
 
 .profileWrap {
@@ -120,7 +142,7 @@
   place-items: center;
   width: 32px;
   height: 32px;
-  border-radius: 50%;
+  border-radius: 9px;
   color: var(--accent-contrast);
   font-size: 14px;
   font-weight: 700;

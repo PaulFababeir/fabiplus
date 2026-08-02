@@ -54,12 +54,11 @@ export function TopBar(): React.JSX.Element {
 
       <button
         type="button"
-        className={styles.kind}
-        style={{ minWidth: 0, padding: '0 10px' }}
+        className={styles.iconButton}
         aria-label="Settings"
         onClick={toggleSettings}
       >
-        <Icon name="settings" size={15} />
+        <Icon name="settings" size={17} />
       </button>
 
       <ProfileMenu />

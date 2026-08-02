@@ -71,43 +71,54 @@ export function Sidebar({ item, profileState }: SidebarProps): React.JSX.Element
         <Icon name="close" size={16} />
       </button>
 
-      <div className={styles.posterBlock} data-hidden={posterHidden}>
-        {posterHidden ? (
-          <button type="button" className={styles.showPoster} onClick={() => setPosterHidden(false)}>
-            <Icon name="maximize" size={12} />
-            Show poster
-          </button>
-        ) : (
-          <div className={styles.posterFrame}>
-            {poster && <img className={styles.posterImage} src={toMovieUrl(poster)} alt="" />}
+      {/*
+        The frame keeps its box when hidden — only its contents go. Collapsing
+        it would pull the title and synopsis up over the backdrop, which is the
+        very thing hiding the poster is meant to reveal.
+      */}
+      <div className={styles.posterBlock}>
+        <div className={styles.posterFrame} data-hidden={posterHidden}>
+          {posterHidden ? (
+            <button
+              type="button"
+              className={styles.showPoster}
+              onClick={() => setPosterHidden(false)}
+            >
+              <Icon name="maximize" size={12} />
+              Show poster
+            </button>
+          ) : (
+            <>
+              {poster && <img className={styles.posterImage} src={toMovieUrl(poster)} alt="" />}
 
-            <div className={styles.posterTools}>
-              <button
-                type="button"
-                className={styles.posterTool}
-                aria-label="Enlarge poster"
-                onClick={() => setEnlarged(true)}
-              >
-                <Icon name="maximize" size={15} />
-              </button>
-              <button
-                type="button"
-                className={styles.posterTool}
-                aria-label="Hide poster to reveal the backdrop"
-                onClick={() => setPosterHidden(true)}
-              >
-                <Icon name="eye-off" size={15} />
-              </button>
-            </div>
+              <div className={styles.posterTools}>
+                <button
+                  type="button"
+                  className={styles.posterTool}
+                  aria-label="Enlarge poster"
+                  onClick={() => setEnlarged(true)}
+                >
+                  <Icon name="maximize" size={15} />
+                </button>
+                <button
+                  type="button"
+                  className={styles.posterTool}
+                  aria-label="Hide poster to reveal the backdrop"
+                  onClick={() => setPosterHidden(true)}
+                >
+                  <Icon name="eye-off" size={15} />
+                </button>
+              </div>
 
-            {posters.length > 0 && (
-              <button type="button" className={styles.swap} onClick={() => setPicking((v) => !v)}>
-                <Icon name="swap" size={12} />
-                {posters.length > 1 ? `Change poster (${posters.length})` : 'Poster options'}
-              </button>
-            )}
-          </div>
-        )}
+              {posters.length > 0 && (
+                <button type="button" className={styles.swap} onClick={() => setPicking((v) => !v)}>
+                  <Icon name="swap" size={12} />
+                  {posters.length > 1 ? `Change poster (${posters.length})` : 'Poster options'}
+                </button>
+              )}
+            </>
+          )}
+        </div>
       </div>
 
       <div className={styles.header}>

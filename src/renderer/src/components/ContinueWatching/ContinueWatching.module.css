@@ -120,7 +120,6 @@
   border-radius: 50%;
   background: rgb(255 255 255 / 10%);
   color: #fff;
-  padding-left: 4px;
   transition:
     background 160ms var(--ease-out),
     transform 160ms var(--ease-out);
@@ -168,8 +167,13 @@
   background: var(--text);
 }
 
+/*
+ * The cards are absolutely positioned with explicit z-indexes, so without one
+ * of its own the arrow sits underneath them and never receives the click.
+ */
 .nav {
   position: absolute;
+  z-index: 20;
   top: 50%;
   display: grid;
   place-items: center;

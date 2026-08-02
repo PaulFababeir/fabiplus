@@ -240,12 +240,6 @@
   color: #fff;
 }
 
-/* Hidden: the frame collapses so the backdrop reads uninterrupted. */
-.posterBlock[data-hidden='true'] {
-  padding-top: clamp(40px, 6vh, 78px);
-  padding-bottom: 0;
-}
-
 .showPoster {
   display: flex;
   align-items: center;
@@ -277,6 +271,21 @@
   border-radius: var(--radius-md);
   background: var(--surface);
   box-shadow: 0 20px 46px rgb(0 0 0 / 60%);
+  transition:
+    background 200ms var(--ease-out),
+    box-shadow 200ms var(--ease-out);
+}
+
+/*
+ * Hidden keeps the identical box so nothing below shifts; only the artwork and
+ * its chrome disappear, leaving the backdrop visible through the gap.
+ */
+.posterFrame[data-hidden='true'] {
+  display: grid;
+  place-items: center;
+  overflow: visible;
+  background: transparent;
+  box-shadow: none;
 }
 
 .posterImage {
