@@ -145,6 +145,13 @@ export interface LibraryCatalog {
   items: LibraryItem[];
 }
 
+/** Colour description declared by a video file, as far as the player needs. */
+export interface VideoColourInfo {
+  transfer: number | null;
+  /** True when the declared transfer is PQ or HLG, so Chromium tone-maps it. */
+  hdr: boolean;
+}
+
 /** Non-fatal problems hit during a scan, surfaced in the UI. */
 export interface ScanIssue {
   folderPath: string;

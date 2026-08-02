@@ -25,6 +25,14 @@ const OSD_MS = 1500;
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2] as const;
 const BRIGHTNESS = [1, 1.1, 1.2, 1.3] as const;
 
+/**
+ * Gamma applied to files that declare an HDR transfer. Chromium tone-maps
+ * those for an SDR display and the result sits well below what VLC shows,
+ * because release groups routinely tag SDR-graded "HYBRID" encodes as HDR.
+ * An exponent below 1 lifts the midtones the tone mapper pulled down.
+ */
+const HDR_GAMMA = 0.72;
+
 function formatTime(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
   const total = Math.floor(seconds);
@@ -76,6 +84,8 @@ export function Player({ item, startAt }: PlayerProps): React.JSX.Element {
   /** Transient notice, VLC-style, so a blind cycle still tells you where it landed. */
   const [osd, setOsd] = useState<string | null>(null);
   const [brightness, setBrightness] = useState(1);
+  const [hdrTagged, setHdrTagged] = useState(false);
+  const [compensateHdr, setCompensateHdr] = useState(true);
 
   // Persisted, so it is set once rather than per film.
   useEffect(() => {
@@ -87,6 +97,18 @@ export function Player({ item, startAt }: PlayerProps): React.JSX.Element {
   const [scrubbing, setScrubbing] = useState(false);
 
   const src = useMemo(() => toMovieUrl(item.video.path), [item.video.path]);
+
+  // A file tagged PQ or HLG will be tone-mapped by Chromium; knowing that up
+  // front lets the correction be on before the first frame is judged.
+  useEffect(() => {
+    let cancelled = false;
+    void window.api.probeVideoColour(item.video.path).then((colour) => {
+      if (!cancelled) setHdrTagged(colour.hdr);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [item.video.path]);
   const { canvasRef, requestFrame } = useScrubPreview(src);
 
   // --- Subtitles ----------------------------------------------------------
@@ -376,7 +398,12 @@ export function Player({ item, startAt }: PlayerProps): React.JSX.Element {
       <video
         ref={videoRef}
         className={styles.video}
-        style={{ '--video-brightness': brightness } as React.CSSProperties}
+        style={
+          {
+            '--video-brightness': brightness,
+            filter: `${hdrTagged && compensateHdr ? 'url(#hdrCompensate) ' : ''}brightness(${brightness})`
+          } as React.CSSProperties
+        }
         src={src}
         autoPlay
         onClick={() => {
@@ -433,6 +460,21 @@ export function Player({ item, startAt }: PlayerProps): React.JSX.Element {
       {waiting && !error && <div className={styles.spinner} />}
 
       {osd && <div className={styles.osd}>{osd}</div>}
+
+      {/*
+        Gamma cannot be expressed with CSS filter functions, so the correction
+        rides on an SVG filter referenced by url(). Zero-sized and hidden; it
+        exists only to be pointed at.
+      */}
+      <svg className={styles.filterDefs} aria-hidden="true">
+        <filter id="hdrCompensate" colorInterpolationFilters="sRGB">
+          <feComponentTransfer>
+            <feFuncR type="gamma" exponent={HDR_GAMMA} />
+            <feFuncG type="gamma" exponent={HDR_GAMMA} />
+            <feFuncB type="gamma" exponent={HDR_GAMMA} />
+          </feComponentTransfer>
+        </filter>
+      </svg>
 
       {error && (
         <div className={styles.error}>
@@ -611,6 +653,22 @@ export function Player({ item, startAt }: PlayerProps): React.JSX.Element {
                           <Icon name="check" size={14} className={styles.menuCheck} />
                         </button>
                       ))
+                    )}
+
+                    {hdrTagged && (
+                      <>
+                        <div className={styles.menuDivider} />
+                        <div className={styles.menuLabel}>HDR</div>
+                        <button
+                          type="button"
+                          className={styles.menuItem}
+                          data-active={compensateHdr}
+                          onClick={() => setCompensateHdr((v) => !v)}
+                        >
+                          <span className={styles.menuItemLabel}>Compensate tone mapping</span>
+                          <Icon name="check" size={14} className={styles.menuCheck} />
+                        </button>
+                      </>
                     )}
 
                     <div className={styles.menuDivider} />

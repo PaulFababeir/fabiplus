@@ -5,7 +5,8 @@ import type {
   LibraryCatalog,
   Profile,
   ProfileState,
-  ReviewCandidate
+  ReviewCandidate,
+  VideoColourInfo
 } from './types.js';
 
 /** IPC channel names. Kept in one place so main and preload cannot drift. */
@@ -23,6 +24,7 @@ export const IPC = {
   libraryRematch: 'library:rematch',
   librarySearchProvider: 'library:search-provider',
   subtitleLoad: 'player:subtitle-load',
+  videoColour: 'player:video-colour',
 
   profilesList: 'profiles:list',
   profileCreate: 'profiles:create',
@@ -61,6 +63,9 @@ export interface RendererApi {
    * so conversion happens in main where the file can be read directly.
    */
   loadSubtitle(path: string): Promise<string | null>;
+
+  /** Reads a file's declared colour tags so the player can spot HDR content. */
+  probeVideoColour(path: string): Promise<VideoColourInfo>;
 
   /** Subscribes to enrichment progress. Returns an unsubscribe function. */
   onEnrichProgress(listener: (progress: EnrichmentProgress) => void): () => void;

@@ -10,10 +10,12 @@ import type {
   LibraryCatalog,
   Profile,
   ProfileState,
-  ReviewCandidate
+  ReviewCandidate,
+  VideoColourInfo
 } from '@shared/types';
 import { imageCacheDir, loadConfig, saveConfig } from './services/config.js';
 import { serveFile } from './services/media-server.js';
+import { isHdrTagged, probeVideoColour } from './services/video-colour.js';
 import { applyManualMatch, enrichLibrary } from './services/enrichment.js';
 import {
   backupLibrary,
@@ -268,6 +270,16 @@ function registerIpc(): void {
     } catch {
       return null;
     }
+  });
+
+  ipcMain.handle(IPC.videoColour, async (_event, path: unknown): Promise<VideoColourInfo> => {
+    if (typeof path !== 'string') return { transfer: null, hdr: false };
+
+    const safe = await resolveAllowedPath(path);
+    if (!safe) return { transfer: null, hdr: false };
+
+    const colour = await probeVideoColour(safe);
+    return { transfer: colour.transfer, hdr: isHdrTagged(colour) };
   });
 
   // -- Profiles ------------------------------------------------------------

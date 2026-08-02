@@ -8,7 +8,8 @@ import type {
   LibraryCatalog,
   Profile,
   ProfileState,
-  ReviewCandidate
+  ReviewCandidate,
+  VideoColourInfo
 } from '../shared/types.js';
 
 /**
@@ -33,6 +34,8 @@ const api: RendererApi = {
   searchProvider: (query, year) =>
     ipcRenderer.invoke(IPC.librarySearchProvider, query, year) as Promise<ReviewCandidate[]>,
   loadSubtitle: (path) => ipcRenderer.invoke(IPC.subtitleLoad, path) as Promise<string | null>,
+  probeVideoColour: (path) =>
+    ipcRenderer.invoke(IPC.videoColour, path) as Promise<VideoColourInfo>,
 
   onEnrichProgress: (listener) => {
     const handler = (_event: IpcRendererEvent, progress: EnrichmentProgress): void =>
