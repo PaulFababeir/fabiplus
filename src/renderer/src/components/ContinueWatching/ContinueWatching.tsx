@@ -1,36 +1,29 @@
 import { useCallback, useEffect, useState } from 'react';
-import { AnimatePresence, motion, type PanInfo } from 'motion/react';
+import { AnimatePresence, motion } from 'motion/react';
 
-import { continueWatching, type ContinueEntry } from '@shared/continue-watching';
+import { continueWatching } from '@shared/continue-watching';
 import { toMovieUrl } from '@shared/media-url';
 import type { LibraryItem, ProfileState } from '@shared/types';
-import { displayTitle, displayYear, runtimeLabel } from '@renderer/lib/selectors';
+import { displayTitle, displayYear, posterFor, runtimeLabel } from '@renderer/lib/selectors';
 import { useUi } from '@renderer/state/useUi';
 import { Icon } from '@renderer/components/ui/Icon';
 import styles from './ContinueWatching.module.css';
 
-/** Cards rendered at once: the hero plus two peeking behind it. */
-const VISIBLE = 3;
-/** Horizontal drag past this fraction of the card advances the deck. */
-const SWIPE_RATIO = 0.18;
+/** Poster cards shown queued to the right of the active film. */
+const QUEUE_SIZE = 2;
 
-/**
- * Transform for each slot in the stack. Slot 0 is the hero; the rest fan out
- * to the right at decreasing scale, matching the Figma treatment.
- */
-const SLOTS = [
-  { x: '0%', scale: 1, opacity: 1, blur: 0 },
-  { x: '18%', scale: 0.87, opacity: 0.5, blur: 1.5 },
-  { x: '38%', scale: 0.78, opacity: 0.28, blur: 3 }
-] as const;
-
-const SPRING = { type: 'spring', stiffness: 260, damping: 32, mass: 0.9 } as const;
+const EASE = [0.16, 1, 0.3, 1] as const;
 
 interface ContinueWatchingProps {
   items: LibraryItem[];
   profileState: ProfileState | null;
 }
 
+/**
+ * The active film's backdrop fills the stage and carries its title, remaining
+ * time and a play button; the films queued behind it appear as posters on the
+ * right. Cycling swaps all of it together.
+ */
 export function ContinueWatching({
   items,
   profileState
@@ -55,163 +48,142 @@ export function ContinueWatching({
     [total]
   );
 
-  const onDragEnd = (_e: unknown, info: PanInfo, width: number): void => {
-    const threshold = width * SWIPE_RATIO;
-    // Velocity lets a quick flick advance without dragging the full distance.
-    if (info.offset.x < -threshold || info.velocity.x < -600) step(1);
-    else if (info.offset.x > threshold || info.velocity.x > 600) step(-1);
-  };
-
   if (total === 0) return null;
 
-  // Slots are filled from the current index, wrapping, so the deck is endless.
-  const slots = Array.from({ length: Math.min(VISIBLE, total) }, (_, offset) => ({
-    slot: offset,
-    entry: deck[(index + offset) % total]!
+  const active = deck[index % total];
+  if (!active) return null;
+
+  const { item, progress } = active;
+  const backdrop = item.metadata?.backdrop?.localPath ?? null;
+  const remaining = item.metadata?.runtimeMin
+    ? runtimeLabel(Math.round(item.metadata.runtimeMin * (1 - progress)))
+    : null;
+
+  // The films after this one, wrapping, shown as posters.
+  const queue = Array.from({ length: Math.min(QUEUE_SIZE, total - 1) }, (_, offset) => ({
+    entry: deck[(index + offset + 1) % total]!,
+    position: (index + offset + 1) % total
   }));
 
   return (
     <section className={styles.section} aria-roledescription="carousel">
       <h2 className={styles.heading}>Continue watching</h2>
 
-      <div className={styles.deck}>
-        {/* Painted back-to-front so the hero ends up on top. */}
-        {[...slots].reverse().map(({ slot, entry }) => {
-          const pose = SLOTS[slot] ?? SLOTS[SLOTS.length - 1]!;
-          const isFront = slot === 0;
+      <div className={styles.stage}>
+        {/* Crossfaded rather than swapped, so cycling reads as a transition. */}
+        <AnimatePresence initial={false}>
+          {backdrop && (
+            <motion.img
+              key={item.id}
+              className={styles.backdrop}
+              src={toMovieUrl(backdrop)}
+              alt=""
+              draggable={false}
+              initial={{ opacity: 0, scale: 1.05 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.55, ease: EASE }}
+            />
+          )}
+        </AnimatePresence>
 
-          return (
-            <motion.div
-              key={entry.item.id}
-              className={styles.card}
-              style={{ zIndex: VISIBLE - slot }}
-              initial={false}
-              animate={{
-                x: pose.x,
-                scale: pose.scale,
-                opacity: pose.opacity,
-                filter: `blur(${pose.blur}px)`
-              }}
-              transition={SPRING}
-              drag={isFront && total > 1 ? 'x' : false}
-              dragConstraints={{ left: 0, right: 0 }}
-              dragElastic={0.16}
-              onDragEnd={(e, info) =>
-                onDragEnd(e, info, (e.currentTarget as HTMLElement).clientWidth)
-              }
-              aria-hidden={!isFront}
-            >
-              {isFront ? (
-                <button
+        <div className={styles.scrim} />
+
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={item.id}
+            className={styles.info}
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.3, ease: EASE }}
+          >
+            <h3 className={styles.title}>{displayTitle(item)}</h3>
+
+            <p className={styles.sub}>
+              {[displayYear(item), remaining && `${remaining} left`].filter(Boolean).join('  ·  ')}
+            </p>
+
+            <div className={styles.progressTrack}>
+              <motion.div
+                className={styles.progressFill}
+                initial={{ width: 0 }}
+                animate={{ width: `${progress * 100}%` }}
+                transition={{ duration: 0.5, ease: EASE }}
+              />
+            </div>
+
+            <button type="button" className={styles.play} onClick={() => play(item.id)}>
+              <Icon name="play" size={15} />
+              Resume
+            </button>
+          </motion.div>
+        </AnimatePresence>
+
+        {queue.length > 0 && (
+          <div className={styles.thumbs}>
+            {queue.map(({ entry, position }) => {
+              const poster = posterFor(entry.item, profileState);
+              return (
+                <motion.button
+                  key={entry.item.id}
                   type="button"
-                  className={styles.front}
-                  onClick={() => play(entry.item.id)}
+                  className={styles.thumb}
+                  // `layout` lets a card glide to its new slot when the deck
+                  // advances rather than jumping.
+                  layout
+                  transition={{ duration: 0.42, ease: EASE }}
+                  aria-label={`Show ${displayTitle(entry.item)}`}
+                  onClick={() => setIndex(position)}
                   onContextMenu={(e) => {
-                    // Right-click opens details rather than resuming.
                     e.preventDefault();
                     select(entry.item.id);
                   }}
                 >
-                  <CardFace entry={entry} />
-                </button>
-              ) : (
-                <div className={styles.front}>
-                  <CardFace entry={entry} muted />
-                </div>
-              )}
-            </motion.div>
-          );
-        })}
+                  {poster ? (
+                    <img
+                      className={styles.thumbImage}
+                      src={toMovieUrl(poster)}
+                      alt=""
+                      draggable={false}
+                    />
+                  ) : (
+                    <span className={styles.thumbFallback}>{displayTitle(entry.item)}</span>
+                  )}
+
+                  <span className={styles.thumbProgress}>
+                    <span
+                      className={styles.thumbProgressFill}
+                      style={{ width: `${entry.progress * 100}%` }}
+                    />
+                  </span>
+                </motion.button>
+              );
+            })}
+          </div>
+        )}
 
         {total > 1 && (
-          <>
+          <div className={styles.nav}>
             <button
               type="button"
-              className={`${styles.nav} ${styles.navPrev}`}
+              className={styles.navButton}
               aria-label="Previous"
               onClick={() => step(-1)}
             >
-              <Icon name="chevron-left" size={18} />
+              <Icon name="chevron-left" size={15} />
             </button>
             <button
               type="button"
-              className={`${styles.nav} ${styles.navNext}`}
+              className={styles.navButton}
               aria-label="Next"
               onClick={() => step(1)}
             >
-              <Icon name="chevron-right" size={18} />
+              <Icon name="chevron-right" size={15} />
             </button>
-          </>
+          </div>
         )}
       </div>
-
-      {total > 1 && (
-        <div className={styles.dots}>
-          {deck.map((entry, i) => (
-            <button
-              key={entry.item.id}
-              type="button"
-              className={styles.dot}
-              data-active={i === index}
-              aria-label={`Show ${displayTitle(entry.item)}`}
-              onClick={() => setIndex(i)}
-            />
-          ))}
-        </div>
-      )}
     </section>
-  );
-}
-
-function CardFace({ entry, muted = false }: { entry: ContinueEntry; muted?: boolean }): React.JSX.Element {
-  const { item, progress } = entry;
-  const backdrop = item.metadata?.backdrop?.localPath ?? null;
-  const remaining = item.metadata?.runtimeMin
-    ? runtimeLabel(Math.round(item.metadata.runtimeMin * (1 - progress)))
-    : null;
-
-  return (
-    <>
-      {backdrop && (
-        <img className={styles.backdrop} src={toMovieUrl(backdrop)} alt="" draggable={false} />
-      )}
-      <span className={styles.scrim} />
-
-      {/* Cards behind show artwork only — text at that scale is just noise. */}
-      {!muted && (
-        <AnimatePresence mode="wait">
-          <motion.span
-            key={item.id}
-            className={styles.content}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.22 }}
-          >
-            <span className={styles.contentRow}>
-              <span className={styles.info}>
-                <h3 className={styles.title}>{displayTitle(item)}</h3>
-                <span className={styles.sub}>
-                  {displayYear(item) ?? '—'}
-                  {remaining && ` · ${remaining} left`}
-                </span>
-              </span>
-              <span className={styles.play}>
-                <Icon name="play" size={22} />
-              </span>
-            </span>
-
-            <span className={styles.progressTrack}>
-              <motion.span
-                className={styles.progressFill}
-                initial={{ width: 0 }}
-                animate={{ width: `${progress * 100}%` }}
-                transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-              />
-            </span>
-          </motion.span>
-        </AnimatePresence>
-      )}
-    </>
   );
 }

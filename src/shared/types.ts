@@ -247,10 +247,6 @@ export interface ProfileState {
 // Config
 // ---------------------------------------------------------------------------
 
-export type TranslucencyLevel = 'off' | 'subtle' | 'medium' | 'strong';
-
-export const TRANSLUCENCY_LEVELS: TranslucencyLevel[] = ['off', 'subtle', 'medium', 'strong'];
-
 export interface AppConfig {
   schemaVersion: number;
   /** Library roots. Phase 1 wires movies only. */
@@ -260,10 +256,10 @@ export interface AppConfig {
   tmdbApiKey: string | null;
   lastProfileId: string | null;
   /**
-   * How much of the desktop shows through the window (Windows 11 acrylic).
-   * `off` is a solid background.
+   * Windows 11 acrylic behind the window, so the desktop reads faintly through
+   * it. Off means a solid background.
    */
-  translucency: TranslucencyLevel;
+  translucentBackground: boolean;
 }
 
 // ---------------------------------------------------------------------------

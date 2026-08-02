@@ -28,21 +28,21 @@ export default function App(): React.JSX.Element {
     settingsOpen,
     rematchOpen,
     playingId,
-    translucency,
-    setTranslucency,
+    translucent,
+    setTranslucent,
     setRematchOpen
   } = useUi();
 
   useEffect(() => {
     void load();
     void loadProfiles();
-    void window.api.getConfig().then((config) => setTranslucency(config.translucency));
-  }, [load, loadProfiles, setTranslucency]);
+    void window.api.getConfig().then((config) => setTranslucent(config.translucentBackground));
+  }, [load, loadProfiles, setTranslucent]);
 
-  // Drives --bg-veil, so the page lets through as much acrylic as chosen.
+  // Drives --bg-veil, so the page lets the acrylic through only when enabled.
   useEffect(() => {
-    document.documentElement.dataset['translucency'] = translucency;
-  }, [translucency]);
+    document.documentElement.dataset['translucent'] = String(translucent);
+  }, [translucent]);
 
   useEffect(() => window.api.onEnrichProgress(setProgress), [setProgress]);
 

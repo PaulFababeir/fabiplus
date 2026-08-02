@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 
-import { TRANSLUCENCY_LEVELS } from '@shared/types';
 import { useLibrary } from '@renderer/state/useLibrary';
 import { useProfile } from '@renderer/state/useProfile';
 import { useUi } from '@renderer/state/useUi';
@@ -9,7 +8,7 @@ import styles from './Modal.module.css';
 
 /** Library maintenance: the TMDB key, rescanning, and metadata refresh. */
 export function SettingsPanel(): React.JSX.Element {
-  const { toggleSettings, translucency, setTranslucency } = useUi();
+  const { toggleSettings, translucent, setTranslucent } = useUi();
   const { catalog, busy, error, progress, summary, rescan, enrich } = useLibrary();
   const { state: profileState, setProgress, clearProgress } = useProfile();
 
@@ -113,22 +112,19 @@ export function SettingsPanel(): React.JSX.Element {
             afterwards.
           </p>
 
-          <label className={styles.label}>Window translucency</label>
-          <div className={styles.actions} style={{ marginTop: 0 }}>
-            {TRANSLUCENCY_LEVELS.map((level) => (
-              <button
-                key={level}
-                type="button"
-                className={`${styles.button} ${translucency === level ? styles.primary : ''}`}
-                aria-pressed={translucency === level}
-                onClick={() => {
-                  setTranslucency(level);
-                  void window.api.setTranslucency(level);
-                }}
-              >
-                {level === 'off' ? 'Off' : level[0]!.toUpperCase() + level.slice(1)}
-              </button>
-            ))}
+          <div className={styles.actions}>
+            <button
+              type="button"
+              className={styles.button}
+              aria-pressed={translucent}
+              onClick={() => {
+                const next = !translucent;
+                setTranslucent(next);
+                void window.api.setTranslucent(next);
+              }}
+            >
+              {translucent ? 'Translucent window: on' : 'Translucent window: off'}
+            </button>
           </div>
 
           <p className={styles.note}>

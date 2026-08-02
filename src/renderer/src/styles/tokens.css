@@ -58,20 +58,12 @@
 }
 
 /*
- * With acrylic behind the window the page itself must let light through.
- * Lower veil, more desktop. Below roughly 55% the grid captions start losing
- * contrast against bright wallpaper, which is why `strong` stops where it does.
+ * With acrylic behind the window the page must let light through. One value,
+ * tuned so the desktop reads as texture behind the app rather than as content
+ * competing with the posters.
  */
-:root[data-translucency='subtle'] {
-  --bg-veil: rgb(14 15 17 / 84%);
-}
-
-:root[data-translucency='medium'] {
-  --bg-veil: rgb(14 15 17 / 66%);
-}
-
-:root[data-translucency='strong'] {
-  --bg-veil: rgb(14 15 17 / 48%);
+:root[data-translucent='true'] {
+  --bg-veil: rgb(14 15 17 / 82%);
 }
 
 * {

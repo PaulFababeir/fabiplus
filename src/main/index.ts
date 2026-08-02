@@ -3,7 +3,6 @@ import { readFile, realpath } from 'node:fs/promises';
 import { join, resolve as resolvePath, sep } from 'node:path';
 
 import { IPC } from '@shared/ipc';
-import { TRANSLUCENCY_LEVELS } from '@shared/types';
 import { isVtt, srtToVtt } from '@shared/subtitles';
 import type {
   AppConfig,
@@ -11,8 +10,7 @@ import type {
   LibraryCatalog,
   Profile,
   ProfileState,
-  ReviewCandidate,
-  TranslucencyLevel
+  ReviewCandidate
 } from '@shared/types';
 import { imageCacheDir, loadConfig, saveConfig } from './services/config.js';
 import { serveFile } from './services/media-server.js';
@@ -322,7 +320,7 @@ function applyBackdrop(win: BrowserWindow, enabled: boolean): void {
 
 async function createWindow(): Promise<void> {
   const config = await loadConfig();
-  const translucent = config.translucency !== 'off';
+  const translucent = config.translucentBackground;
   const win = new BrowserWindow({
     width: 1540,
     height: 1024,

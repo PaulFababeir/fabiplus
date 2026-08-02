@@ -11,131 +11,107 @@
 }
 
 /*
- * The deck: the front card occupies 78% of the row, with two smaller cards
- * peeking out to its right. Sizes come from the Figma frame, where the
- * ghosts extend nearly to the edge of the movie column rather than sitting
- * just behind the hero.
+ * One stage rather than a stack of equal cards: the active film's backdrop
+ * fills it, and the films queued behind appear as posters floating on the
+ * right. Cycling swaps what is on the plate rather than sliding a row.
  */
-.deck {
+.stage {
   position: relative;
   width: 100%;
-  /* 78% width at 3:2 ⇒ height is 0.52 × width, so the row is ~1.92:1. */
-  aspect-ratio: 1.92 / 1;
-  max-height: 470px;
-}
-
-.card {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: 78%;
+  aspect-ratio: 2.15 / 1;
+  max-height: 460px;
   overflow: hidden;
-  border: 1px solid rgb(255 255 255 / 12%);
   border-radius: var(--radius-lg);
   background: var(--surface);
-}
-
-/*
- * Slot transforms are driven by motion in the component so they can spring
- * between positions; defining them here too would fight the animation.
- */
-.card {
-  transform-origin: center;
-  will-change: transform, opacity;
-}
-
-.front {
-  display: block;
-  user-select: none;
-  width: 100%;
-  height: 100%;
-  padding: 0;
-  border: none;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
+  isolation: isolate;
 }
 
 .backdrop {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  display: block;
+  user-select: none;
 }
 
+/*
+ * Weighted to the left, where the text sits, and lifted along the bottom for
+ * the pager. The right stays clear so the poster cards read against artwork.
+ */
 .scrim {
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    to top,
-    rgb(6 7 9 / 88%) 0%,
-    rgb(6 7 9 / 45%) 38%,
-    rgb(6 7 9 / 5%) 72%
-  );
+  background:
+    linear-gradient(
+      to right,
+      rgb(8 9 11 / 92%) 0%,
+      rgb(8 9 11 / 78%) 26%,
+      rgb(8 9 11 / 40%) 52%,
+      rgb(8 9 11 / 18%) 74%,
+      rgb(8 9 11 / 30%) 100%
+    ),
+    linear-gradient(to top, rgb(8 9 11 / 55%) 0%, transparent 34%);
 }
 
-/* Title bottom-left, play glyph right, progress rule spanning beneath both. */
-.content {
-  position: absolute;
-  right: 30px;
-  bottom: 24px;
-  left: 30px;
-}
-
-.contentRow {
-  display: flex;
-  align-items: flex-end;
-  gap: 20px;
-}
+/* --- Text block ----------------------------------------------------------- */
 
 .info {
-  flex: 1;
-  min-width: 0;
+  position: absolute;
+  top: 50%;
+  left: clamp(28px, 6%, 76px);
+  width: min(46%, 460px);
+  transform: translateY(-50%);
 }
 
 .title {
   margin: 0;
-  font-size: clamp(24px, 3.4vw, 42px);
+  color: #fff;
+  font-size: clamp(24px, 3.1vw, 44px);
   font-weight: 700;
-  letter-spacing: -0.02em;
-  line-height: 1.05;
+  letter-spacing: -0.025em;
+  line-height: 1.04;
+  text-shadow: 0 2px 18px rgb(0 0 0 / 55%);
 }
 
 .sub {
-  margin-top: 8px;
-  color: rgb(255 255 255 / 72%);
-  font-size: 12.5px;
+  margin-top: 10px;
+  color: rgb(255 255 255 / 74%);
+  font-size: 13px;
+  line-height: 1.55;
 }
 
 .play {
-  display: grid;
-  flex: 0 0 auto;
-  place-items: center;
-  width: 52px;
-  height: 52px;
-  border: 1px solid rgb(255 255 255 / 55%);
-  border-radius: 50%;
-  background: rgb(255 255 255 / 10%);
-  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 20px;
+  padding: 10px 22px 10px 18px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: rgb(255 255 255 / 92%);
+  color: #101114;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
   transition:
     background 160ms var(--ease-out),
     transform 160ms var(--ease-out);
 }
 
-.front:hover .play {
-  background: rgb(255 255 255 / 92%);
-  color: #101114;
-  transform: scale(1.06);
+.play:hover {
+  background: #fff;
+  transform: translateY(-2px);
 }
 
 .progressTrack {
-  height: 2px;
-  margin-top: 16px;
+  width: min(280px, 100%);
+  height: 3px;
+  margin-top: 20px;
   border-radius: 2px;
-  background: rgb(255 255 255 / 25%);
+  background: rgb(255 255 255 / 28%);
+  overflow: hidden;
 }
 
 .progressFill {
@@ -144,59 +120,102 @@
   background: #fff;
 }
 
-/* Dots double as the deck pager. */
-.dots {
+/* --- Poster queue --------------------------------------------------------- */
+
+.thumbs {
+  position: absolute;
+  top: 50%;
+  right: clamp(20px, 3.5%, 46px);
   display: flex;
-  gap: 6px;
-  justify-content: center;
-  margin-top: 14px;
+  gap: 14px;
+  transform: translateY(-52%);
 }
 
-.dot {
-  width: 6px;
-  height: 6px;
+.thumb {
+  position: relative;
+  height: clamp(130px, 26vw, 252px);
+  aspect-ratio: var(--poster-ratio);
   padding: 0;
-  border: none;
-  border-radius: 50%;
-  background: var(--border);
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: var(--radius-md);
+  background: var(--surface);
   cursor: pointer;
-  transition: background 160ms var(--ease-out);
+  box-shadow: 0 16px 38px rgb(0 0 0 / 52%);
+  transition:
+    transform 220ms var(--ease-out),
+    box-shadow 220ms var(--ease-out);
 }
 
-.dot[data-active='true'] {
-  background: var(--text);
+.thumb:hover,
+.thumb:focus-visible {
+  transform: translateY(-6px);
+  box-shadow: 0 22px 48px rgb(0 0 0 / 62%);
 }
 
-/*
- * The cards are absolutely positioned with explicit z-indexes, so without one
- * of its own the arrow sits underneath them and never receives the click.
- */
+.thumbImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  user-select: none;
+}
+
+/* Placeholder when a film has no cached poster. */
+.thumbFallback {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  padding: 10px;
+  place-items: center;
+  color: var(--text-dim);
+  font-size: 11.5px;
+  text-align: center;
+}
+
+.thumbProgress {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: rgb(255 255 255 / 26%);
+}
+
+.thumbProgressFill {
+  height: 100%;
+  background: #fff;
+}
+
+/* --- Pager ---------------------------------------------------------------- */
+
 .nav {
   position: absolute;
+  bottom: 16px;
+  left: 50%;
   z-index: 20;
-  top: 50%;
+  display: flex;
+  gap: 10px;
+  transform: translateX(-50%);
+}
+
+.navButton {
   display: grid;
   place-items: center;
   width: 38px;
-  height: 38px;
-  transform: translateY(-50%);
-  border: none;
-  border-radius: 50%;
-  background: rgb(10 11 13 / 70%);
-  color: #fff;
-  opacity: 0;
+  height: 30px;
+  border: 1px solid rgb(255 255 255 / 20%);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 12%);
+  color: rgb(255 255 255 / 85%);
   cursor: pointer;
-  transition: opacity 160ms var(--ease-out);
+  backdrop-filter: blur(6px);
+  transition:
+    background 140ms var(--ease-out),
+    color 140ms var(--ease-out);
 }
 
-.deck:hover .nav {
-  opacity: 1;
-}
-
-.navPrev {
-  left: 14px;
-}
-
-.navNext {
-  right: 14px;
+.navButton:hover {
+  background: rgb(255 255 255 / 26%);
+  color: #fff;
 }

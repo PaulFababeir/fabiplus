@@ -148,10 +148,8 @@
  * the first thing to lose contrast as it thins. A shadow buys back the
  * legibility instead of forcing the veil back up.
  */
-:global(:root[data-translucency='medium']) .title,
-:global(:root[data-translucency='strong']) .title,
-:global(:root[data-translucency='medium']) .year,
-:global(:root[data-translucency='strong']) .year {
+:global(:root[data-translucent='true']) .title,
+:global(:root[data-translucent='true']) .year {
   text-shadow: 0 1px 3px rgb(0 0 0 / 65%);
 }
 

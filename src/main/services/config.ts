@@ -30,21 +30,21 @@ function defaults(): AppConfig {
     seriesRoots: [],
     tmdbApiKey: null,
     lastProfileId: null,
-    translucency: 'medium'
+    translucentBackground: true
   };
 }
 
 export async function loadConfig(): Promise<AppConfig> {
-  const loaded = await readJsonSafe<Partial<AppConfig> & { translucentBackground?: boolean }>(
+  const loaded = await readJsonSafe<Partial<AppConfig> & { translucency?: string }>(
     configPath(),
     {}
   );
 
-  // The setting used to be a boolean. Carry an existing choice across rather
-  // than silently resetting it to the default.
+  // A short-lived build stored this as a level. Map it back rather than
+  // resetting anyone's choice.
   const migrated: Partial<AppConfig> = { ...loaded };
-  if (migrated.translucency === undefined && typeof loaded.translucentBackground === 'boolean') {
-    migrated.translucency = loaded.translucentBackground ? 'medium' : 'off';
+  if (migrated.translucentBackground === undefined && typeof loaded.translucency === 'string') {
+    migrated.translucentBackground = loaded.translucency !== 'off';
   }
 
   // Merge over defaults so a config written by an older build stays usable.
