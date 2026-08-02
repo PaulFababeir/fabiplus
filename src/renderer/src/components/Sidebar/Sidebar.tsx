@@ -6,6 +6,7 @@ import { TMDB_ATTRIBUTION } from '@renderer/lib/attribution';
 import { AUTO_ACCEPT_UI } from '@renderer/lib/constants';
 import { displayTitle, displayYear, posterFor, runtimeLabel } from '@renderer/lib/selectors';
 import { PosterPicker } from '@renderer/components/Modal/PosterPicker';
+import { PosterLightbox } from './PosterLightbox';
 import { useUi } from '@renderer/state/useUi';
 import { Icon } from '@renderer/components/ui/Icon';
 import styles from './Sidebar.module.css';
@@ -42,6 +43,8 @@ export function Sidebar({ item, profileState }: SidebarProps): React.JSX.Element
   const [tab, setTab] = useState<Tab>('cast');
   const [showAllCast, setShowAllCast] = useState(false);
   const [picking, setPicking] = useState(false);
+  const [posterHidden, setPosterHidden] = useState(false);
+  const [enlarged, setEnlarged] = useState(false);
 
   // Collapsing removes the panel outright — nothing peeks in from the edge.
   // Picking any film in the grid brings it back.
@@ -68,16 +71,43 @@ export function Sidebar({ item, profileState }: SidebarProps): React.JSX.Element
         <Icon name="close" size={16} />
       </button>
 
-      <div className={styles.posterBlock}>
-        <div className={styles.posterFrame}>
-          {poster && <img className={styles.posterImage} src={toMovieUrl(poster)} alt="" />}
-          {posters.length > 0 && (
-            <button type="button" className={styles.swap} onClick={() => setPicking((v) => !v)}>
-              <Icon name="swap" size={12} />
-              {posters.length > 1 ? `Change poster (${posters.length})` : 'Poster options'}
-            </button>
-          )}
-        </div>
+      <div className={styles.posterBlock} data-hidden={posterHidden}>
+        {posterHidden ? (
+          <button type="button" className={styles.showPoster} onClick={() => setPosterHidden(false)}>
+            <Icon name="maximize" size={12} />
+            Show poster
+          </button>
+        ) : (
+          <div className={styles.posterFrame}>
+            {poster && <img className={styles.posterImage} src={toMovieUrl(poster)} alt="" />}
+
+            <div className={styles.posterTools}>
+              <button
+                type="button"
+                className={styles.posterTool}
+                aria-label="Enlarge poster"
+                onClick={() => setEnlarged(true)}
+              >
+                <Icon name="maximize" size={15} />
+              </button>
+              <button
+                type="button"
+                className={styles.posterTool}
+                aria-label="Hide poster to reveal the backdrop"
+                onClick={() => setPosterHidden(true)}
+              >
+                <Icon name="eye-off" size={15} />
+              </button>
+            </div>
+
+            {posters.length > 0 && (
+              <button type="button" className={styles.swap} onClick={() => setPicking((v) => !v)}>
+                <Icon name="swap" size={12} />
+                {posters.length > 1 ? `Change poster (${posters.length})` : 'Poster options'}
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       <div className={styles.header}>
@@ -186,6 +216,10 @@ export function Sidebar({ item, profileState }: SidebarProps): React.JSX.Element
 
       {picking && (
         <PosterPicker item={item} chosenIndex={chosenIndex} onClose={() => setPicking(false)} />
+      )}
+
+      {enlarged && poster && (
+        <PosterLightbox src={toMovieUrl(poster)} onClose={() => setEnlarged(false)} />
       )}
 
       <div className={styles.footer}>

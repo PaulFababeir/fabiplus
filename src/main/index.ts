@@ -1,9 +1,9 @@
-import { app, BrowserWindow, ipcMain, net, protocol } from 'electron';
-import { realpath } from 'node:fs/promises';
+import { app, BrowserWindow, ipcMain, protocol } from 'electron';
+import { readFile, realpath } from 'node:fs/promises';
 import { join, resolve as resolvePath, sep } from 'node:path';
-import { pathToFileURL } from 'node:url';
 
 import { IPC } from '@shared/ipc';
+import { isVtt, srtToVtt } from '@shared/subtitles';
 import type {
   AppConfig,
   EnrichmentSummary,
@@ -13,6 +13,7 @@ import type {
   ReviewCandidate
 } from '@shared/types';
 import { imageCacheDir, loadConfig, saveConfig } from './services/config.js';
+import { serveFile } from './services/media-server.js';
 import { applyManualMatch, enrichLibrary } from './services/enrichment.js';
 import {
   backupLibrary,
@@ -91,7 +92,10 @@ function registerMovieProtocol(): void {
     if (!safe) {
       return new Response('Forbidden', { status: 403 });
     }
-    return net.fetch(pathToFileURL(safe).toString());
+
+    // Served by hand rather than via net.fetch(file://) so Range headers are
+    // honoured — without 206 responses the video element cannot seek.
+    return serveFile(safe, request.headers.get('Range'));
   });
 }
 
@@ -221,6 +225,22 @@ function registerIpc(): void {
         }));
     }
   );
+
+  ipcMain.handle(IPC.subtitleLoad, async (_event, path: unknown): Promise<string | null> => {
+    if (typeof path !== 'string') return null;
+
+    // Same containment check as the media protocol — a subtitle path arriving
+    // from the renderer is no more trustworthy than any other.
+    const safe = await resolveAllowedPath(path);
+    if (!safe) return null;
+
+    try {
+      const raw = await readFile(safe, 'utf8');
+      return isVtt(raw) ? raw : srtToVtt(raw);
+    } catch {
+      return null;
+    }
+  });
 
   // -- Profiles ------------------------------------------------------------
 

@@ -20,6 +20,7 @@ export const IPC = {
   libraryEnrichProgress: 'library:enrich-progress',
   libraryRematch: 'library:rematch',
   librarySearchProvider: 'library:search-provider',
+  subtitleLoad: 'player:subtitle-load',
 
   profilesList: 'profiles:list',
   profileCreate: 'profiles:create',
@@ -49,6 +50,12 @@ export interface RendererApi {
   rematch(movieId: string, remoteId: number): Promise<LibraryCatalog>;
   /** Free-text provider search, for fixing a match the scorer got wrong. */
   searchProvider(query: string, year: number | null): Promise<ReviewCandidate[]>;
+
+  /**
+   * Reads a subtitle file and returns it as WebVTT. `<track>` rejects SubRip,
+   * so conversion happens in main where the file can be read directly.
+   */
+  loadSubtitle(path: string): Promise<string | null>;
 
   /** Subscribes to enrichment progress. Returns an unsubscribe function. */
   onEnrichProgress(listener: (progress: EnrichmentProgress) => void): () => void;

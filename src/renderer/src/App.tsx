@@ -5,6 +5,7 @@ import { FilterRow } from '@renderer/components/FilterRow/FilterRow';
 import { MovieGrid } from '@renderer/components/Grid/MovieGrid';
 import { RematchDialog } from '@renderer/components/Modal/RematchDialog';
 import { SettingsPanel } from '@renderer/components/Modal/SettingsPanel';
+import { Player } from '@renderer/components/Player/Player';
 import { BackdropLayer, Sidebar } from '@renderer/components/Sidebar/Sidebar';
 import { TopBar } from '@renderer/components/TopBar/TopBar';
 import { AUTO_ACCEPT_UI } from '@renderer/lib/constants';
@@ -25,6 +26,7 @@ export default function App(): React.JSX.Element {
     sidebarOpen,
     settingsOpen,
     rematchOpen,
+    playingId,
     setRematchOpen
   } = useUi();
 
@@ -45,6 +47,16 @@ export default function App(): React.JSX.Element {
     () => items.find((item) => item.id === selectedId) ?? null,
     [items, selectedId]
   );
+  const playing = useMemo(
+    () => items.find((item) => item.id === playingId) ?? null,
+    [items, playingId]
+  );
+  // Resume where this profile left off, unless the film was finished.
+  const resumeAt = useMemo(() => {
+    if (!playing) return 0;
+    const entry = profileState?.watch[playing.id];
+    return entry && !entry.finished ? entry.positionSec : 0;
+  }, [playing, profileState]);
 
   const pendingReview = useMemo(
     () => needsReviewItems(items, AUTO_ACCEPT_UI).length,
@@ -91,6 +103,8 @@ export default function App(): React.JSX.Element {
 
         <Sidebar item={selected} profileState={profileState} />
       </div>
+
+      {playing && <Player key={playing.id} item={playing} startAt={resumeAt} />}
 
       {settingsOpen && <SettingsPanel />}
       {rematchOpen && <RematchDialog />}

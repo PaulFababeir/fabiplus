@@ -13,7 +13,7 @@ interface MovieGridProps {
 }
 
 export function MovieGrid({ items, profileState }: MovieGridProps): React.JSX.Element {
-  const { selectedId, select } = useUi();
+  const { selectedId, select, play } = useUi();
 
   if (items.length === 0) {
     return <p className={styles.empty}>Nothing here. Try a different genre or search.</p>;
@@ -48,7 +48,20 @@ export function MovieGrid({ items, profileState }: MovieGridProps): React.JSX.El
                 {needsReview && <span className={styles.reviewFlag}>CHECK</span>}
 
                 <span className={styles.overlay}>
-                  <span className={styles.playButton}>
+                  {/*
+                    A nested <button> is invalid, so the play affordance is a
+                    span that stops propagation and starts playback directly.
+                  */}
+                  <span
+                    className={styles.playButton}
+                    role="button"
+                    tabIndex={-1}
+                    aria-label={`Play ${displayTitle(item)}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      play(item.id);
+                    }}
+                  >
                     <Icon name="play" size={20} />
                   </span>
                 </span>

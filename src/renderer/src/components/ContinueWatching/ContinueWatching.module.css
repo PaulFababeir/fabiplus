@@ -34,30 +34,20 @@
   border: 1px solid rgb(255 255 255 / 12%);
   border-radius: var(--radius-lg);
   background: var(--surface);
-  transition:
-    transform 320ms var(--ease-out),
-    opacity 320ms var(--ease-out);
-  will-change: transform;
 }
 
-/* Translations are relative to the card's own width, not the deck's. */
-.ghost[data-depth='1'] {
-  transform: translateX(18%) scale(0.87);
-  opacity: 0.5;
-}
-
-.ghost[data-depth='2'] {
-  transform: translateX(38%) scale(0.78);
-  opacity: 0.28;
-}
-
-/* Behind-cards are pure decoration. */
-.ghost {
-  pointer-events: none;
+/*
+ * Slot transforms are driven by motion in the component so they can spring
+ * between positions; defining them here too would fight the animation.
+ */
+.card {
+  transform-origin: center;
+  will-change: transform, opacity;
 }
 
 .front {
   display: block;
+  user-select: none;
   width: 100%;
   height: 100%;
   padding: 0;

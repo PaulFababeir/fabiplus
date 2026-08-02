@@ -28,6 +28,7 @@ const api: RendererApi = {
     ipcRenderer.invoke(IPC.libraryRematch, movieId, remoteId) as Promise<LibraryCatalog>,
   searchProvider: (query, year) =>
     ipcRenderer.invoke(IPC.librarySearchProvider, query, year) as Promise<ReviewCandidate[]>,
+  loadSubtitle: (path) => ipcRenderer.invoke(IPC.subtitleLoad, path) as Promise<string | null>,
 
   onEnrichProgress: (listener) => {
     const handler = (_event: IpcRendererEvent, progress: EnrichmentProgress): void =>
