@@ -18,6 +18,20 @@
   width: var(--sidebar-width);
   height: 62%;
   z-index: 0;
+  /*
+   * Shared by the artwork and its tint. Defining the ramp once is the point:
+   * when only the image carried it, the tint kept a hard left edge and drew a
+   * vertical line down the join with the movie column.
+   */
+  --backdrop-ramp: linear-gradient(
+    to right,
+    transparent 0%,
+    rgb(0 0 0 / 8%) 20%,
+    rgb(0 0 0 / 30%) 38%,
+    rgb(0 0 0 / 62%) 57%,
+    rgb(0 0 0 / 88%) 76%,
+    #000 92%
+  );
   pointer-events: none;
   opacity: 0;
   transition: opacity 420ms var(--ease-out);
@@ -44,15 +58,7 @@
   object-fit: cover;
   object-position: center top;
   mask-image:
-    linear-gradient(
-      to right,
-      transparent 0%,
-      rgb(0 0 0 / 12%) 18%,
-      rgb(0 0 0 / 38%) 36%,
-      rgb(0 0 0 / 70%) 56%,
-      rgb(0 0 0 / 92%) 74%,
-      #000 88%
-    ),
+    var(--backdrop-ramp),
     linear-gradient(
       to bottom,
       transparent 0%,
@@ -69,15 +75,7 @@
     );
   mask-composite: intersect;
   -webkit-mask-image:
-    linear-gradient(
-      to right,
-      transparent 0%,
-      rgb(0 0 0 / 12%) 18%,
-      rgb(0 0 0 / 38%) 36%,
-      rgb(0 0 0 / 70%) 56%,
-      rgb(0 0 0 / 92%) 74%,
-      #000 88%
-    ),
+    var(--backdrop-ramp),
     linear-gradient(
       to bottom,
       transparent 0%,
@@ -102,6 +100,8 @@
 .backdropFade {
   position: absolute;
   inset: 0;
+  mask-image: var(--backdrop-ramp);
+  -webkit-mask-image: var(--backdrop-ramp);
   background: linear-gradient(
     to bottom,
     transparent 0%,
