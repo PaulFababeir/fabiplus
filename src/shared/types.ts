@@ -145,6 +145,25 @@ export interface LibraryCatalog {
   items: LibraryItem[];
 }
 
+/** What to show on a Discord profile while a film is playing. */
+export interface DiscordActivity {
+  title: string;
+  subtitle: string;
+  /** Drives Discord's countdown; null when the runtime is unknown. */
+  remainingSec: number | null;
+  /** Asset key uploaded to the Discord application, or null for no artwork. */
+  largeImage: string | null;
+}
+
+/** Result of a manual update check. */
+export interface UpdateStatus {
+  state: 'current' | 'available' | 'downloaded' | 'unavailable' | 'error';
+  /** The version currently running. */
+  version: string;
+  /** Newer version when available, otherwise an explanation or null. */
+  detail: string | null;
+}
+
 /** Colour description declared by a video file, as far as the player needs. */
 export interface VideoColourInfo {
   transfer: number | null;
@@ -264,6 +283,13 @@ export interface AppConfig {
    * where a little more is still wanted.
    */
   videoBrightness: number;
+  /**
+   * Discord Rich Presence. Off by default — this broadcasts what you are
+   * watching to anyone who can see your profile.
+   */
+  discordPresence: boolean;
+  /** Application ID from the Discord developer portal. */
+  discordAppId: string | null;
 }
 
 // ---------------------------------------------------------------------------

@@ -3,12 +3,14 @@ import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
 import { IPC, type RendererApi } from '../shared/ipc.js';
 import type {
   AppConfig,
+  DiscordActivity,
   EnrichmentProgress,
   EnrichmentSummary,
   LibraryCatalog,
   Profile,
   ProfileState,
   ReviewCandidate,
+  UpdateStatus,
   VideoColourInfo
 } from '../shared/types.js';
 
@@ -37,6 +39,14 @@ const api: RendererApi = {
   loadSubtitle: (path) => ipcRenderer.invoke(IPC.subtitleLoad, path) as Promise<string | null>,
   probeVideoColour: (path) =>
     ipcRenderer.invoke(IPC.videoColour, path) as Promise<VideoColourInfo>,
+
+  getAppVersion: () => ipcRenderer.invoke(IPC.appVersion) as Promise<string>,
+  setDiscordActivity: (activity) =>
+    ipcRenderer.invoke(IPC.discordSet, activity) as Promise<boolean>,
+  setDiscordConfig: (enabled, appId) =>
+    ipcRenderer.invoke(IPC.configSetDiscord, enabled, appId) as Promise<AppConfig>,
+  checkForUpdate: () => ipcRenderer.invoke(IPC.updateCheck) as Promise<UpdateStatus>,
+  downloadUpdate: () => ipcRenderer.invoke(IPC.updateDownload) as Promise<UpdateStatus>,
 
   onEnrichProgress: (listener) => {
     const handler = (_event: IpcRendererEvent, progress: EnrichmentProgress): void =>

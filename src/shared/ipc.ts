@@ -1,11 +1,13 @@
 import type {
   AppConfig,
+  DiscordActivity,
   EnrichmentProgress,
   EnrichmentSummary,
   LibraryCatalog,
   Profile,
   ProfileState,
   ReviewCandidate,
+  UpdateStatus,
   VideoColourInfo
 } from './types.js';
 
@@ -26,6 +28,11 @@ export const IPC = {
   librarySearchProvider: 'library:search-provider',
   subtitleLoad: 'player:subtitle-load',
   videoColour: 'player:video-colour',
+  updateCheck: 'update:check',
+  updateDownload: 'update:download',
+  appVersion: 'app:version',
+  discordSet: 'discord:set',
+  configSetDiscord: 'config:set-discord',
 
   profilesList: 'profiles:list',
   profileCreate: 'profiles:create',
@@ -72,6 +79,16 @@ export interface RendererApi {
 
   /** Reads a file's declared colour tags so the player can spot HDR content. */
   probeVideoColour(path: string): Promise<VideoColourInfo>;
+
+  getAppVersion(): Promise<string>;
+  /** Manual only — nothing checks on its own. */
+  checkForUpdate(): Promise<UpdateStatus>;
+  /** Downloads the pending update; it installs on quit. */
+  downloadUpdate(): Promise<UpdateStatus>;
+
+  /** Publishes what is playing, or clears it when passed null. */
+  setDiscordActivity(activity: DiscordActivity | null): Promise<boolean>;
+  setDiscordConfig(enabled: boolean, appId: string | null): Promise<AppConfig>;
 
   /** Subscribes to enrichment progress. Returns an unsubscribe function. */
   onEnrichProgress(listener: (progress: EnrichmentProgress) => void): () => void;

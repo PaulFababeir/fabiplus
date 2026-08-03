@@ -6,16 +6,20 @@ import { IPC } from '@shared/ipc';
 import { isVtt, srtToVtt } from '@shared/subtitles';
 import type {
   AppConfig,
+  DiscordActivity,
   EnrichmentSummary,
   LibraryCatalog,
   Profile,
   ProfileState,
   ReviewCandidate,
+  UpdateStatus,
   VideoColourInfo
 } from '@shared/types';
 import { imageCacheDir, loadConfig, saveConfig } from './services/config.js';
 import { serveFile } from './services/media-server.js';
 import { isHdrTagged, probeVideoColour } from './services/video-colour.js';
+import { checkForUpdate, currentVersion, downloadUpdate } from './services/updater.js';
+import { presence } from './services/discord-presence.js';
 import { applyManualMatch, enrichLibrary } from './services/enrichment.js';
 import {
   backupLibrary,
@@ -329,6 +333,38 @@ function registerIpc(): void {
     const colour = await probeVideoColour(safe);
     return { transfer: colour.transfer, hdr: isHdrTagged(colour) };
   });
+
+  ipcMain.handle(IPC.appVersion, async (): Promise<string> => currentVersion());
+  ipcMain.handle(IPC.updateCheck, async (): Promise<UpdateStatus> => checkForUpdate());
+  ipcMain.handle(IPC.updateDownload, async (): Promise<UpdateStatus> => downloadUpdate());
+
+  ipcMain.handle(IPC.discordSet, async (_event, activity: unknown): Promise<boolean> => {
+    const config = await loadConfig();
+    if (!config.discordPresence || !config.discordAppId) {
+      presence.disconnect();
+      return false;
+    }
+    if (!(await presence.connect(config.discordAppId))) return false;
+
+    presence.set((activity ?? null) as DiscordActivity | null);
+    return true;
+  });
+
+  ipcMain.handle(
+    IPC.configSetDiscord,
+    async (_event, enabled: unknown, appId: unknown): Promise<AppConfig> => {
+      const config = await loadConfig();
+      const on = enabled === true;
+      const id = typeof appId === 'string' && appId.trim() !== '' ? appId.trim() : null;
+
+      // Turning it off must clear whatever is currently on the profile.
+      if (!on || !id) {
+        presence.set(null);
+        presence.disconnect();
+      }
+      return saveConfig({ ...config, discordPresence: on, discordAppId: id });
+    }
+  );
 
   // -- Profiles ------------------------------------------------------------
 

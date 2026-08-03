@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 
+import type { UpdateStatus } from '@shared/types';
+
 import { useLibrary } from '@renderer/state/useLibrary';
 import { useProfile } from '@renderer/state/useProfile';
 import { useUi } from '@renderer/state/useUi';
@@ -15,10 +17,58 @@ export function SettingsPanel(): React.JSX.Element {
   const [hasKey, setHasKey] = useState(false);
   const [keyDraft, setKeyDraft] = useState('');
   const [confirmingClear, setConfirmingClear] = useState(false);
+  const [version, setVersion] = useState('');
+  const [discordOn, setDiscordOn] = useState(false);
+  const [discordId, setDiscordId] = useState('');
+  const [update, setUpdate] = useState<UpdateStatus | null>(null);
+  const [checking, setChecking] = useState(false);
 
   useEffect(() => {
     void window.api.getConfig().then((config) => setHasKey(config.tmdbApiKey !== null));
+    void window.api.getAppVersion().then(setVersion);
+    void window.api.getConfig().then((config) => {
+      setDiscordOn(config.discordPresence);
+      setDiscordId(config.discordAppId ?? '');
+    });
   }, []);
+
+  const saveDiscord = async (enabled: boolean, appId: string): Promise<void> => {
+    setDiscordOn(enabled);
+    await window.api.setDiscordConfig(enabled, appId.trim() || null);
+  };
+
+  const runUpdateCheck = async (): Promise<void> => {
+    setChecking(true);
+    try {
+      setUpdate(await window.api.checkForUpdate());
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  const runUpdateDownload = async (): Promise<void> => {
+    setChecking(true);
+    try {
+      setUpdate(await window.api.downloadUpdate());
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  const updateMessage = (status: UpdateStatus): string => {
+    switch (status.state) {
+      case 'current':
+        return 'You are on the latest version.';
+      case 'available':
+        return `Version ${status.detail} is available.`;
+      case 'downloaded':
+        return 'Downloaded. It installs the next time you close the app.';
+      case 'unavailable':
+        return status.detail ?? 'Updates are not available here.';
+      default:
+        return status.detail ?? 'The update check failed.';
+    }
+  };
 
   const saveKey = async (): Promise<void> => {
     const config = await window.api.setTmdbKey(keyDraft);
@@ -192,6 +242,72 @@ export function SettingsPanel(): React.JSX.Element {
               )}
             </div>
           )}
+
+          <div className={styles.divider} />
+
+          <label className={styles.label}>Discord presence</label>
+          <div className={styles.actions} style={{ marginTop: 0 }}>
+            <button
+              type="button"
+              className={styles.button}
+              aria-pressed={discordOn}
+              disabled={!discordId.trim() && !discordOn}
+              onClick={() => void saveDiscord(!discordOn, discordId)}
+            >
+              {discordOn ? 'Showing what you watch' : 'Off'}
+            </button>
+          </div>
+
+          <input
+            className={styles.input}
+            style={{ marginTop: 8 }}
+            value={discordId}
+            placeholder="Discord application ID"
+            onChange={(e) => setDiscordId(e.target.value.replace(/\D/g, ''))}
+            onBlur={() => void saveDiscord(discordOn, discordId)}
+          />
+
+          <p className={styles.note}>
+            Shows the film you are playing on your Discord profile, with a countdown, and clears
+            when you stop. Off by default — it is visible to anyone who can see your profile.
+            Needs an application ID from discord.com/developers; the app name you give it there is
+            the name Discord displays.
+          </p>
+
+          <div className={styles.divider} />
+
+          <label className={styles.label}>About</label>
+          <div className={styles.actions} style={{ marginTop: 0 }}>
+            <span style={{ alignSelf: 'center', color: 'var(--text-muted)', fontSize: 12.5 }}>
+              Version {version || '…'}
+            </span>
+            <button
+              type="button"
+              className={styles.button}
+              disabled={checking}
+              onClick={() => void runUpdateCheck()}
+            >
+              {checking ? 'Checking…' : 'Check for updates'}
+            </button>
+            {update?.state === 'available' && (
+              <button
+                type="button"
+                className={`${styles.button} ${styles.primary}`}
+                disabled={checking}
+                onClick={() => void runUpdateDownload()}
+              >
+                Download
+              </button>
+            )}
+          </div>
+
+          {update && <p className={styles.note}>{updateMessage(update)}</p>}
+
+          <p className={styles.note}>
+            Nothing is checked automatically — this is the only thing here that reaches the
+            network besides metadata. Windows cannot replace a running program, so an update
+            downloads now and installs when you next close the app.
+          </p>
 
           {error && <p className={styles.error}>{error}</p>}
         </div>

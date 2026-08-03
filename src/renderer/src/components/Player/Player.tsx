@@ -178,6 +178,33 @@ export function Player({ item, startAt }: PlayerProps): React.JSX.Element {
     };
   }, [persist]);
 
+  /**
+   * Publishes to Discord while playing and clears on exit. Re-sent when
+   * play/pause flips or the position jumps by more than a minute, so a seek is
+   * reflected without pushing an update on every timeupdate tick.
+   */
+  useEffect(() => {
+    if (!playing || duration <= 0) {
+      void window.api.setDiscordActivity(null);
+      return;
+    }
+
+    void window.api.setDiscordActivity({
+      title: displayTitle(item),
+      subtitle: [displayYear(item), item.metadata?.genres[0]].filter(Boolean).join(' · '),
+      remainingSec: Math.max(0, Math.round(duration - current)),
+      largeImage: 'poster'
+    });
+    // `current` is intentionally absent: including it would fire every tick.
+  }, [playing, duration, item, Math.floor(current / 60)]);
+
+  // Clear the profile when the player closes, however it closes.
+  useEffect(() => {
+    return () => {
+      void window.api.setDiscordActivity(null);
+    };
+  }, []);
+
   // --- Idle chrome --------------------------------------------------------
 
   /**

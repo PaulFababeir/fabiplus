@@ -143,6 +143,12 @@
   background-clip: content-box;
 }
 
+.divider {
+  height: 1px;
+  margin: 20px 0 16px;
+  background: var(--border);
+}
+
 /* Pinned below the scrolling body so progress is never scrolled out of view. */
 .footer {
   flex: 0 0 auto;

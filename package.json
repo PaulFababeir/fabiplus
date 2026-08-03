@@ -11,7 +11,9 @@
     "start": "electron-vite preview",
     "typecheck": "tsc --noEmit",
     "test": "tsx --tsconfig tsconfig.node.json --test \"src/**/*.test.ts\"",
-    "scan:report": "tsx scripts/scan-report.ts"
+    "scan:report": "tsx scripts/scan-report.ts",
+    "dist": "npm run build && electron-builder --win --publish never",
+    "release": "npm run build && electron-builder --win --publish always"
   },
   "devDependencies": {
     "@types/node": "^26.1.2",
@@ -19,15 +21,54 @@
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^5.2.0",
     "electron": "^43.2.0",
+    "electron-builder": "^26.15.3",
     "electron-vite": "^5.0.0",
     "tsx": "^4.23.1",
     "typescript": "^7.0.2",
     "vite": "^7.3.6"
   },
   "dependencies": {
+    "electron-updater": "^6.8.9",
     "motion": "^12.43.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "zustand": "^5.0.14"
+  },
+  "build": {
+    "appId": "com.paulfababeir.movieapp",
+    "productName": "movie-app",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "out/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "${productName}-${version}-setup.${ext}"
+    },
+    "nsis": {
+      "perMachine": false,
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "Movie Library"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "PaulFababeir",
+        "repo": "movie-app"
+      }
+    ]
   }
 }

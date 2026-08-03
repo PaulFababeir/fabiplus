@@ -6,6 +6,7 @@ import { MAX_PROFILES } from '@shared/constants';
 import type { Profile, ProfileState, WatchEntry } from '@shared/types';
 import { readJsonOrFail, writeJsonAtomic } from './atomic-json.js';
 import { userDataDir } from './config.js';
+import { emptyProfileState, migrateProfileState } from './profile-migration.js';
 
 /**
  * Profiles and their watch state.
@@ -14,8 +15,6 @@ import { userDataDir } from './config.js';
  * re-scrape, so every write goes through `writeJsonAtomic` and each profile
  * lives in its own file — one corrupt profile can never take the others down.
  */
-
-const SCHEMA_VERSION = 1;
 
 /** Avatar accents, handed out in order as profiles are created. */
 const ACCENTS = ['#a78bfa', '#f472b6', '#4ade80', '#60a5fa', '#fbbf24'] as const;
@@ -64,7 +63,7 @@ export async function createProfile(name: string): Promise<Profile> {
   };
 
   await saveProfiles([...profiles, profile]);
-  await saveProfileState(emptyState(profile.id));
+  await saveProfileState(emptyProfileState(profile.id));
   return profile;
 }
 
@@ -115,19 +114,13 @@ export async function ensureProfile(): Promise<Profile[]> {
   }
 }
 
-function emptyState(profileId: string): ProfileState {
-  return { schemaVersion: SCHEMA_VERSION, profileId, watch: {}, posterChoice: {} };
-}
-
+/**
+ * Throws on data written by a newer build rather than resetting it — see
+ * `profile-migration.ts`. Callers that write back must let that propagate.
+ */
 export async function loadProfileState(id: string): Promise<ProfileState> {
-  const loaded = await readJsonOrFail<ProfileState | null>(profileStatePath(id), null);
-  if (!loaded || loaded.schemaVersion !== SCHEMA_VERSION) return emptyState(id);
-  return {
-    ...emptyState(id),
-    ...loaded,
-    watch: loaded.watch ?? {},
-    posterChoice: loaded.posterChoice ?? {}
-  };
+  const loaded = await readJsonOrFail<unknown>(profileStatePath(id), null);
+  return migrateProfileState(loaded, id);
 }
 
 export async function saveProfileState(state: ProfileState): Promise<void> {

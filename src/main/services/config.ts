@@ -31,7 +31,9 @@ function defaults(): AppConfig {
     tmdbApiKey: null,
     lastProfileId: null,
     translucentBackground: true,
-    videoBrightness: 1
+    videoBrightness: 1,
+    discordPresence: false,
+    discordAppId: null
   };
 }
 
