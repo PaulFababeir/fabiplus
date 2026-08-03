@@ -192,7 +192,37 @@ The **application ID** is the whole identity of the presence: Discord looks it u
 to get the name shown on the first line. That name comes from the developer
 portal, not from this codebase. No other portal configuration is required.
 
-Two traps cost real debugging time here, both silent:
+### What it publishes
+
+`shared/presence.ts` maps app state to one of four activities, and is pure so
+the branching is tested without a socket:
+
+| State | First line | Second line | Timer |
+|---|---|---|---|
+| Playing | title | `2014 · Adventure` | countdown |
+| Paused | title | `Paused · 2014 · Adventure` | none |
+| Film selected | `Browsing the library` | that film's title | none |
+| Idle | `Browsing the library` | `79 films` | none |
+
+**Never send `null` while the app is open.** Clearing the Rich Presence does not
+leave the profile blank — Discord falls back to its own detected-app line, which
+is the app name and an elapsed timer with no title or artwork. That fallback is
+exactly what looks like "presence is broken". The presence is only cleared when
+the process exits and the socket closes.
+
+The countdown is dropped when paused because `timestamps.end` is an absolute
+wall-clock instant: leaving it set counts down a film that is not moving.
+
+`useDiscordPresence` at the app shell is the **only** writer. It used to live in
+the player, which could not describe the library view and cleared the presence on
+unmount. Playback is mirrored into `useUi.playback` on play/pause and about once
+a minute — not per `timeupdate`, which would re-render the shell several times a
+second. The hook compares the built activity by value before sending, because the
+shell re-renders on every keystroke in the search box; `presenceEpoch` exists to
+force a publish when the Discord settings change, which the value check would
+otherwise swallow.
+
+Three traps cost real debugging time here, all silent:
 
 - **Frames sent before `READY` are discarded.** Discord dispatches `READY` after
   the handshake; anything written earlier vanishes, which showed up as a presence

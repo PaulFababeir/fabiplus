@@ -1,0 +1,109 @@
+import { TMDB_IMAGE_BASE } from './constants.js';
+import type { DiscordActivity, LibraryItem } from './types.js';
+
+/**
+ * What the app publishes to Discord, for every state it can be in.
+ *
+ * The app always has *something* to say while it is open. Sending null clears
+ * the Rich Presence, at which point Discord falls back to the bare detected-app
+ * line — the app name and an elapsed timer, with no title or artwork. That is
+ * the thing this exists to prevent, so nothing here ever returns null; the
+ * presence is only cleared when the process exits and the socket closes.
+ */
+
+/** Shown when no film is open. Discord puts this on the second line. */
+const BROWSING = 'Browsing the library';
+
+/**
+ * Asset key to upload under Rich Presence → Art Assets, used when a film has no
+ * TMDB artwork and for the idle state.
+ */
+export const FALLBACK_ART = 'poster';
+
+/**
+ * Newer Discord clients accept an https URL in `large_image`; older ones only
+ * resolve asset keys uploaded to the application. Sending the poster URL costs
+ * nothing when unsupported — Discord ignores what it cannot resolve — and gets
+ * per-film artwork on clients that do handle it, which is confirmed to include
+ * current desktop builds.
+ */
+export function discordArtwork(item: LibraryItem): string {
+  const meta = item.metadata;
+  const remote = meta?.posters[0]?.remotePath;
+  if (meta?.providerId === 'tmdb' && remote) return `${TMDB_IMAGE_BASE}/w500${remote}`;
+  return FALLBACK_ART;
+}
+
+/**
+ * A film reduced to the fields the presence needs.
+ *
+ * Taking primitives rather than a `LibraryItem` keeps this free of the
+ * renderer's display helpers, which is what lets the whole thing be pure and
+ * tested without duplicating the title/year fallback those helpers own.
+ */
+export interface PresenceFilm {
+  title: string;
+  year: number | null;
+  genre: string | null;
+  /** Asset key or image URL. */
+  image: string;
+}
+
+export interface PresenceInput {
+  /** The film open in the player, or null in the library view. */
+  film: PresenceFilm | null;
+  /** True only while the video is actually advancing. */
+  playing: boolean;
+  /** Seconds left, or null when the runtime is not known yet. */
+  remainingSec: number | null;
+  /** Film chosen in the library, shown when nothing is playing. */
+  selected: PresenceFilm | null;
+  /** Size of the library, for the idle line. */
+  libraryCount: number;
+}
+
+function describe(film: PresenceFilm): string {
+  return [film.year, film.genre].filter(Boolean).join(' · ');
+}
+
+export function buildPresence(input: PresenceInput): DiscordActivity {
+  const { film, playing, remainingSec, selected, libraryCount } = input;
+
+  if (film) {
+    const detail = describe(film);
+
+    if (playing) {
+      return {
+        title: film.title,
+        subtitle: detail,
+        remainingSec,
+        largeImage: film.image
+      };
+    }
+
+    // No countdown while paused: `timestamps.end` is an absolute wall-clock
+    // instant, so Discord would keep counting down a film that is not moving.
+    return {
+      title: film.title,
+      subtitle: detail ? `Paused · ${detail}` : 'Paused',
+      remainingSec: null,
+      largeImage: film.image
+    };
+  }
+
+  if (selected) {
+    return {
+      title: BROWSING,
+      subtitle: selected.title,
+      remainingSec: null,
+      largeImage: selected.image
+    };
+  }
+
+  return {
+    title: BROWSING,
+    subtitle: libraryCount === 1 ? '1 film' : `${libraryCount} films`,
+    remainingSec: null,
+    largeImage: FALLBACK_ART
+  };
+}

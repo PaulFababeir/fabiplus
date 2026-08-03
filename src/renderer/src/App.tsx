@@ -11,6 +11,7 @@ import { BackdropLayer, Sidebar } from '@renderer/components/Sidebar/Sidebar';
 import { TopBar } from '@renderer/components/TopBar/TopBar';
 import { AUTO_ACCEPT } from '@shared/constants';
 import { filterAndSort, genresOf, needsReviewItems } from '@renderer/lib/selectors';
+import { useDiscordPresence } from '@renderer/lib/useDiscordPresence';
 import { useLibrary } from '@renderer/state/useLibrary';
 import { useProfile } from '@renderer/state/useProfile';
 import { useUi } from '@renderer/state/useUi';
@@ -29,6 +30,8 @@ export default function App(): React.JSX.Element {
     rematchOpen,
     playingId,
     translucent,
+    playback,
+    presenceEpoch,
     setTranslucent,
     setRematchOpen
   } = useUi();
@@ -71,6 +74,16 @@ export default function App(): React.JSX.Element {
     () => needsReviewItems(items, AUTO_ACCEPT).length,
     [items]
   );
+
+  // Publishes whatever the app is doing — playing, paused, or browsing — so the
+  // presence never falls back to Discord's bare detected-app line.
+  useDiscordPresence({
+    playing,
+    selected,
+    playback,
+    libraryCount: items.length,
+    epoch: presenceEpoch
+  });
 
   return (
     <div className={styles.app}>

@@ -11,7 +11,7 @@ import styles from './Modal.module.css';
 
 /** Library maintenance: the TMDB key, rescanning, and metadata refresh. */
 export function SettingsPanel(): React.JSX.Element {
-  const { toggleSettings, translucent, setTranslucent } = useUi();
+  const { toggleSettings, translucent, setTranslucent, bumpPresence } = useUi();
   const { busy, error, progress, summary, rescan, enrich, fetchNew } = useLibrary();
   const { state: profileState, clearProgress } = useProfile();
 
@@ -36,6 +36,9 @@ export function SettingsPanel(): React.JSX.Element {
   const saveDiscord = async (enabled: boolean, appId: string): Promise<void> => {
     setDiscordOn(enabled);
     await window.api.setDiscordConfig(enabled, appId.trim() || null);
+    // The shell only republishes when the presence content changes, so nudge it
+    // — otherwise switching this on shows nothing until you touch something.
+    bumpPresence();
   };
 
   const runUpdateCheck = async (): Promise<void> => {

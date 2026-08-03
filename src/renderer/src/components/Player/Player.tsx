@@ -34,22 +34,6 @@ const BRIGHTNESS = [1, 1.1, 1.2, 1.3] as const;
  */
 const HDR_GAMMA = 0.72;
 
-/**
- * Artwork key for Discord.
- *
- * Newer Discord clients accept an https URL directly in `large_image`; older
- * ones only resolve asset keys uploaded to the application. Sending the poster
- * URL costs nothing when unsupported — Discord ignores what it cannot resolve —
- * and gets per-film artwork on clients that do handle it. `poster` is the
- * fallback key to upload under Rich Presence → Art Assets.
- */
-function discordArtwork(item: LibraryItem): string {
-  const meta = item.metadata;
-  const remote = meta?.posters[0]?.remotePath;
-  if (meta?.providerId === 'tmdb' && remote) return `${TMDB_IMAGE_BASE}/w500${remote}`;
-  return 'poster';
-}
-
 function formatTime(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
   const total = Math.floor(seconds);
@@ -69,6 +53,7 @@ interface PlayerProps {
 
 export function Player({ item, startAt }: PlayerProps): React.JSX.Element {
   const stopPlaying = useUi((s) => s.stopPlaying);
+  const setPlayback = useUi((s) => s.setPlayback);
   const setProgress = useProfile((s) => s.setProgress);
 
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -196,31 +181,19 @@ export function Player({ item, startAt }: PlayerProps): React.JSX.Element {
   }, [persist]);
 
   /**
-   * Publishes to Discord while playing and clears on exit. Re-sent when
-   * play/pause flips or the position jumps by more than a minute, so a seek is
-   * reflected without pushing an update on every timeupdate tick.
+   * Mirrors playback into the store, where the shell turns it into the Discord
+   * presence. Pushed when play/pause flips or the position moves by more than a
+   * minute — enough for a seek to show up, without a store write on every
+   * timeupdate tick.
+   *
+   * The player deliberately does not talk to Discord itself: it cannot describe
+   * the library view, and clearing the presence on unmount is what let Discord
+   * fall back to its bare detected-app activity.
    */
   useEffect(() => {
-    if (!playing || duration <= 0) {
-      void window.api.setDiscordActivity(null);
-      return;
-    }
-
-    void window.api.setDiscordActivity({
-      title: displayTitle(item),
-      subtitle: [displayYear(item), item.metadata?.genres[0]].filter(Boolean).join(' · '),
-      remainingSec: Math.max(0, Math.round(duration - current)),
-      largeImage: discordArtwork(item)
-    });
+    setPlayback({ playing, positionSec: current, durationSec: duration });
     // `current` is intentionally absent: including it would fire every tick.
-  }, [playing, duration, item, Math.floor(current / 60)]);
-
-  // Clear the profile when the player closes, however it closes.
-  useEffect(() => {
-    return () => {
-      void window.api.setDiscordActivity(null);
-    };
-  }, []);
+  }, [playing, duration, setPlayback, Math.floor(current / 60)]);
 
   // --- Idle chrome --------------------------------------------------------
 
