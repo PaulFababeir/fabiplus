@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { buildActivity, encodeFrame, pipePath } from './discord-presence.js';
+import { buildActivity, decodeFrames, encodeFrame, pipePath } from './discord-presence.js';
 
 describe('encodeFrame', () => {
   it('prefixes opcode and byte length as little-endian int32', () => {
@@ -62,5 +62,61 @@ describe('buildActivity', () => {
       large_image: 'poster',
       large_text: 'Interstellar'
     });
+  });
+});
+
+describe('decodeFrames', () => {
+  it('reads a single frame', () => {
+    const { frames, rest } = decodeFrames(encodeFrame(1, { evt: 'READY' }));
+    assert.equal(frames.length, 1);
+    assert.equal(frames[0]?.opcode, 1);
+    assert.deepEqual(frames[0]?.payload, { evt: 'READY' });
+    assert.equal(rest.length, 0);
+  });
+
+  it('reads several frames from one chunk', () => {
+    const buf = Buffer.concat([encodeFrame(1, { a: 1 }), encodeFrame(3, { b: 2 })]);
+    const { frames, rest } = decodeFrames(buf);
+    assert.equal(frames.length, 2);
+    assert.equal(frames[1]?.opcode, 3);
+    assert.equal(rest.length, 0);
+  });
+
+  /**
+   * A pipe read is not frame-aligned. Dropping the tail here would lose the
+   * READY event and leave the presence stuck on a default activity.
+   */
+  it('carries a partial frame forward', () => {
+    const whole = encodeFrame(1, { evt: 'READY' });
+    const first = decodeFrames(whole.subarray(0, 10));
+    assert.equal(first.frames.length, 0);
+    assert.equal(first.rest.length, 10);
+
+    const second = decodeFrames(Buffer.concat([first.rest, whole.subarray(10)]));
+    assert.equal(second.frames.length, 1);
+    assert.deepEqual(second.frames[0]?.payload, { evt: 'READY' });
+  });
+
+  it('holds a header split across chunks', () => {
+    const whole = encodeFrame(1, { evt: 'READY' });
+    const { frames, rest } = decodeFrames(whole.subarray(0, 5));
+    assert.equal(frames.length, 0);
+    assert.equal(rest.length, 5);
+  });
+
+  it('skips an unparseable body without losing later frames', () => {
+    const bad = Buffer.alloc(8);
+    bad.writeInt32LE(1, 0);
+    bad.writeInt32LE(3, 4);
+    const buf = Buffer.concat([bad, Buffer.from('not', 'utf8'), encodeFrame(1, { ok: true })]);
+
+    const { frames } = decodeFrames(buf);
+    assert.equal(frames.length, 1);
+    assert.deepEqual(frames[0]?.payload, { ok: true });
+  });
+
+  it('round-trips multibyte payloads', () => {
+    const { frames } = decodeFrames(encodeFrame(1, { t: 'ソラニン' }));
+    assert.deepEqual(frames[0]?.payload, { t: 'ソラニン' });
   });
 });

@@ -22,6 +22,11 @@ import type { DiscordActivity } from '@shared/types';
 const OP_HANDSHAKE = 0;
 const OP_FRAME = 1;
 const OP_CLOSE = 2;
+const OP_PING = 3;
+const OP_PONG = 4;
+
+/** Give up waiting for READY rather than hanging if Discord never answers. */
+const READY_TIMEOUT_MS = 4000;
 
 /** Discord exposes up to ten pipes; the first free one wins. */
 const MAX_PIPES = 10;
@@ -36,6 +41,40 @@ export function encodeFrame(opcode: number, payload: unknown): Buffer {
   header.writeInt32LE(opcode, 0);
   header.writeInt32LE(json.length, 4);
   return Buffer.concat([header, json]);
+}
+
+export interface DecodedFrame {
+  opcode: number;
+  payload: Record<string, unknown>;
+}
+
+/**
+ * Splits a stream into frames, returning whatever is left over.
+ *
+ * A pipe read is not frame-aligned: one chunk can carry several frames or half
+ * of one, so the remainder has to be carried forward. Pure, so that boundary
+ * handling is testable without a socket.
+ */
+export function decodeFrames(buffer: Buffer): { frames: DecodedFrame[]; rest: Buffer } {
+  const frames: DecodedFrame[] = [];
+  let offset = 0;
+
+  while (buffer.length - offset >= 8) {
+    const opcode = buffer.readInt32LE(offset);
+    const length = buffer.readInt32LE(offset + 4);
+    if (length < 0 || buffer.length - offset - 8 < length) break;
+
+    const body = buffer.subarray(offset + 8, offset + 8 + length).toString('utf8');
+    offset += 8 + length;
+
+    try {
+      frames.push({ opcode, payload: JSON.parse(body) as Record<string, unknown> });
+    } catch {
+      // A frame we cannot parse is not worth tearing the connection down for.
+    }
+  }
+
+  return { frames, rest: buffer.subarray(offset) };
 }
 
 /** Windows names the pipes; other platforms use a socket under $TMPDIR. */
@@ -78,8 +117,10 @@ class DiscordPresence {
   #socket: Socket | null = null;
   #ready = false;
   #appId: string | null = null;
-  /** Held while disconnected so it can be sent as soon as a pipe opens. */
+  /** Held until READY arrives, then sent. */
   #pending: DiscordActivity | null = null;
+  #buffer: Buffer = Buffer.alloc(0);
+  #onReady: (() => void) | null = null;
 
   get connected(): boolean {
     return this.#ready;
@@ -95,19 +136,62 @@ class DiscordPresence {
       if (!socket) continue;
 
       this.#socket = socket;
+      this.#buffer = Buffer.alloc(0);
       socket.on('error', () => this.disconnect());
       socket.on('close', () => {
         this.#ready = false;
         this.#socket = null;
       });
+      socket.on('data', (chunk: Buffer) => this.#read(chunk));
 
       socket.write(encodeFrame(OP_HANDSHAKE, { v: 1, client_id: appId }));
-      this.#ready = true;
 
-      if (this.#pending) this.set(this.#pending);
-      return true;
+      // Frames sent before Discord dispatches READY are discarded, which is
+      // why the presence showed the app with a default elapsed timer and none
+      // of the title or artwork that had already been written.
+      if (await this.#awaitReady()) return true;
+      this.disconnect();
+      return false;
     }
     return false;
+  }
+
+  #awaitReady(): Promise<boolean> {
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        this.#onReady = null;
+        resolve(false);
+      }, READY_TIMEOUT_MS);
+
+      this.#onReady = () => {
+        clearTimeout(timer);
+        this.#onReady = null;
+        resolve(true);
+      };
+    });
+  }
+
+  #read(chunk: Buffer): void {
+    this.#buffer = Buffer.concat([this.#buffer, chunk]);
+    const { frames, rest } = decodeFrames(this.#buffer);
+    this.#buffer = rest;
+
+    for (const frame of frames) {
+      if (frame.opcode === OP_PING) {
+        this.#socket?.write(encodeFrame(OP_PONG, frame.payload));
+        continue;
+      }
+      if (frame.opcode === OP_CLOSE) {
+        this.disconnect();
+        continue;
+      }
+      if (frame.opcode === OP_FRAME && frame.payload['evt'] === 'READY') {
+        this.#ready = true;
+        this.#onReady?.();
+        // Whatever was queued while connecting goes out now that it will stick.
+        if (this.#pending) this.set(this.#pending);
+      }
+    }
   }
 
   set(activity: DiscordActivity | null): void {
@@ -138,6 +222,8 @@ class DiscordPresence {
     }
     this.#socket = null;
     this.#ready = false;
+    this.#buffer = Buffer.alloc(0);
+    this.#onReady = null;
   }
 }
 

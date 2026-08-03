@@ -6,6 +6,7 @@ import { useLibrary } from '@renderer/state/useLibrary';
 import { useProfile } from '@renderer/state/useProfile';
 import { useUi } from '@renderer/state/useUi';
 import { Icon } from '@renderer/components/ui/Icon';
+import { Toggle } from '@renderer/components/ui/Toggle';
 import styles from './Modal.module.css';
 
 /** Library maintenance: the TMDB key, rescanning, and metadata refresh. */
@@ -151,26 +152,15 @@ export function SettingsPanel(): React.JSX.Element {
             afterwards.
           </p>
 
-          <div className={styles.actions}>
-            <button
-              type="button"
-              className={styles.button}
-              aria-pressed={translucent}
-              onClick={() => {
-                const next = !translucent;
-                setTranslucent(next);
-                void window.api.setTranslucent(next);
-              }}
-            >
-              {translucent ? 'Translucent window: on' : 'Translucent window: off'}
-            </button>
-          </div>
-
-          <p className={styles.note}>
-            Blurs the desktop behind the window (Windows 11 acrylic). Applies straight away. If
-            nothing changes, check Windows Settings → Personalisation → Colours → Transparency
-            effects, which Electron follows.
-          </p>
+          <Toggle
+            checked={translucent}
+            label="Translucent window"
+            hint="Blurs the desktop behind the app (Windows 11 acrylic). If nothing changes, check Windows Settings → Personalisation → Colours → Transparency effects."
+            onChange={(next) => {
+              setTranslucent(next);
+              void window.api.setTranslucent(next);
+            }}
+          />
 
           <p className={styles.note}>
             <strong>Check for new films</strong> rescans and then looks up only the titles that
@@ -246,32 +236,26 @@ export function SettingsPanel(): React.JSX.Element {
           <div className={styles.divider} />
 
           <label className={styles.label}>Discord presence</label>
-          <div className={styles.actions} style={{ marginTop: 0 }}>
-            <button
-              type="button"
-              className={styles.button}
-              aria-pressed={discordOn}
-              disabled={!discordId.trim() && !discordOn}
-              onClick={() => void saveDiscord(!discordOn, discordId)}
-            >
-              {discordOn ? 'Showing what you watch' : 'Off'}
-            </button>
-          </div>
 
           <input
             className={styles.input}
-            style={{ marginTop: 8 }}
             value={discordId}
             placeholder="Discord application ID"
             onChange={(e) => setDiscordId(e.target.value.replace(/\D/g, ''))}
             onBlur={() => void saveDiscord(discordOn, discordId)}
           />
 
+          <Toggle
+            checked={discordOn}
+            disabled={!discordId.trim()}
+            label="Show what I'm watching"
+            hint="Puts the current film on your Discord profile with a countdown, and clears when you stop. Visible to anyone who can see your profile."
+            onChange={(next) => void saveDiscord(next, discordId)}
+          />
+
           <p className={styles.note}>
-            Shows the film you are playing on your Discord profile, with a countdown, and clears
-            when you stop. Off by default — it is visible to anyone who can see your profile.
-            Needs an application ID from discord.com/developers; the app name you give it there is
-            the name Discord displays.
+            Needs an application ID from discord.com/developers — the name you give it there is
+            what Discord displays. Discord must be running as a desktop app.
           </p>
 
           <div className={styles.divider} />

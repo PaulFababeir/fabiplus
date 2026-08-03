@@ -1,0 +1,79 @@
+/* The whole row is the target, not just the switch. */
+.row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 140ms var(--ease-out);
+}
+
+.row:hover:not(:disabled) {
+  background: rgb(255 255 255 / 4%);
+}
+
+.row:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.text {
+  flex: 1;
+  min-width: 0;
+}
+
+.label {
+  display: block;
+  font-size: 13px;
+}
+
+.hint {
+  display: block;
+  margin-top: 2px;
+  color: var(--text-dim);
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+
+.track {
+  position: relative;
+  flex: 0 0 auto;
+  width: 40px;
+  height: 23px;
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--border);
+  transition:
+    background 180ms var(--ease-out),
+    box-shadow 180ms var(--ease-out);
+}
+
+.track[data-on='true'] {
+  background: var(--accent);
+  box-shadow: inset 0 0 0 1px transparent;
+}
+
+.thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: var(--text-dim);
+  transition:
+    transform 180ms var(--ease-out),
+    background 180ms var(--ease-out);
+}
+
+.track[data-on='true'] .thumb {
+  transform: translateX(17px);
+  background: var(--accent-contrast);
+}
