@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'motion/react';
 
+import { TMDB_IMAGE_BASE } from '@shared/constants';
 import { toMovieUrl } from '@shared/media-url';
 import type { LibraryItem } from '@shared/types';
 import { displayTitle, displayYear } from '@renderer/lib/selectors';
@@ -32,6 +33,22 @@ const BRIGHTNESS = [1, 1.1, 1.2, 1.3] as const;
  * An exponent below 1 lifts the midtones the tone mapper pulled down.
  */
 const HDR_GAMMA = 0.72;
+
+/**
+ * Artwork key for Discord.
+ *
+ * Newer Discord clients accept an https URL directly in `large_image`; older
+ * ones only resolve asset keys uploaded to the application. Sending the poster
+ * URL costs nothing when unsupported — Discord ignores what it cannot resolve —
+ * and gets per-film artwork on clients that do handle it. `poster` is the
+ * fallback key to upload under Rich Presence → Art Assets.
+ */
+function discordArtwork(item: LibraryItem): string {
+  const meta = item.metadata;
+  const remote = meta?.posters[0]?.remotePath;
+  if (meta?.providerId === 'tmdb' && remote) return `${TMDB_IMAGE_BASE}/w500${remote}`;
+  return 'poster';
+}
 
 function formatTime(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
@@ -193,7 +210,7 @@ export function Player({ item, startAt }: PlayerProps): React.JSX.Element {
       title: displayTitle(item),
       subtitle: [displayYear(item), item.metadata?.genres[0]].filter(Boolean).join(' · '),
       remainingSec: Math.max(0, Math.round(duration - current)),
-      largeImage: 'poster'
+      largeImage: discordArtwork(item)
     });
     // `current` is intentionally absent: including it would fire every tick.
   }, [playing, duration, item, Math.floor(current / 60)]);

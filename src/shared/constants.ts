@@ -23,6 +23,9 @@ export const AUTO_ACCEPT = 0.75;
 /** Below this it is treated as no match at all rather than a guess. */
 export const REJECT_BELOW = 0.45;
 
+/** Public CDN base for TMDB artwork. */
+export const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p';
+
 /**
  * Required by the TMDB free-tier terms, rendered in the sidebar footer.
  */

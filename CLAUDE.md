@@ -11,9 +11,11 @@ returns is cached to disk so the app runs with the network off.
 npm run dev          # electron-vite dev, HMR on the renderer
 npm start            # run the production build
 npm run build        # tsc --noEmit && electron-vite build
-npm test             # 119 tests, node:test via tsx
+npm test             # 136 tests, node:test via tsx
 npm run typecheck
 npm run scan:report  # print the parse table for every folder, no network
+npm run dist         # NSIS installer into release/ (~97 MB)
+npm run release      # same, published to GitHub Releases
 ```
 
 Only one instance can run at a time (`requestSingleInstanceLock`). Launching a
@@ -24,7 +26,7 @@ under `src/main/` or `src/preload/` restarts the app; renderer edits hot-reload.
 
 ```
 src/main/          Electron main. Scanner, TMDB provider, matcher, stores.
-                   All 119 tests live here or in shared.
+                   All 136 tests live here or in shared.
 src/preload/       The entire renderer API surface (contextBridge).
 src/renderer/      React UI. No Node access.
 src/shared/        Types, constants, and pure logic both processes need.
@@ -34,6 +36,32 @@ scripts/           Dev tools.
 `src/shared/constants.ts` exists because the renderer cannot import from main.
 Anything both sides need goes there — several values were previously duplicated
 by hand and drifted.
+
+## Packaging and releases
+
+`electron-builder`, NSIS, `perMachine: false` (installs per-user, no UAC).
+Output is `release/movie-app-<version>-setup.exe` plus `latest.yml`, the feed
+`electron-updater` polls.
+
+**`build.productName` must stay `movie-app`.** Electron derives
+`app.getPath('userData')` from `app.getName()`, which returns `productName` when
+set. Changing it moves the data directory and orphans the catalog, profiles and
+image cache in one release. The NSIS `shortcutName` carries the pretty name
+instead — that is cosmetic and safe.
+
+Updates are **manual only**, from Settings. Everything else works offline and a
+background updater phoning home each launch would break that. Windows cannot
+replace a running executable, so the installer downloads to temp and applies on
+quit. Unsigned, so SmartScreen warns on first run.
+
+### Versioning
+
+`package.json` `version` drives the installer name, the update comparison and
+`app.getVersion()`. SemVer, staying on `0.x` for now.
+
+Separately — and this is the contract that actually matters — each stored file
+carries its own `schemaVersion`, independent of the app version. A feature
+release may not touch any schema; a patch release might bump one.
 
 ## Where the data lives
 
@@ -103,6 +131,13 @@ empty. Treating an unreadable file as empty lets a caller conclude "nothing here
 yet" and write fresh data over a good catalog. Read paths that write back must
 use `readJsonOrFail`.
 
+**Profile schema changes must migrate, never reset.** `profiles.ts` used to
+return an empty state on any `schemaVersion` mismatch, which would have wiped
+every user's watch history the first time the schema was bumped after a release.
+`profile-migration.ts` now migrates forward through a `STEPS` registry and
+*throws* on data newer than the build understands. Adding version 2 means adding
+one entry to `STEPS` — do not edit the loader.
+
 **React StrictMode double-invokes effects.** `ensureProfile` is serialised
 behind a shared promise because two concurrent calls both saw an empty list,
 both created a profile, and the second write orphaned the first — taking its
@@ -136,6 +171,21 @@ passes `--tsconfig tsconfig.node.json`.
   carousel arrows were unclickable because the cards had z-indexes and the
   arrows did not.
 
+## Discord Rich Presence
+
+Opt-in, off by default, configured in Settings with an application ID from the
+Discord developer portal. `discord-presence.ts` speaks the IPC protocol directly
+— four opcodes and a length-prefixed JSON frame — rather than depending on
+`discord-rpc`, which is unmaintained and pulls in an OAuth stack this needs none
+of. Nothing contacts Discord's servers; it writes to the local client's named
+pipe. If Discord is not running, connection fails and presence stays off.
+
+`timestamps.end` is what produces the countdown. Frame length is measured in
+**bytes**, not characters — a title like `ソラニン` desyncs the stream otherwise.
+
+Artwork sends the TMDB poster URL, which newer clients resolve directly; older
+ones need an asset key uploaded to the application (`poster` is the fallback).
+
 ## Conventions
 
 - **Commits**: conventional prefix, lowercase, terse (2–5 words), subject only,
@@ -153,6 +203,10 @@ profiles, poster picker, Continue Watching, the player (seek, subtitles with
 
 **Known gaps:**
 
+- **Library roots are hardcoded to `D:/Movies`** in `config.ts`, with no folder
+  picker and no IPC to change them. A fresh install on any other machine scans
+  a path that does not exist and shows an empty library with no explanation.
+  This is the blocker for anyone else installing the app.
 - **`.mkv` and 10-bit HEVC do not play.** Chromium can't decode them; the player
   shows a clear error naming the format. Bundling mpv is the real fix and also
   solves HDR tone mapping properly.
