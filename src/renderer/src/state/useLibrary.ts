@@ -13,6 +13,7 @@ interface LibraryStore {
   load: () => Promise<void>;
   rescan: () => Promise<void>;
   enrich: (force: boolean) => Promise<void>;
+  fetchNew: () => Promise<void>;
   rematch: (movieId: string, remoteId: number) => Promise<void>;
   setProgress: (progress: EnrichmentProgress | null) => void;
   dismissSummary: () => void;
@@ -60,6 +61,19 @@ export const useLibrary = create<LibraryStore>((set, get) => ({
         catalog: await window.api.getLibrary(),
         error: summary.fatalError
       });
+    } catch (err) {
+      set({ error: message(err) });
+    } finally {
+      set({ busy: false, progress: null });
+    }
+  },
+
+  /** Rescan plus enrichment limited to films that were not there before. */
+  fetchNew: async () => {
+    set({ busy: true, error: null, summary: null });
+    try {
+      const summary = await window.api.fetchNewLibrary();
+      set({ summary, catalog: await window.api.getLibrary(), error: summary.fatalError });
     } catch (err) {
       set({ error: message(err) });
     } finally {

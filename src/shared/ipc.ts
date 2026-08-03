@@ -20,6 +20,7 @@ export const IPC = {
   libraryGet: 'library:get',
   libraryScan: 'library:scan',
   libraryEnrich: 'library:enrich',
+  libraryFetchNew: 'library:fetch-new',
   libraryEnrichProgress: 'library:enrich-progress',
   libraryRematch: 'library:rematch',
   librarySearchProvider: 'library:search-provider',
@@ -53,6 +54,11 @@ export interface RendererApi {
   scanLibrary(): Promise<LibraryCatalog>;
   /** Fetches metadata and artwork for unmatched films. */
   enrichLibrary(force: boolean): Promise<EnrichmentSummary>;
+  /**
+   * Rescans, then fetches metadata for films that were not in the catalog
+   * before — so adding one title costs one lookup, not a pass over the library.
+   */
+  fetchNewLibrary(): Promise<EnrichmentSummary>;
   /** Forces a film to a specific provider id, overriding the fuzzy match. */
   rematch(movieId: string, remoteId: number): Promise<LibraryCatalog>;
   /** Free-text provider search, for fixing a match the scorer got wrong. */

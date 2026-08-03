@@ -29,6 +29,7 @@ const api: RendererApi = {
   scanLibrary: () => ipcRenderer.invoke(IPC.libraryScan) as Promise<LibraryCatalog>,
   enrichLibrary: (force) =>
     ipcRenderer.invoke(IPC.libraryEnrich, force) as Promise<EnrichmentSummary>,
+  fetchNewLibrary: () => ipcRenderer.invoke(IPC.libraryFetchNew) as Promise<EnrichmentSummary>,
   rematch: (movieId, remoteId) =>
     ipcRenderer.invoke(IPC.libraryRematch, movieId, remoteId) as Promise<LibraryCatalog>,
   searchProvider: (query, year) =>

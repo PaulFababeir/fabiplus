@@ -12,7 +12,30 @@
   overflow-x: auto;
   scroll-behavior: smooth;
   scrollbar-width: none;
-  mask-image: linear-gradient(to right, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%);
+  /*
+   * Faded only on the side that actually has more content. A permanent left
+   * fade dimmed "All" even at the start of the strip, where nothing is
+   * hidden — the mask now follows the scroll state.
+   */
+  mask-image: linear-gradient(to right, #000 0, #000 100%);
+}
+
+.track[data-more-left='true'] {
+  mask-image: linear-gradient(to right, transparent 0, #000 28px, #000 100%);
+}
+
+.track[data-more-right='true'] {
+  mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 28px), transparent 100%);
+}
+
+.track[data-more-left='true'][data-more-right='true'] {
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 28px,
+    #000 calc(100% - 28px),
+    transparent 100%
+  );
 }
 
 .track::-webkit-scrollbar {

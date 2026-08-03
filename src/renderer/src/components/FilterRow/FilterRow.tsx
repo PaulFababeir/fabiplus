@@ -58,7 +58,12 @@ export function FilterRow({ genres }: FilterRowProps): React.JSX.Element {
 
   return (
     <div className={styles.row}>
-      <div className={styles.track} ref={trackRef}>
+      <div
+        className={styles.track}
+        ref={trackRef}
+        data-more-left={canScrollLeft}
+        data-more-right={canScrollRight}
+      >
         <button
           type="button"
           className={styles.pill}

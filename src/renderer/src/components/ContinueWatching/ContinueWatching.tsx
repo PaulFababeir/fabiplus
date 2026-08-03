@@ -9,8 +9,13 @@ import { useUi } from '@renderer/state/useUi';
 import { Icon } from '@renderer/components/ui/Icon';
 import styles from './ContinueWatching.module.css';
 
-/** Poster cards shown queued to the right of the active film. */
-const QUEUE_SIZE = 2;
+/**
+ * Poster cards on the right: the film currently on the plate, then the ones
+ * queued behind it. Including the active poster gives the row an anchor, so
+ * cycling reads as movement through a list rather than cards appearing from
+ * nowhere.
+ */
+const QUEUE_SIZE = 3;
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
@@ -59,10 +64,11 @@ export function ContinueWatching({
     ? runtimeLabel(Math.round(item.metadata.runtimeMin * (1 - progress)))
     : null;
 
-  // The films after this one, wrapping, shown as posters.
-  const queue = Array.from({ length: Math.min(QUEUE_SIZE, total - 1) }, (_, offset) => ({
-    entry: deck[(index + offset + 1) % total]!,
-    position: (index + offset + 1) % total
+  // Starts at the active film so the row shows what is playing plus what is next.
+  const queue = Array.from({ length: Math.min(QUEUE_SIZE, total) }, (_, offset) => ({
+    entry: deck[(index + offset) % total]!,
+    position: (index + offset) % total,
+    isActive: offset === 0
   }));
 
   return (
@@ -122,18 +128,34 @@ export function ContinueWatching({
 
         {queue.length > 0 && (
           <div className={styles.thumbs}>
-            {queue.map(({ entry, position }) => {
+            {/*
+              `popLayout` takes leaving cards out of flow immediately, so the
+              rest slide across cleanly instead of the newcomer appearing to
+              crawl out from under its neighbour.
+            */}
+            <AnimatePresence initial={false} mode="popLayout">
+              {queue.map(({ entry, position, isActive }) => {
               const poster = posterFor(entry.item, profileState);
               return (
                 <motion.button
                   key={entry.item.id}
                   type="button"
                   className={styles.thumb}
-                  // `layout` lets a card glide to its new slot when the deck
-                  // advances rather than jumping.
+                  data-active={isActive}
                   layout
-                  transition={{ duration: 0.42, ease: EASE }}
-                  aria-label={`Show ${displayTitle(entry.item)}`}
+                  // Cards drop in from above and fall away downward, so a new
+                  // poster never looks like it is sliding out from beneath the
+                  // one beside it.
+                  initial={{ opacity: 0, y: -34, scale: 0.94 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 34, scale: 0.94 }}
+                  transition={{ duration: 0.4, ease: EASE }}
+                  aria-label={
+                    isActive
+                      ? `${displayTitle(entry.item)} (showing)`
+                      : `Show ${displayTitle(entry.item)}`
+                  }
+                  aria-current={isActive}
                   onClick={() => setIndex(position)}
                   onContextMenu={(e) => {
                     e.preventDefault();
@@ -159,7 +181,8 @@ export function ContinueWatching({
                   </span>
                 </motion.button>
               );
-            })}
+              })}
+            </AnimatePresence>
           </div>
         )}
 

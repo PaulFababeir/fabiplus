@@ -207,6 +207,54 @@ function registerIpc(): void {
     }
   );
 
+  ipcMain.handle(IPC.libraryFetchNew, async (event): Promise<EnrichmentSummary> => {
+    const config = await loadConfig();
+    const empty: EnrichmentSummary = {
+      total: 0,
+      matched: 0,
+      needsReview: 0,
+      failed: 0,
+      durationMs: 0,
+      review: [],
+      fatalError: null
+    };
+
+    if (!config.tmdbApiKey) {
+      return { ...empty, fatalError: 'No TMDB API key set. Add one in Settings.' };
+    }
+
+    const existing = await loadLibrary();
+    // Captured before the merge — afterwards every item looks equally present.
+    const knownIds = new Set(existing.items.map((item) => item.id));
+
+    const scan = await scanRoots(config.movieRoots, 'movie');
+    const merged = mergeScan(existing, scan, config.movieRoots);
+    if (wouldDestroyMetadata(existing, merged)) {
+      console.error('[library] rescan would drop all metadata; keeping the stored catalog');
+      return { ...empty, fatalError: 'Rescan looked wrong and was refused. Nothing was changed.' };
+    }
+    await saveLibrary(merged);
+
+    const fresh = merged.items.filter((item) => !knownIds.has(item.id));
+    if (fresh.length === 0) return empty;
+
+    const provider = new TmdbProvider(config.tmdbApiKey);
+    const { items: enriched, summary } = await enrichLibrary(fresh, provider, {
+      onProgress: (progress) => {
+        if (!event.sender.isDestroyed()) event.sender.send(IPC.libraryEnrichProgress, progress);
+      }
+    });
+
+    // Fold the enriched newcomers back into the full catalog.
+    const byId = new Map(enriched.map((item) => [item.id, item]));
+    const next = merged.items.map((item) => byId.get(item.id) ?? item);
+
+    await saveLibrary({ ...merged, items: next });
+    await backupLibrary();
+    console.log(`[library] fetched metadata for ${fresh.length} new film(s)`);
+    return summary;
+  });
+
   ipcMain.handle(
     IPC.libraryRematch,
     async (_event, movieId: unknown, remoteId: unknown): Promise<LibraryCatalog> => {

@@ -9,7 +9,7 @@ import styles from './Modal.module.css';
 /** Library maintenance: the TMDB key, rescanning, and metadata refresh. */
 export function SettingsPanel(): React.JSX.Element {
   const { toggleSettings, translucent, setTranslucent } = useUi();
-  const { busy, error, progress, summary, rescan, enrich } = useLibrary();
+  const { busy, error, progress, summary, rescan, enrich, fetchNew } = useLibrary();
   const { state: profileState, clearProgress } = useProfile();
 
   const [hasKey, setHasKey] = useState(false);
@@ -122,7 +122,21 @@ export function SettingsPanel(): React.JSX.Element {
             effects, which Electron follows.
           </p>
 
+          <p className={styles.note}>
+            <strong>Check for new films</strong> rescans and then looks up only the titles that
+            were not in the catalog before, so adding one film costs one lookup rather than a pass
+            over the whole library.
+          </p>
+
           <div className={styles.actions}>
+            <button
+              type="button"
+              className={`${styles.button} ${styles.primary}`}
+              disabled={busy || !hasKey}
+              onClick={() => void fetchNew()}
+            >
+              Check for new films
+            </button>
             <button
               type="button"
               className={styles.button}
@@ -179,24 +193,41 @@ export function SettingsPanel(): React.JSX.Element {
             </div>
           )}
 
-          {progress && (
-            <div className={styles.progress}>
-              {progress.done}/{progress.total} · {progress.current}
-              <div className={styles.bar}>
-                <div className={styles.barFill} style={{ width: `${percent}%` }} />
-              </div>
-            </div>
-          )}
-
-          {summary && !progress && (
-            <p className={styles.progress}>
-              Finished in {(summary.durationMs / 1000).toFixed(1)}s — {summary.matched} matched,{' '}
-              {summary.needsReview} need review, {summary.failed} failed.
-            </p>
-          )}
-
           {error && <p className={styles.error}>{error}</p>}
         </div>
+
+        {/*
+          Outside the scrolling body on purpose. Sitting inside it, progress
+          was pushed below the fold by the settings above and looked missing
+          exactly when it mattered.
+        */}
+        {(progress || (summary && busy)) && (
+          <div className={styles.footer}>
+            <div className={styles.progressRow}>
+              <span className={styles.progressLabel}>
+                {progress ? progress.current : 'Working…'}
+              </span>
+              <span className={styles.progressCount}>
+                {progress ? `${progress.done}/${progress.total}` : ''}
+              </span>
+            </div>
+            <div className={styles.bar}>
+              <div className={styles.barFill} style={{ width: `${percent}%` }} />
+            </div>
+          </div>
+        )}
+
+        {summary && !busy && (
+          <div className={styles.footer}>
+            <span className={styles.progressLabel}>
+              {summary.total === 0
+                ? 'No new films found.'
+                : `${summary.total} processed in ${(summary.durationMs / 1000).toFixed(1)}s — ` +
+                  `${summary.matched} matched, ${summary.needsReview} need review, ` +
+                  `${summary.failed} failed.`}
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );
