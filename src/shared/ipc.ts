@@ -86,8 +86,12 @@ export interface RendererApi {
   /** Downloads the pending update; it installs on quit. */
   downloadUpdate(): Promise<UpdateStatus>;
 
-  /** Publishes what is playing, or clears it when passed null. */
-  setDiscordActivity(activity: DiscordActivity | null): Promise<boolean>;
+  /**
+   * Publishes what is playing, or clears it when passed null. Resolves to the
+   * Discord application's own name once known — it lives in the developer
+   * portal, so Discord is the only source for it — or null if not yet.
+   */
+  setDiscordActivity(activity: DiscordActivity | null): Promise<string | null>;
   setDiscordConfig(enabled: boolean, appId: string | null): Promise<AppConfig>;
 
   /** Subscribes to enrichment progress. Returns an unsubscribe function. */

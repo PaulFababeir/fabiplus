@@ -338,22 +338,22 @@ function registerIpc(): void {
   ipcMain.handle(IPC.updateCheck, async (): Promise<UpdateStatus> => checkForUpdate());
   ipcMain.handle(IPC.updateDownload, async (): Promise<UpdateStatus> => downloadUpdate());
 
-  ipcMain.handle(IPC.discordSet, async (_event, activity: unknown): Promise<boolean> => {
+  ipcMain.handle(IPC.discordSet, async (_event, activity: unknown): Promise<string | null> => {
     const config = await loadConfig();
     if (!config.discordPresence || !config.discordAppId) {
       presence.disconnect();
-      return false;
+      return null;
     }
 
     // Silent failure here means Discord is not running, which is normal and not
     // worth surfacing to the user — but it should still be findable in a log.
     if (!(await presence.connect(config.discordAppId))) {
       console.warn('[discord] could not reach the Discord client');
-      return false;
+      return null;
     }
 
     presence.set((activity ?? null) as DiscordActivity | null);
-    return true;
+    return presence.appName;
   });
 
   ipcMain.handle(

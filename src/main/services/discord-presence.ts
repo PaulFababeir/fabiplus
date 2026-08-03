@@ -127,6 +127,16 @@ export class DiscordPresence {
   #onReady: (() => void) | null = null;
   /** Shared by callers that arrive while a connection is still opening. */
   #connecting: Promise<boolean> | null = null;
+  /**
+   * The Discord application's own name, learned from Discord rather than
+   * configured. It lives in the developer portal, not in this codebase, so the
+   * only way to know it is to send an activity without a `name` override and
+   * read what comes back — Discord fills the field in. The browsing activity
+   * does exactly that, and it is always the first thing published.
+   */
+  #appName: string | null = null;
+  /** The override last sent, so an echo of it is not mistaken for the app name. */
+  #lastSentName: string | null = null;
   /** Bumped per attempt so a superseded one cannot tear down its successor. */
   #generation = 0;
 
@@ -139,6 +149,11 @@ export class DiscordPresence {
 
   get connected(): boolean {
     return this.#ready;
+  }
+
+  /** Null until Discord has echoed an activity that carried no name override. */
+  get appName(): string | null {
+    return this.#appName;
   }
 
   /**
@@ -226,6 +241,14 @@ export class DiscordPresence {
         this.disconnect();
         continue;
       }
+      if (frame.opcode === OP_FRAME && frame.payload['cmd'] === 'SET_ACTIVITY') {
+        // Discord fills `name` in from the application when we did not override
+        // it. An echo matching what we sent tells us nothing new.
+        const data = frame.payload['data'] as { name?: unknown } | null;
+        const echoed = typeof data?.name === 'string' ? data.name : null;
+        if (echoed && echoed !== this.#lastSentName) this.#appName = echoed;
+        continue;
+      }
       if (frame.opcode === OP_FRAME && frame.payload['evt'] === 'READY') {
         this.#ready = true;
         this.#onReady?.();
@@ -238,6 +261,7 @@ export class DiscordPresence {
   set(activity: DiscordActivity | null): void {
     this.#pending = activity;
     if (!this.#ready || !this.#socket) return;
+    this.#lastSentName = activity?.name ?? null;
 
     this.#socket.write(
       encodeFrame(OP_FRAME, {

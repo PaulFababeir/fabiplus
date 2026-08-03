@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { buildPresence, discordArtwork, type PresenceFilm } from '@shared/presence';
 import type { LibraryItem, ProfileState } from '@shared/types';
@@ -48,6 +48,14 @@ export function useDiscordPresence({
   libraryCount,
   epoch
 }: PresenceArgs): void {
+  /**
+   * The Discord application's name. It is configured in the developer portal,
+   * so the app cannot know it up front — Discord reports it back on the first
+   * activity that does not override `name`, which is always the browsing one.
+   * Until then the subtext just omits it.
+   */
+  const [appName, setAppName] = useState<string | null>(null);
+
   const activity = useMemo(
     () =>
       buildPresence({
@@ -58,9 +66,10 @@ export function useDiscordPresence({
             ? Math.max(0, Math.round(playback.durationSec - playback.positionSec))
             : null,
         selected: toFilm(selected, profile),
-        libraryCount
+        libraryCount,
+        appName
       }),
-    [playing, selected, playback, profile, libraryCount]
+    [playing, selected, playback, profile, libraryCount, appName]
   );
 
   // Compared by value: the shell re-renders on every keystroke in the search
@@ -72,7 +81,12 @@ export function useDiscordPresence({
     const key = `${epoch}:${encoded}`;
     if (last.current === key) return;
     last.current = key;
-    void window.api.setDiscordActivity(activity);
+
+    // Learning the name changes the activity, so this publishes a second time
+    // and then settles — the value comparison stops it going round again.
+    void window.api.setDiscordActivity(activity).then((name) => {
+      if (name) setAppName((current) => (current === name ? current : name));
+    });
     // `activity` is the parsed form of `encoded`; depending on both would fire
     // on every render, which is the thing the comparison above exists to stop.
   }, [encoded, epoch]);

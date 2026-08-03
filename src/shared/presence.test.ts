@@ -24,7 +24,14 @@ const solanin: PresenceFilm = {
   image: 'poster'
 };
 
-const base = { film: null, playing: false, remainingSec: null, selected: null, libraryCount: 79 };
+const base = {
+  film: null,
+  playing: false,
+  remainingSec: null,
+  selected: null,
+  libraryCount: 79,
+  appName: 'Fabi+'
+};
 
 describe('buildPresence', () => {
   /** Reads "Watching Interstellar" rather than the application name. */
@@ -32,10 +39,21 @@ describe('buildPresence', () => {
     const activity = buildPresence({ ...base, film, playing: true, remainingSec: 4200 });
     assert.equal(activity.name, 'Interstellar');
     assert.equal(activity.type, ACTIVITY_WATCHING);
-    assert.equal(activity.details, '2014 · Adventure');
-    assert.equal(activity.state, '');
     assert.equal(activity.remainingSec, 4200);
     assert.equal(activity.largeImage, film.image);
+  });
+
+  /** Year and genre belong in the grey subtext, beside the app name. */
+  it('puts the app name, year and genre in the subtext', () => {
+    const activity = buildPresence({ ...base, film, playing: true, remainingSec: 4200 });
+    assert.equal(activity.state, 'Fabi+ · 2014 · Adventure');
+    // The prominent line is left for the countdown while playing.
+    assert.equal(activity.details, '');
+  });
+
+  it('omits the app name until Discord has reported it', () => {
+    const activity = buildPresence({ ...base, film, playing: true, appName: null });
+    assert.equal(activity.state, '2014 · Adventure');
   });
 
   /**
@@ -45,8 +63,8 @@ describe('buildPresence', () => {
   it('drops the countdown when paused and says so', () => {
     const activity = buildPresence({ ...base, film, playing: false, remainingSec: 4200 });
     assert.equal(activity.name, 'Interstellar');
-    assert.equal(activity.details, '2014 · Adventure');
-    assert.equal(activity.state, 'Paused');
+    assert.equal(activity.details, 'Paused');
+    assert.equal(activity.state, 'Fabi+ · 2014 · Adventure');
     assert.equal(activity.remainingSec, null);
   });
 
@@ -54,7 +72,8 @@ describe('buildPresence', () => {
     const bare = { ...solanin, year: null, genre: null };
     const activity = buildPresence({ ...base, film: bare });
     assert.equal(activity.name, 'Solanin');
-    assert.equal(activity.state, 'Paused');
+    assert.equal(activity.details, 'Paused');
+    assert.equal(activity.state, 'Fabi+');
   });
 
   /** Browsing keeps the app name — nothing else identifies the app there. */
@@ -102,6 +121,7 @@ describe('buildPresence', () => {
     }
   });
 });
+
 
 /** Enough of a LibraryItem to exercise the artwork branch. */
 function itemWith(metadata: LibraryItem['metadata']): LibraryItem {

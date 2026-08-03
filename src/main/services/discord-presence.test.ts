@@ -161,10 +161,14 @@ describe('decodeFrames', () => {
   });
 });
 
+/** What the stub reports as the application's name, as Discord would. */
+const STUB_APP_NAME = 'Fabi+';
+
 /**
- * A stand-in for the Discord client: answers a handshake with READY and records
- * the activities it is sent. Runs on its own pipe so it never collides with a
- * real Discord install on the developer's machine.
+ * A stand-in for the Discord client: answers a handshake with READY, records
+ * the activities it is sent, and echoes each one back the way Discord does.
+ * Runs on its own pipe so it never collides with a real Discord install on the
+ * developer's machine.
  */
 function stubDiscord(): Promise<{
   path: string;
@@ -198,6 +202,16 @@ function stubDiscord(): Promise<{
         if (frame.opcode === 1 && frame.payload['cmd'] === 'SET_ACTIVITY') {
           const args = frame.payload['args'] as { activity: Record<string, unknown> | null };
           activities.push(args.activity);
+
+          // Discord echoes the applied activity back, filling `name` in from
+          // the application whenever the caller did not supply one.
+          socket.write(
+            encodeFrame(1, {
+              cmd: 'SET_ACTIVITY',
+              evt: null,
+              data: { ...args.activity, name: args.activity?.['name'] ?? STUB_APP_NAME }
+            })
+          );
         }
       }
     });
@@ -286,6 +300,45 @@ describe('DiscordPresence', () => {
       await presence.connect('app-id');
       assert.equal(await presence.connect('app-id'), true);
       assert.equal(presence.connected, true);
+    });
+  });
+
+  /**
+   * The application's name lives in the developer portal, not in this codebase,
+   * so the only way to learn it is to read what Discord fills in when we send
+   * no override. The browsing activity does that, and goes out first.
+   */
+  it('learns the application name from an activity with no override', async () => {
+    await withStub(async (_discord, presence) => {
+      await presence.connect('app-id');
+      assert.equal(presence.appName, null);
+
+      presence.set({ ...solanin, name: null });
+      await new Promise((r) => setTimeout(r, 50));
+      assert.equal(presence.appName, STUB_APP_NAME);
+    });
+  });
+
+  it('does not mistake an echo of its own override for the app name', async () => {
+    await withStub(async (_discord, presence) => {
+      await presence.connect('app-id');
+
+      presence.set(solanin);
+      await new Promise((r) => setTimeout(r, 50));
+      assert.equal(presence.appName, null, 'took the film title for the app name');
+    });
+  });
+
+  it('keeps the learned name once a film starts overriding it', async () => {
+    await withStub(async (_discord, presence) => {
+      await presence.connect('app-id');
+
+      presence.set({ ...solanin, name: null });
+      await new Promise((r) => setTimeout(r, 50));
+
+      presence.set(solanin);
+      await new Promise((r) => setTimeout(r, 50));
+      assert.equal(presence.appName, STUB_APP_NAME);
     });
   });
 

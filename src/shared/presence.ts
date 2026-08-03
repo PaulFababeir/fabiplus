@@ -77,26 +77,37 @@ export interface PresenceInput {
   selected: PresenceFilm | null;
   /** Size of the library, for the idle line. */
   libraryCount: number;
+  /**
+   * The Discord application's name, which only Discord can tell us. Null until
+   * it has, in which case the subtext simply omits it.
+   */
+  appName: string | null;
 }
 
-function describe(film: PresenceFilm): string {
-  return [film.year, film.genre].filter(Boolean).join(' · ');
+/** The grey line under the title: "Fabi+ · 2013 · Horror". */
+function describe(film: PresenceFilm, appName: string | null): string {
+  return [appName, film.year, film.genre].filter(Boolean).join(' · ');
 }
 
 export function buildPresence(input: PresenceInput): DiscordActivity {
-  const { film, playing, remainingSec, selected, libraryCount } = input;
+  const { film, playing, remainingSec, selected, libraryCount, appName } = input;
 
   // A film takes over the first line, so it reads "Watching Interstellar"
   // rather than the app name. Browsing keeps the app name — that is the only
   // thing identifying the app when no film is open.
+  //
+  // Discord renders `details` prominently and `state` as grey subtext, so the
+  // year and genre go in `state` alongside the app name, leaving `details` for
+  // the one thing worth calling out. While playing that is nothing: the
+  // countdown takes the line instead.
   if (film) {
     return {
       name: film.title,
       type: ACTIVITY_WATCHING,
-      details: describe(film),
+      details: playing ? '' : 'Paused',
+      state: describe(film, appName),
       // No countdown while paused: `timestamps.end` is an absolute wall-clock
       // instant, so Discord would count down a film that is not moving.
-      state: playing ? '' : 'Paused',
       remainingSec: playing ? remainingSec : null,
       largeImage: film.image
     };

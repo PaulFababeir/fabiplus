@@ -212,12 +212,24 @@ portal, not from this codebase. No other portal configuration is required.
 `shared/presence.ts` maps app state to one of four activities, and is pure so
 the branching is tested without a socket:
 
-| State | First line | Second line | Third line | Timer |
+Discord renders `details` prominently and `state` as grey subtext, which is why
+the year and genre sit in `state`:
+
+| State | First line | Prominent | Subtext | Timer |
 |---|---|---|---|---|
-| Playing | `Watching <title>` | `2014 · Adventure` | — | countdown |
-| Paused | `Watching <title>` | `2014 · Adventure` | `Paused` | none |
+| Playing | `Watching <title>` | — | `<app> · 2013 · Horror` | countdown |
+| Paused | `Watching <title>` | `Paused` | `<app> · 2013 · Horror` | none |
 | Film selected | app name | `Browsing the library` | that film's title | none |
 | Idle | app name | `Browsing the library` | `79 films` | none |
+
+While playing, the prominent line is deliberately empty — the countdown takes it.
+
+The **app name in the subtext is learned from Discord, never configured.** It
+lives in the developer portal, so the app cannot know it up front; Discord fills
+`name` in on any activity that does not override it, and the browsing activity
+— always the first published — does exactly that. `presence.appName` caches it,
+the IPC call returns it, and the hook re-publishes once with it. Do not add a
+settings field for this: it would duplicate the portal and drift from it.
 
 The local RPC honours both `type` (3 = Watching) and a **`name` that overrides
 the application name** — verified against the desktop client, which echoes both

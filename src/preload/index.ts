@@ -41,7 +41,7 @@ const api: RendererApi = {
 
   getAppVersion: () => ipcRenderer.invoke(IPC.appVersion) as Promise<string>,
   setDiscordActivity: (activity) =>
-    ipcRenderer.invoke(IPC.discordSet, activity) as Promise<boolean>,
+    ipcRenderer.invoke(IPC.discordSet, activity) as Promise<string | null>,
   setDiscordConfig: (enabled, appId) =>
     ipcRenderer.invoke(IPC.configSetDiscord, enabled, appId) as Promise<AppConfig>,
   checkForUpdate: () => ipcRenderer.invoke(IPC.updateCheck) as Promise<UpdateStatus>,
