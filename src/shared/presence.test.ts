@@ -91,13 +91,37 @@ function itemWith(metadata: LibraryItem['metadata']): LibraryItem {
 }
 
 describe('discordArtwork', () => {
-  it('builds a TMDB URL when the film has provider artwork', () => {
-    const item = itemWith({
-      providerId: 'tmdb',
-      posters: [{ remotePath: '/abc.jpg' }]
-    } as LibraryItem['metadata']);
+  const threePosters = itemWith({
+    providerId: 'tmdb',
+    posters: [
+      { remotePath: '/first.jpg', localPath: 'C:/cache/first.jpg' },
+      { remotePath: '/second.jpg', localPath: 'C:/cache/second.jpg' },
+      { remotePath: '/third.jpg', localPath: 'C:/cache/third.jpg' }
+    ]
+  } as unknown as LibraryItem['metadata']);
 
-    assert.equal(discordArtwork(item), 'https://image.tmdb.org/t/p/w500/abc.jpg');
+  it('builds a TMDB URL when the film has provider artwork', () => {
+    assert.equal(discordArtwork(threePosters), 'https://image.tmdb.org/t/p/w500/first.jpg');
+  });
+
+  /** The presence should show the same poster the library does. */
+  it('honours the poster the profile picked', () => {
+    assert.equal(discordArtwork(threePosters, 2), 'https://image.tmdb.org/t/p/w500/third.jpg');
+  });
+
+  /**
+   * Sends the remote path, never the cached `localPath` — Discord fetches the
+   * image itself and a path on this disk means nothing to it.
+   */
+  it('never sends a local file path', () => {
+    for (const index of [0, 1, 2]) {
+      assert.ok(discordArtwork(threePosters, index).startsWith('https://image.tmdb.org/'));
+    }
+  });
+
+  /** A pick can outlive a refetch that came back with fewer posters. */
+  it('falls back to the first poster when the pick is out of range', () => {
+    assert.equal(discordArtwork(threePosters, 9), 'https://image.tmdb.org/t/p/w500/first.jpg');
   });
 
   it('falls back to the uploaded asset key without metadata', () => {

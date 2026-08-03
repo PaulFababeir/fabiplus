@@ -188,6 +188,12 @@ ones need an asset key uploaded to the application (`poster` is the fallback).
 Confirmed working: Discord rewrites the URL to `mp:external/…` and serves it, so
 per-film posters need no uploaded assets.
 
+It follows the profile's poster pick, so the presence shows the same artwork the
+library does. Note this sends `remotePath`, **not** the cached `localPath` the UI
+renders — Discord fetches the image from its own servers and a path on this disk
+is meaningless to it. An out-of-range pick falls back to the first poster, since
+a choice outlives a refetch that returns fewer posters.
+
 The **application ID** is the whole identity of the presence: Discord looks it up
 to get the name shown on the first line. That name comes from the developer
 portal, not from this codebase. No other portal configuration is required.

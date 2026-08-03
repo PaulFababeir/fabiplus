@@ -81,6 +81,7 @@ export default function App(): React.JSX.Element {
     playing,
     selected,
     playback,
+    profile: profileState,
     libraryCount: items.length,
     epoch: presenceEpoch
   });

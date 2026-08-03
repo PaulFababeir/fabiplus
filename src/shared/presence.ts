@@ -26,12 +26,19 @@ export const FALLBACK_ART = 'poster';
  * nothing when unsupported — Discord ignores what it cannot resolve — and gets
  * per-film artwork on clients that do handle it, which is confirmed to include
  * current desktop builds.
+ *
+ * `posterIndex` is the profile's pick, so the presence shows the same artwork
+ * the library does. It is deliberately the *remote* path and not the cached
+ * `localPath` the UI renders: Discord fetches the image from its own servers,
+ * and a path on this disk is meaningless to it.
  */
-export function discordArtwork(item: LibraryItem): string {
+export function discordArtwork(item: LibraryItem, posterIndex = 0): string {
   const meta = item.metadata;
-  const remote = meta?.posters[0]?.remotePath;
-  if (meta?.providerId === 'tmdb' && remote) return `${TMDB_IMAGE_BASE}/w500${remote}`;
-  return FALLBACK_ART;
+  if (meta?.providerId !== 'tmdb') return FALLBACK_ART;
+
+  // A stale pick — the choice outlives a refetch that returned fewer posters.
+  const poster = meta.posters[posterIndex] ?? meta.posters[0];
+  return poster ? `${TMDB_IMAGE_BASE}/w500${poster.remotePath}` : FALLBACK_ART;
 }
 
 /**

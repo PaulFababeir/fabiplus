@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 
 import { buildPresence, discordArtwork, type PresenceFilm } from '@shared/presence';
-import type { LibraryItem } from '@shared/types';
+import type { LibraryItem, ProfileState } from '@shared/types';
 import type { PlaybackStatus } from '@renderer/state/useUi';
 import { displayTitle, displayYear } from './selectors';
 
@@ -16,13 +16,14 @@ import { displayTitle, displayYear } from './selectors';
  * update and blank it again.
  */
 
-function toFilm(item: LibraryItem | null): PresenceFilm | null {
+function toFilm(item: LibraryItem | null, profile: ProfileState | null): PresenceFilm | null {
   if (!item) return null;
   return {
     title: displayTitle(item),
     year: displayYear(item),
     genre: item.metadata?.genres[0] ?? null,
-    image: discordArtwork(item)
+    // The profile's poster pick, so Discord shows the artwork the library does.
+    image: discordArtwork(item, profile?.posterChoice[item.id] ?? 0)
   };
 }
 
@@ -32,6 +33,8 @@ interface PresenceArgs {
   /** The film chosen in the library. */
   selected: LibraryItem | null;
   playback: PlaybackStatus;
+  /** Supplies the poster choice; the presence follows it. */
+  profile: ProfileState | null;
   libraryCount: number;
   /** Changes when the Discord settings do, forcing a re-publish. */
   epoch: number;
@@ -41,22 +44,23 @@ export function useDiscordPresence({
   playing,
   selected,
   playback,
+  profile,
   libraryCount,
   epoch
 }: PresenceArgs): void {
   const activity = useMemo(
     () =>
       buildPresence({
-        film: toFilm(playing),
+        film: toFilm(playing, profile),
         playing: playback.playing,
         remainingSec:
           playback.durationSec > 0
             ? Math.max(0, Math.round(playback.durationSec - playback.positionSec))
             : null,
-        selected: toFilm(selected),
+        selected: toFilm(selected, profile),
         libraryCount
       }),
-    [playing, selected, playback, libraryCount]
+    [playing, selected, playback, profile, libraryCount]
   );
 
   // Compared by value: the shell re-renders on every keystroke in the search
