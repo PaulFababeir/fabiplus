@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'motion/react';
 
-import { TMDB_IMAGE_BASE } from '@shared/constants';
 import { toMovieUrl } from '@shared/media-url';
 import type { LibraryItem } from '@shared/types';
 import { displayTitle, displayYear } from '@renderer/lib/selectors';

@@ -39,7 +39,7 @@ const main = async (): Promise<void> => {
     process.exit(2);
   }
 
-  let buffer = Buffer.alloc(0);
+  let buffer: Buffer = Buffer.alloc(0);
   socket.on('data', (chunk: Buffer) => {
     const { frames, rest } = decodeFrames(Buffer.concat([buffer, chunk]));
     buffer = rest;
@@ -48,8 +48,10 @@ const main = async (): Promise<void> => {
 
       if (f.payload['evt'] === 'READY') {
         const activity = buildActivity({
-          title: 'Interstellar',
-          subtitle: '2014 · Adventure',
+          name: 'Interstellar',
+          type: 3,
+          details: '2014 · Adventure',
+          state: '',
           remainingSec: 5400,
           largeImage: 'https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg'
         });

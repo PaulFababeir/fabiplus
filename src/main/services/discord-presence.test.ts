@@ -39,12 +39,33 @@ describe('pipePath', () => {
 });
 
 describe('buildActivity', () => {
-  const base = { title: 'Interstellar', subtitle: '2014', remainingSec: null, largeImage: null };
+  const base = {
+    name: null,
+    type: 0,
+    details: 'Interstellar',
+    state: '2014',
+    remainingSec: null,
+    largeImage: null
+  };
 
-  it('maps title and subtitle to the two visible lines', () => {
+  it('maps details and state to the lines below the first', () => {
     const payload = buildActivity(base);
     assert.equal(payload['details'], 'Interstellar');
     assert.equal(payload['state'], '2014');
+  });
+
+  /** Omitted, not nulled — that is what makes Discord use the app name. */
+  it('omits name entirely when there is none', () => {
+    assert.equal('name' in buildActivity(base), false);
+  });
+
+  it('sends a name to replace the application name on the first line', () => {
+    assert.equal(buildActivity({ ...base, name: 'Interstellar' })['name'], 'Interstellar');
+  });
+
+  /** 3 is Watching; the desktop client honours it over the local socket. */
+  it('carries the activity type through', () => {
+    assert.equal(buildActivity({ ...base, type: 3 })['type'], 3);
   });
 
   /** `end` is what makes Discord render a countdown rather than elapsed time. */
@@ -60,8 +81,8 @@ describe('buildActivity', () => {
     assert.equal(buildActivity({ ...base, remainingSec: 0 })['timestamps'], undefined);
   });
 
-  it('omits an empty subtitle rather than sending a blank line', () => {
-    assert.equal(buildActivity({ ...base, subtitle: '' })['state'], undefined);
+  it('omits an empty state rather than sending a blank line', () => {
+    assert.equal(buildActivity({ ...base, state: '' })['state'], undefined);
   });
 
   it('only sends assets when an image key is configured', () => {
@@ -70,6 +91,17 @@ describe('buildActivity', () => {
       large_image: 'poster',
       large_text: 'Interstellar'
     });
+  });
+
+  /** The hover label should name the film, not its year and genre. */
+  it('labels the artwork with the name when there is one', () => {
+    const payload = buildActivity({
+      ...base,
+      name: 'Solanin',
+      details: '2010 · Drama',
+      largeImage: 'poster'
+    });
+    assert.deepEqual(payload['assets'], { large_image: 'poster', large_text: 'Solanin' });
   });
 });
 
@@ -149,7 +181,9 @@ function stubDiscord(): Promise<{
 
   const server: Server = createServer((socket) => {
     sockets.push(socket);
-    let buffer = Buffer.alloc(0);
+    // Annotated: `Buffer.alloc` is the narrower Buffer<ArrayBuffer>, but the
+    // remainder handed back by decodeFrames is a plain Buffer.
+    let buffer: Buffer = Buffer.alloc(0);
 
     socket.on('error', () => {});
     socket.on('data', (chunk: Buffer) => {
@@ -184,20 +218,46 @@ function stubDiscord(): Promise<{
   });
 }
 
-describe('DiscordPresence', () => {
-  it('sends the activity once connected', async () => {
-    const discord = await stubDiscord();
-    const presence = new DiscordPresence(() => discord.path);
+const solanin = {
+  name: 'Solanin',
+  type: 3,
+  details: '2010',
+  state: '',
+  remainingSec: null,
+  largeImage: null
+};
 
-    assert.equal(await presence.connect('app-id'), true);
-    presence.set({ title: 'Solanin', subtitle: '2010', remainingSec: null, largeImage: null });
-    await new Promise((r) => setTimeout(r, 50));
-
-    assert.equal(discord.activities.length, 1);
-    assert.equal(discord.activities[0]?.['details'], 'Solanin');
-
+/**
+ * Tears the stub and socket down even when an assertion throws — otherwise a
+ * failing test leaves a live pipe server and the whole run hangs instead of
+ * reporting the failure.
+ */
+async function withStub(
+  run: (
+    discord: Awaited<ReturnType<typeof stubDiscord>>,
+    presence: DiscordPresence
+  ) => Promise<void>
+): Promise<void> {
+  const discord = await stubDiscord();
+  const presence = new DiscordPresence(() => discord.path);
+  try {
+    await run(discord, presence);
+  } finally {
     presence.disconnect();
     await discord.close();
+  }
+}
+
+describe('DiscordPresence', () => {
+  it('sends the activity once connected', async () => {
+    await withStub(async (discord, presence) => {
+      assert.equal(await presence.connect('app-id'), true);
+      presence.set(solanin);
+      await new Promise((r) => setTimeout(r, 50));
+
+      assert.equal(discord.activities.length, 1);
+      assert.equal(discord.activities[0]?.['name'], 'Solanin');
+    });
   });
 
   /**
@@ -208,34 +268,25 @@ describe('DiscordPresence', () => {
    * produces exactly this pattern on mount.
    */
   it('survives concurrent connects', async () => {
-    const discord = await stubDiscord();
-    const presence = new DiscordPresence(() => discord.path);
+    await withStub(async (_discord, presence) => {
+      const [a, b] = await Promise.all([presence.connect('app-id'), presence.connect('app-id')]);
+      assert.equal(a, true);
+      assert.equal(b, true);
 
-    const [a, b] = await Promise.all([presence.connect('app-id'), presence.connect('app-id')]);
-    assert.equal(a, true);
-    assert.equal(b, true);
+      presence.set(solanin);
 
-    presence.set({ title: 'Solanin', subtitle: '2010', remainingSec: null, largeImage: null });
-
-    // Well past the READY timeout an orphaned attempt would have fired at.
-    await new Promise((r) => setTimeout(r, 4500));
-    assert.equal(presence.connected, true, 'a stale attempt tore down the connection');
-
-    presence.disconnect();
-    await discord.close();
+      // Well past the READY timeout an orphaned attempt would have fired at.
+      await new Promise((r) => setTimeout(r, 4500));
+      assert.equal(presence.connected, true, 'a stale attempt tore down the connection');
+    });
   });
 
   it('reuses the connection instead of reconnecting', async () => {
-    const discord = await stubDiscord();
-    const presence = new DiscordPresence(() => discord.path);
-
-    await presence.connect('app-id');
-    const second = presence.connect('app-id');
-    assert.equal(await second, true);
-    assert.equal(presence.connected, true);
-
-    presence.disconnect();
-    await discord.close();
+    await withStub(async (_discord, presence) => {
+      await presence.connect('app-id');
+      assert.equal(await presence.connect('app-id'), true);
+      assert.equal(presence.connected, true);
+    });
   });
 
   it('reports failure when nothing is listening', async () => {

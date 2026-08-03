@@ -15,6 +15,16 @@ import type { DiscordActivity, LibraryItem } from './types.js';
 const BROWSING = 'Browsing the library';
 
 /**
+ * Discord's activity verbs, rendered before the first line.
+ *
+ * The local RPC socket honours `type` — verified against the desktop client,
+ * which echoes the value back. A client that ignored it would simply say
+ * "Playing", so this degrades quietly rather than failing.
+ */
+export const ACTIVITY_PLAYING = 0;
+export const ACTIVITY_WATCHING = 3;
+
+/**
  * Asset key to upload under Rich Presence → Art Assets, used when a film has no
  * TMDB artwork and for the idle state.
  */
@@ -76,40 +86,38 @@ function describe(film: PresenceFilm): string {
 export function buildPresence(input: PresenceInput): DiscordActivity {
   const { film, playing, remainingSec, selected, libraryCount } = input;
 
+  // A film takes over the first line, so it reads "Watching Interstellar"
+  // rather than the app name. Browsing keeps the app name — that is the only
+  // thing identifying the app when no film is open.
   if (film) {
-    const detail = describe(film);
-
-    if (playing) {
-      return {
-        title: film.title,
-        subtitle: detail,
-        remainingSec,
-        largeImage: film.image
-      };
-    }
-
-    // No countdown while paused: `timestamps.end` is an absolute wall-clock
-    // instant, so Discord would keep counting down a film that is not moving.
     return {
-      title: film.title,
-      subtitle: detail ? `Paused · ${detail}` : 'Paused',
-      remainingSec: null,
+      name: film.title,
+      type: ACTIVITY_WATCHING,
+      details: describe(film),
+      // No countdown while paused: `timestamps.end` is an absolute wall-clock
+      // instant, so Discord would count down a film that is not moving.
+      state: playing ? '' : 'Paused',
+      remainingSec: playing ? remainingSec : null,
       largeImage: film.image
     };
   }
 
   if (selected) {
     return {
-      title: BROWSING,
-      subtitle: selected.title,
+      name: null,
+      type: ACTIVITY_PLAYING,
+      details: BROWSING,
+      state: selected.title,
       remainingSec: null,
       largeImage: selected.image
     };
   }
 
   return {
-    title: BROWSING,
-    subtitle: libraryCount === 1 ? '1 film' : `${libraryCount} films`,
+    name: null,
+    type: ACTIVITY_PLAYING,
+    details: BROWSING,
+    state: libraryCount === 1 ? '1 film' : `${libraryCount} films`,
     remainingSec: null,
     largeImage: FALLBACK_ART
   };

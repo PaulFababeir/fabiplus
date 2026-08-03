@@ -3,7 +3,6 @@ import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
 import { IPC, type RendererApi } from '../shared/ipc.js';
 import type {
   AppConfig,
-  DiscordActivity,
   EnrichmentProgress,
   EnrichmentSummary,
   LibraryCatalog,

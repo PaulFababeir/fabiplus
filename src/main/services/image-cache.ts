@@ -2,7 +2,6 @@ import { createHash } from 'node:crypto';
 import { access, mkdir, rename, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import { POSTERS_PER_MOVIE } from '@shared/constants';
 import type { CachedImage } from '@shared/types';
 import { imageCacheDir } from './config.js';
 import type { RemoteImage } from './metadata/provider.js';

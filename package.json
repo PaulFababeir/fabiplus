@@ -7,9 +7,9 @@
   "type": "module",
   "scripts": {
     "dev": "electron-vite dev",
-    "build": "tsc --noEmit && electron-vite build",
+    "build": "tsc --build && electron-vite build",
     "start": "electron-vite preview",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --build",
     "test": "tsx --tsconfig tsconfig.node.json --test \"src/**/*.test.ts\"",
     "scan:report": "tsx scripts/scan-report.ts",
     "dist": "npm run build && electron-builder --win --publish never",

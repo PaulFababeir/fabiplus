@@ -161,7 +161,7 @@ function applyToken(tags: ReleaseTags, kind: TokenKind, token: string): void {
  */
 function extractGroups(input: string, tags: ReleaseTags): { rest: string; year: number | null } {
   let year: number | null = null;
-  const rest = input.replace(/[[(]([^\])]*)[\])]/g, (whole, inner: string) => {
+  const rest = input.replace(/[[(]([^\])]*)[\])]/g, (_whole, inner: string) => {
     const trimmed = inner.trim();
 
     const asYear = isYear(trimmed);

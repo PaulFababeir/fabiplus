@@ -16,9 +16,8 @@
     "skipLibCheck": true,
     "noEmit": true,
     "composite": true,
-    "baseUrl": ".",
     "paths": {
-      "@shared/*": ["src/shared/*"]
+      "@shared/*": ["./src/shared/*"]
     }
   },
   "include": ["src/main/**/*", "src/preload/**/*", "src/shared/**/*", "scripts/**/*", "electron.vite.config.ts"]

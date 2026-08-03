@@ -94,10 +94,14 @@ export function pipePath(index: number): string {
  */
 export function buildActivity(activity: DiscordActivity): Record<string, unknown> {
   const payload: Record<string, unknown> = {
-    details: activity.title,
-    state: activity.subtitle || undefined,
+    type: activity.type,
+    details: activity.details || undefined,
+    state: activity.state || undefined,
     instance: false
   };
+
+  // Omitted rather than nulled, so Discord falls back to the application name.
+  if (activity.name) payload['name'] = activity.name;
 
   if (activity.remainingSec !== null && activity.remainingSec > 0) {
     payload['timestamps'] = { end: Date.now() + activity.remainingSec * 1000 };
@@ -106,7 +110,7 @@ export function buildActivity(activity: DiscordActivity): Record<string, unknown
   if (activity.largeImage) {
     payload['assets'] = {
       large_image: activity.largeImage,
-      large_text: activity.title
+      large_text: activity.name ?? activity.details
     };
   }
 

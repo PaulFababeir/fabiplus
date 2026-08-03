@@ -145,10 +145,21 @@ export interface LibraryCatalog {
   items: LibraryItem[];
 }
 
-/** What to show on a Discord profile while a film is playing. */
+/**
+ * What to show on a Discord profile. Field names follow Discord's own, because
+ * they map to specific lines and guessing wrong is invisible until you look at
+ * a profile: `name` is the first line, `details` the second, `state` the third.
+ */
 export interface DiscordActivity {
-  title: string;
-  subtitle: string;
+  /**
+   * Replaces the application name on the first line. Null keeps the app name,
+   * which is what identifies the app while browsing.
+   */
+  name: string | null;
+  /** The verb before `name` — see ACTIVITY_PLAYING / ACTIVITY_WATCHING. */
+  type: number;
+  details: string;
+  state: string;
   /** Drives Discord's countdown; null when the runtime is unknown. */
   remainingSec: number | null;
   /** Asset key uploaded to the Discord application, or null for no artwork. */

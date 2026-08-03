@@ -11,8 +11,8 @@ returns is cached to disk so the app runs with the network off.
 npm run dev          # electron-vite dev, HMR on the renderer
 npm start            # run the production build
 npm run build        # tsc --noEmit && electron-vite build
-npm test             # 136 tests, node:test via tsx
-npm run typecheck
+npm test             # 164 tests, node:test via tsx
+npm run typecheck    # tsc --build — see below, --noEmit checks nothing here
 npm run scan:report  # print the parse table for every folder, no network
 npm run dist         # NSIS installer into release/ (~97 MB)
 npm run release      # same, published to GitHub Releases
@@ -126,6 +126,15 @@ applies an SVG gamma filter (`HDR_GAMMA`) to tagged files. CSS `filter` has no
 gamma function, hence SVG. `force-color-profile=srgb` is set in main and handles
 the separate display-ICC half of the problem.
 
+**`tsc --noEmit` type-checks nothing in this repo.** The root `tsconfig.json` is
+a solution file — `"files": []` plus references to the node and web projects —
+and `--noEmit` does not traverse project references, so it exits 0 having read
+no source at all. It must be `tsc --build`. This was wrong for a long time and
+hid fifteen real errors, including a test asserting against a field that had
+been renamed. Relatedly, the web project must **exclude** `*.test.ts`: tests are
+node programs, and compiled under the renderer's `types` every `node:` import
+fails.
+
 **`readJsonSafe` vs `readJsonOrFail`.** Only a *missing* file may fall back to
 empty. Treating an unreadable file as empty lets a caller conclude "nothing here
 yet" and write fresh data over a good catalog. Read paths that write back must
@@ -203,12 +212,24 @@ portal, not from this codebase. No other portal configuration is required.
 `shared/presence.ts` maps app state to one of four activities, and is pure so
 the branching is tested without a socket:
 
-| State | First line | Second line | Timer |
-|---|---|---|---|
-| Playing | title | `2014 · Adventure` | countdown |
-| Paused | title | `Paused · 2014 · Adventure` | none |
-| Film selected | `Browsing the library` | that film's title | none |
-| Idle | `Browsing the library` | `79 films` | none |
+| State | First line | Second line | Third line | Timer |
+|---|---|---|---|---|
+| Playing | `Watching <title>` | `2014 · Adventure` | — | countdown |
+| Paused | `Watching <title>` | `2014 · Adventure` | `Paused` | none |
+| Film selected | app name | `Browsing the library` | that film's title | none |
+| Idle | app name | `Browsing the library` | `79 films` | none |
+
+The local RPC honours both `type` (3 = Watching) and a **`name` that overrides
+the application name** — verified against the desktop client, which echoes both
+back. That is what puts the film itself on the first line instead of the app.
+`DiscordActivity` therefore uses Discord's own field names: `name` is line one,
+`details` line two, `state` line three. Guessing that mapping wrong is invisible
+until you look at a profile.
+
+A film takes the first line; browsing deliberately does not, because the app
+name is the only thing identifying the app when no film is open. A client that
+ignored either field would just show "Playing &lt;app name&gt;", so this degrades
+quietly rather than breaking.
 
 **Never send `null` while the app is open.** Clearing the Rich Presence does not
 leave the profile blank — Discord falls back to its own detected-app line, which

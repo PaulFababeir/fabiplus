@@ -1,7 +1,13 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { buildPresence, discordArtwork, type PresenceFilm } from './presence.js';
+import {
+  ACTIVITY_PLAYING,
+  ACTIVITY_WATCHING,
+  buildPresence,
+  discordArtwork,
+  type PresenceFilm
+} from './presence.js';
 import type { LibraryItem } from './types.js';
 
 const film: PresenceFilm = {
@@ -21,10 +27,13 @@ const solanin: PresenceFilm = {
 const base = { film: null, playing: false, remainingSec: null, selected: null, libraryCount: 79 };
 
 describe('buildPresence', () => {
-  it('shows the film and a countdown while playing', () => {
+  /** Reads "Watching Interstellar" rather than the application name. */
+  it('puts the film on the first line while playing', () => {
     const activity = buildPresence({ ...base, film, playing: true, remainingSec: 4200 });
-    assert.equal(activity.title, 'Interstellar');
-    assert.equal(activity.subtitle, '2014 · Adventure');
+    assert.equal(activity.name, 'Interstellar');
+    assert.equal(activity.type, ACTIVITY_WATCHING);
+    assert.equal(activity.details, '2014 · Adventure');
+    assert.equal(activity.state, '');
     assert.equal(activity.remainingSec, 4200);
     assert.equal(activity.largeImage, film.image);
   });
@@ -35,45 +44,51 @@ describe('buildPresence', () => {
    */
   it('drops the countdown when paused and says so', () => {
     const activity = buildPresence({ ...base, film, playing: false, remainingSec: 4200 });
-    assert.equal(activity.title, 'Interstellar');
-    assert.equal(activity.subtitle, 'Paused · 2014 · Adventure');
+    assert.equal(activity.name, 'Interstellar');
+    assert.equal(activity.details, '2014 · Adventure');
+    assert.equal(activity.state, 'Paused');
     assert.equal(activity.remainingSec, null);
-    assert.equal(activity.largeImage, film.image);
   });
 
   it('still reads as paused for a film with no year or genre', () => {
     const bare = { ...solanin, year: null, genre: null };
-    assert.equal(buildPresence({ ...base, film: bare }).subtitle, 'Paused');
+    const activity = buildPresence({ ...base, film: bare });
+    assert.equal(activity.name, 'Solanin');
+    assert.equal(activity.state, 'Paused');
   });
 
+  /** Browsing keeps the app name — nothing else identifies the app there. */
   it('shows the chosen film while browsing', () => {
     const activity = buildPresence({ ...base, selected: solanin });
-    assert.equal(activity.title, 'Browsing the library');
-    assert.equal(activity.subtitle, 'Solanin');
+    assert.equal(activity.name, null);
+    assert.equal(activity.type, ACTIVITY_PLAYING);
+    assert.equal(activity.details, 'Browsing the library');
+    assert.equal(activity.state, 'Solanin');
     assert.equal(activity.largeImage, 'poster');
   });
 
   it('falls back to the library size when nothing is chosen', () => {
     const activity = buildPresence(base);
-    assert.equal(activity.title, 'Browsing the library');
-    assert.equal(activity.subtitle, '79 films');
+    assert.equal(activity.name, null);
+    assert.equal(activity.details, 'Browsing the library');
+    assert.equal(activity.state, '79 films');
   });
 
   it('does not say "1 films"', () => {
-    assert.equal(buildPresence({ ...base, libraryCount: 1 }).subtitle, '1 film');
+    assert.equal(buildPresence({ ...base, libraryCount: 1 }).state, '1 film');
   });
 
   /** A film in the player outranks whatever is still selected behind it. */
   it('prefers the playing film over the selection', () => {
     const activity = buildPresence({ ...base, film, playing: true, selected: solanin });
-    assert.equal(activity.title, 'Interstellar');
+    assert.equal(activity.name, 'Interstellar');
   });
 
   /**
-   * The whole point: every state produces something, because a null would let
+   * The whole point: every state says something, because a null would let
    * Discord fall back to the bare app-name-and-elapsed-timer activity.
    */
-  it('never produces an empty title', () => {
+  it('never produces a blank activity', () => {
     const states: Parameters<typeof buildPresence>[0][] = [
       base,
       { ...base, selected: solanin },
@@ -81,7 +96,10 @@ describe('buildPresence', () => {
       { ...base, film, playing: false },
       { ...base, libraryCount: 0 }
     ];
-    for (const state of states) assert.ok(buildPresence(state).title.length > 0);
+    for (const state of states) {
+      const activity = buildPresence(state);
+      assert.ok((activity.name ?? activity.details).length > 0);
+    }
   });
 });
 
