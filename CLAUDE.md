@@ -185,6 +185,30 @@ pipe. If Discord is not running, connection fails and presence stays off.
 
 Artwork sends the TMDB poster URL, which newer clients resolve directly; older
 ones need an asset key uploaded to the application (`poster` is the fallback).
+Confirmed working: Discord rewrites the URL to `mp:external/…` and serves it, so
+per-film posters need no uploaded assets.
+
+The **application ID** is the whole identity of the presence: Discord looks it up
+to get the name shown on the first line. That name comes from the developer
+portal, not from this codebase. No other portal configuration is required.
+
+Two traps cost real debugging time here, both silent:
+
+- **Frames sent before `READY` are discarded.** Discord dispatches `READY` after
+  the handshake; anything written earlier vanishes, which showed up as a presence
+  with the app name and a default elapsed timer but no title or artwork.
+- **`connect()` must be safe under concurrency.** Two calls in the same tick each
+  opened a socket and each overwrote a single `#onReady` slot, orphaning the
+  first. The orphan timed out four seconds later and called `disconnect()`,
+  tearing down the *live* connection its successor was using — presence appeared,
+  then vanished after ~2s. The player triggers this every time: its effect and
+  cleanup both fire, and StrictMode double-invokes on mount. In-flight attempts
+  are now shared and a generation counter stops a superseded attempt from
+  disconnecting its successor. `discord-presence.test.ts` runs a stub Discord
+  over a real named pipe to hold this.
+
+`scripts/discord-probe.ts <appId>` connects, handshakes and sends one activity,
+logging every frame — the fastest way to tell a protocol fault from an app one.
 
 ## Conventions
 

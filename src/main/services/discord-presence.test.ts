@@ -1,7 +1,15 @@
 import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
+import { createServer, type Server, type Socket } from 'node:net';
 import { describe, it } from 'node:test';
 
-import { buildActivity, decodeFrames, encodeFrame, pipePath } from './discord-presence.js';
+import {
+  DiscordPresence,
+  buildActivity,
+  decodeFrames,
+  encodeFrame,
+  pipePath
+} from './discord-presence.js';
 
 describe('encodeFrame', () => {
   it('prefixes opcode and byte length as little-endian int32', () => {
@@ -118,5 +126,122 @@ describe('decodeFrames', () => {
   it('round-trips multibyte payloads', () => {
     const { frames } = decodeFrames(encodeFrame(1, { t: 'ソラニン' }));
     assert.deepEqual(frames[0]?.payload, { t: 'ソラニン' });
+  });
+});
+
+/**
+ * A stand-in for the Discord client: answers a handshake with READY and records
+ * the activities it is sent. Runs on its own pipe so it never collides with a
+ * real Discord install on the developer's machine.
+ */
+function stubDiscord(): Promise<{
+  path: string;
+  activities: (Record<string, unknown> | null)[];
+  close: () => Promise<void>;
+}> {
+  const path =
+    process.platform === 'win32'
+      ? `\\\\?\\pipe\\movie-app-test-${randomUUID()}`
+      : `${process.env['TMPDIR'] ?? '/tmp'}/movie-app-test-${randomUUID()}`;
+
+  const activities: (Record<string, unknown> | null)[] = [];
+  const sockets: Socket[] = [];
+
+  const server: Server = createServer((socket) => {
+    sockets.push(socket);
+    let buffer = Buffer.alloc(0);
+
+    socket.on('error', () => {});
+    socket.on('data', (chunk: Buffer) => {
+      const decoded = decodeFrames(Buffer.concat([buffer, chunk]));
+      buffer = decoded.rest;
+
+      for (const frame of decoded.frames) {
+        if (frame.opcode === 0) {
+          socket.write(encodeFrame(1, { cmd: 'DISPATCH', evt: 'READY', data: {} }));
+          continue;
+        }
+        if (frame.opcode === 1 && frame.payload['cmd'] === 'SET_ACTIVITY') {
+          const args = frame.payload['args'] as { activity: Record<string, unknown> | null };
+          activities.push(args.activity);
+        }
+      }
+    });
+  });
+
+  return new Promise((resolve) => {
+    server.listen(path, () =>
+      resolve({
+        path,
+        activities,
+        close: () =>
+          new Promise((done) => {
+            for (const socket of sockets) socket.destroy();
+            server.close(() => done());
+          })
+      })
+    );
+  });
+}
+
+describe('DiscordPresence', () => {
+  it('sends the activity once connected', async () => {
+    const discord = await stubDiscord();
+    const presence = new DiscordPresence(() => discord.path);
+
+    assert.equal(await presence.connect('app-id'), true);
+    presence.set({ title: 'Solanin', subtitle: '2010', remainingSec: null, largeImage: null });
+    await new Promise((r) => setTimeout(r, 50));
+
+    assert.equal(discord.activities.length, 1);
+    assert.equal(discord.activities[0]?.['details'], 'Solanin');
+
+    presence.disconnect();
+    await discord.close();
+  });
+
+  /**
+   * The bug this guards: two calls in the same tick each opened a socket and
+   * each overwrote the single READY-resolver slot. The orphaned first attempt
+   * timed out four seconds later and disconnected, killing the live connection
+   * its successor was using — presence appeared, then vanished. The player
+   * produces exactly this pattern on mount.
+   */
+  it('survives concurrent connects', async () => {
+    const discord = await stubDiscord();
+    const presence = new DiscordPresence(() => discord.path);
+
+    const [a, b] = await Promise.all([presence.connect('app-id'), presence.connect('app-id')]);
+    assert.equal(a, true);
+    assert.equal(b, true);
+
+    presence.set({ title: 'Solanin', subtitle: '2010', remainingSec: null, largeImage: null });
+
+    // Well past the READY timeout an orphaned attempt would have fired at.
+    await new Promise((r) => setTimeout(r, 4500));
+    assert.equal(presence.connected, true, 'a stale attempt tore down the connection');
+
+    presence.disconnect();
+    await discord.close();
+  });
+
+  it('reuses the connection instead of reconnecting', async () => {
+    const discord = await stubDiscord();
+    const presence = new DiscordPresence(() => discord.path);
+
+    await presence.connect('app-id');
+    const second = presence.connect('app-id');
+    assert.equal(await second, true);
+    assert.equal(presence.connected, true);
+
+    presence.disconnect();
+    await discord.close();
+  });
+
+  it('reports failure when nothing is listening', async () => {
+    const presence = new DiscordPresence(
+      (i) => `${pipePath(i)}-movie-app-absent-${randomUUID()}`
+    );
+    assert.equal(await presence.connect('app-id'), false);
   });
 });

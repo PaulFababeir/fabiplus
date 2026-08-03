@@ -344,7 +344,13 @@ function registerIpc(): void {
       presence.disconnect();
       return false;
     }
-    if (!(await presence.connect(config.discordAppId))) return false;
+
+    // Silent failure here means Discord is not running, which is normal and not
+    // worth surfacing to the user — but it should still be findable in a log.
+    if (!(await presence.connect(config.discordAppId))) {
+      console.warn('[discord] could not reach the Discord client');
+      return false;
+    }
 
     presence.set((activity ?? null) as DiscordActivity | null);
     return true;

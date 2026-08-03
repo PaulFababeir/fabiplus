@@ -113,7 +113,7 @@ export function buildActivity(activity: DiscordActivity): Record<string, unknown
   return payload;
 }
 
-class DiscordPresence {
+export class DiscordPresence {
   #socket: Socket | null = null;
   #ready = false;
   #appId: string | null = null;
@@ -121,19 +121,56 @@ class DiscordPresence {
   #pending: DiscordActivity | null = null;
   #buffer: Buffer = Buffer.alloc(0);
   #onReady: (() => void) | null = null;
+  /** Shared by callers that arrive while a connection is still opening. */
+  #connecting: Promise<boolean> | null = null;
+  /** Bumped per attempt so a superseded one cannot tear down its successor. */
+  #generation = 0;
+
+  /** Overridable so tests can point at a stub pipe instead of Discord's. */
+  #resolvePipe: (index: number) => string;
+
+  constructor(resolvePipe: (index: number) => string = pipePath) {
+    this.#resolvePipe = resolvePipe;
+  }
 
   get connected(): boolean {
     return this.#ready;
   }
 
+  /**
+   * Concurrent callers share one attempt.
+   *
+   * Without this, two calls in the same tick each opened a socket and each
+   * wrote their resolver into `#onReady`, so the second silently orphaned the
+   * first. The orphan then timed out and disconnected — killing the live
+   * connection its successor was using, a few seconds after presence appeared.
+   * The player triggers exactly that: its effect and cleanup both fire, and
+   * StrictMode double-invokes them on mount.
+   */
   async connect(appId: string): Promise<boolean> {
     if (this.#ready && this.#appId === appId) return true;
+    if (this.#connecting && this.#appId === appId) return this.#connecting;
+
     this.disconnect();
     this.#appId = appId;
 
+    const attempt = (this.#generation += 1);
+    this.#connecting = this.#open(appId, attempt).finally(() => {
+      if (this.#generation === attempt) this.#connecting = null;
+    });
+    return this.#connecting;
+  }
+
+  async #open(appId: string, attempt: number): Promise<boolean> {
     for (let i = 0; i < MAX_PIPES; i += 1) {
-      const socket = await tryPipe(pipePath(i));
+      const socket = await tryPipe(this.#resolvePipe(i));
       if (!socket) continue;
+
+      // A newer attempt took over while this pipe was opening.
+      if (this.#generation !== attempt) {
+        socket.destroy();
+        return false;
+      }
 
       this.#socket = socket;
       this.#buffer = Buffer.alloc(0);
@@ -150,7 +187,7 @@ class DiscordPresence {
       // why the presence showed the app with a default elapsed timer and none
       // of the title or artwork that had already been written.
       if (await this.#awaitReady()) return true;
-      this.disconnect();
+      if (this.#generation === attempt) this.disconnect();
       return false;
     }
     return false;
