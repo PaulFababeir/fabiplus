@@ -43,11 +43,26 @@ by hand and drifted.
 Output is `release/movie-app-<version>-setup.exe` plus `latest.yml`, the feed
 `electron-updater` polls.
 
-**`build.productName` must stay `movie-app`.** Electron derives
-`app.getPath('userData')` from `app.getName()`, which returns `productName` when
-set. Changing it moves the data directory and orphans the catalog, profiles and
-image cache in one release. The NSIS `shortcutName` carries the pretty name
-instead — that is cosmetic and safe.
+**The data directory is pinned in `main/index.ts`; do not remove that line.**
+
+```ts
+app.setPath('userData', join(app.getPath('appData'), 'movie-app'));
+```
+
+Electron derives `userData` from `app.getName()`, which returns `productName`
+when set. `productName` is `Fabi+` — a display name — so without the pin the
+data directory would follow it to `%APPDATA%/Fabi+`, orphaning the catalog,
+profiles and image cache in one release. Watch history is not regenerable.
+
+That also closes a dev/production split: unpackaged runs took the name from
+`package.json` (`movie-app`) and packaged ones from `build.productName`, so the
+two diverged the moment those differed. The literal `movie-app` is now the only
+thing that decides, and **renaming the app is safe** as long as the pin stays.
+
+`artifactName` is deliberately the literal `movie-app-${version}-setup.${ext}`
+rather than `${productName}-…`. It keeps the installer filename ASCII — a `+`
+in a release asset URL is a hazard for `electron-updater` — and keeps the name
+stable across renames, so an existing update feed keeps resolving.
 
 Updates are **manual only**, from Settings. Everything else works offline and a
 background updater phoning home each launch would break that. Windows cannot

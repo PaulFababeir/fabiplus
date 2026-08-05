@@ -1,4 +1,4 @@
-# Movie Library
+# Fabi+
 
 An offline desktop movie library and player for a local collection. Point it at
 a folder of films and it scans them, pulls artwork and metadata from TMDB, and

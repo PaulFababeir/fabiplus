@@ -47,6 +47,23 @@ import { scanRoots } from './services/scanner.js';
 const isDev = !app.isPackaged;
 
 /**
+ * Pins the data directory to a literal name, independent of the display name.
+ *
+ * Electron derives `userData` from `app.getName()`, which returns `productName`
+ * when set. Renaming the app would therefore move `%APPDATA%/movie-app` and
+ * orphan the catalog, profiles and image cache in a single release — and watch
+ * history is not regenerable. Fixing the path here is what lets `productName`
+ * be a display name rather than a load-bearing identifier.
+ *
+ * It also closes a dev/production split: unpackaged runs took the name from
+ * package.json (`movie-app`) while packaged ones took `build.productName`, so
+ * the two used different directories the moment those differed.
+ *
+ * Must run before anything reads a userData path.
+ */
+app.setPath('userData', join(app.getPath('appData'), 'movie-app'));
+
+/**
  * Chromium colour-manages video into the display's ICC profile; VLC and most
  * desktop players do not. On a wide-gamut or non-sRGB monitor that transform
  * is what makes the same file look noticeably darker here than in VLC.
