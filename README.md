@@ -89,6 +89,17 @@ npm run dist       # NSIS installer into release/
 Requires Node 20+. Only one instance runs at a time — launching a second focuses
 the first, which can look like nothing happened.
 
+### Cutting a release
+
+```bash
+npm version patch        # bumps package.json, commits, creates the tag
+git push --follow-tags
+```
+
+That tag triggers `.github/workflows/release.yml`, which builds on Windows and
+uploads the installer and update feed to a **draft** release. Publish the draft
+on GitHub to make it downloadable and visible to the in-app updater.
+
 ## Known gaps
 
 - **`.mkv` and 10-bit HEVC do not play.** Chromium cannot decode them; the

@@ -1,0 +1,53 @@
+name: Release
+
+# Fires only on a version tag you push, never on an ordinary commit — releases
+# stay a deliberate act. Cutting one is:
+#
+#   npm version patch      # bumps package.json and creates the tag
+#   git push --follow-tags
+#
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    # Windows is not optional: the NSIS target needs a Windows runner.
+    runs-on: windows-latest
+
+    permissions:
+      # electron-builder creates the release and uploads the installer.
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # A tag that disagrees with package.json produces a release whose assets
+      # are named for one version and whose update feed advertises another.
+      - name: Check the tag matches package.json
+        shell: bash
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          pkg="$(node -p "require('./package.json').version")"
+          if [ "$tag" != "$pkg" ]; then
+            echo "tag $GITHUB_REF_NAME does not match package.json version $pkg" >&2
+            exit 1
+          fi
+          echo "releasing $pkg"
+
+      - run: npm test
+
+      # `npm run release` runs tsc --build and electron-vite build first, then
+      # electron-builder --publish always. GITHUB_TOKEN is enough; no personal
+      # access token is needed from within Actions.
+      - run: npm run release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

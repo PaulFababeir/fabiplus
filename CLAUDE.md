@@ -69,6 +69,27 @@ background updater phoning home each launch would break that. Windows cannot
 replace a running executable, so the installer downloads to temp and applies on
 quit. Unsigned, so SmartScreen warns on first run.
 
+### Cutting a release
+
+Nothing publishes on its own. `.github/workflows/release.yml` runs on a pushed
+`v*` tag and nothing else:
+
+```bash
+npm version patch        # bumps package.json, commits, creates the tag
+git push --follow-tags
+```
+
+It refuses to build when the tag disagrees with `package.json`, since that
+produces assets named for one version and a feed advertising another.
+
+electron-builder uploads the installer, `latest.yml` and the blockmap to a
+**draft** release. Drafts are invisible to `electron-updater`, so the release
+must be published in the GitHub UI before Settings → Check for updates sees it.
+
+`npm run release` does the same thing locally, but needs `GH_TOKEN` set to a
+personal access token with `repo` scope. Inside Actions the built-in
+`GITHUB_TOKEN` covers it.
+
 ### Versioning
 
 `package.json` `version` drives the installer name, the update comparison and
