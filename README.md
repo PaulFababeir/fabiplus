@@ -14,11 +14,34 @@ the network off.
 
 ## Installing
 
-Grab the installer from [Releases](https://github.com/PaulFababeir/movie-app/releases)
-and run it. It installs per-user, so there is no UAC prompt.
+**Windows 10/11, 64-bit.** One file, from
+[Releases](https://github.com/PaulFababeir/movie-app/releases):
 
-The build is unsigned, so SmartScreen will warn the first time — **More info →
-Run anyway**. Updates are manual, from Settings; nothing phones home on its own.
+```
+movie-app-<version>-setup.exe
+```
+
+That is the whole app — Electron, the fonts and every dependency are bundled, so
+there is nothing else to install. No Node, no npm, no cloning the source.
+
+Ignore the other two files on a release. `latest.yml` and the `.blockmap` are
+what the in-app updater reads; downloading them by hand does nothing.
+
+It installs per-user, so there is no UAC prompt. The build is unsigned, so
+SmartScreen will warn the first time — **More info → Run anyway**. Updates are
+manual, from Settings; nothing phones home on its own.
+
+### What you supply
+
+The app ships no films and no API key of its own:
+
+- **Your films**, in a folder you point it at on first run.
+- **A free [TMDB API key](https://www.themoviedb.org/settings/api)** for posters
+  and metadata. Optional — without one the library still scans and plays, it
+  just shows titles parsed from the folder names instead of artwork.
+
+Discord Rich Presence needs nothing at all: one toggle in Settings, off by
+default.
 
 ## First run
 
@@ -66,10 +89,8 @@ Your films are never moved, renamed, or written to. The app only reads them.
 
 ## Discord Rich Presence
 
-Off by default. To enable it, create an application at
-[discord.com/developers](https://discord.com/developers/applications) — the name
-you give it there is what Discord displays — and paste its Application ID into
-Settings. No other portal setup is needed.
+Off by default. Flip the toggle in Settings — there is nothing to register or
+paste in.
 
 While a film is playing your profile reads *Watching &lt;title&gt;* with the
 poster and a countdown; paused and browsing states are shown too. It talks to
@@ -81,7 +102,7 @@ servers. If Discord is not running, presence simply stays off.
 ```bash
 npm install
 npm run dev        # electron-vite dev, hot reload on the renderer
-npm test           # 175 tests, node:test via tsx
+npm test           # 185 tests, node:test via tsx
 npm run typecheck  # tsc --build
 npm run dist       # NSIS installer into release/
 ```

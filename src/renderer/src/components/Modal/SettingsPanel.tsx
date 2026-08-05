@@ -20,7 +20,6 @@ export function SettingsPanel(): React.JSX.Element {
   const [confirmingClear, setConfirmingClear] = useState(false);
   const [version, setVersion] = useState('');
   const [discordOn, setDiscordOn] = useState(false);
-  const [discordId, setDiscordId] = useState('');
   const [update, setUpdate] = useState<UpdateStatus | null>(null);
   const [checking, setChecking] = useState(false);
   const [roots, setRoots] = useState<string[]>([]);
@@ -30,7 +29,6 @@ export function SettingsPanel(): React.JSX.Element {
     void window.api.getAppVersion().then(setVersion);
     void window.api.getConfig().then((config) => {
       setDiscordOn(config.discordPresence);
-      setDiscordId(config.discordAppId ?? '');
       setRoots(config.movieRoots);
     });
   }, []);
@@ -56,9 +54,14 @@ export function SettingsPanel(): React.JSX.Element {
     await rescan();
   };
 
-  const saveDiscord = async (enabled: boolean, appId: string): Promise<void> => {
+  /**
+   * The application ID is bundled (see DISCORD_APP_ID), so null is sent and
+   * main falls back to it. Only an install that already stored an override
+   * keeps one.
+   */
+  const saveDiscord = async (enabled: boolean): Promise<void> => {
     setDiscordOn(enabled);
-    await window.api.setDiscordConfig(enabled, appId.trim() || null);
+    await window.api.setDiscordConfig(enabled, null);
     // The shell only republishes when the presence content changes, so nudge it
     // — otherwise switching this on shows nothing until you touch something.
     bumpPresence();
@@ -219,17 +222,11 @@ export function SettingsPanel(): React.JSX.Element {
             afterwards.
           </p>
 
-          <Toggle
-            checked={translucent}
-            label="Translucent window"
-            hint="Blurs the desktop behind the app (Windows 11 acrylic). If nothing changes, check Windows Settings → Personalisation → Colours → Transparency effects."
-            onChange={(next) => {
-              setTranslucent(next);
-              void window.api.setTranslucent(next);
-            }}
-          />
+          <div className={styles.divider} />
 
-          <p className={styles.note}>
+          <label className={styles.label}>Library</label>
+
+          <p className={styles.note} style={{ marginTop: 0 }}>
             <strong>Check for new films</strong> rescans and then looks up only the titles that
             were not in the catalog before, so adding one film costs one lookup rather than a pass
             over the whole library.
@@ -302,27 +299,32 @@ export function SettingsPanel(): React.JSX.Element {
 
           <div className={styles.divider} />
 
-          <label className={styles.label}>Discord presence</label>
+          <label className={styles.label}>Appearance</label>
 
-          <input
-            className={styles.input}
-            value={discordId}
-            placeholder="Discord application ID"
-            onChange={(e) => setDiscordId(e.target.value.replace(/\D/g, ''))}
-            onBlur={() => void saveDiscord(discordOn, discordId)}
+          <Toggle
+            checked={translucent}
+            label="Translucent window"
+            hint="Blurs the desktop behind the app (Windows 11 acrylic). If nothing changes, check Windows Settings → Personalisation → Colours → Transparency effects."
+            onChange={(next) => {
+              setTranslucent(next);
+              void window.api.setTranslucent(next);
+            }}
           />
+
+          <div className={styles.divider} />
+
+          <label className={styles.label}>Discord presence</label>
 
           <Toggle
             checked={discordOn}
-            disabled={!discordId.trim()}
             label="Show what I'm watching"
             hint="Puts the current film on your Discord profile with a countdown, and clears when you stop. Visible to anyone who can see your profile."
-            onChange={(next) => void saveDiscord(next, discordId)}
+            onChange={(next) => void saveDiscord(next)}
           />
 
           <p className={styles.note}>
-            Needs an application ID from discord.com/developers — the name you give it there is
-            what Discord displays. Discord must be running as a desktop app.
+            Discord must be running as a desktop app. Nothing is sent to Discord&apos;s servers —
+            this talks to the local client only, and stops the moment you switch it off.
           </p>
 
           <div className={styles.divider} />
@@ -368,19 +370,28 @@ export function SettingsPanel(): React.JSX.Element {
           was pushed below the fold by the settings above and looked missing
           exactly when it mattered.
         */}
-        {(progress || (summary && busy)) && (
+        {(busy || progress) && (
           <div className={styles.footer}>
             <div className={styles.progressRow}>
               <span className={styles.progressLabel}>
-                {progress ? progress.current : 'Working…'}
+                {progress ? progress.current : 'Scanning library…'}
               </span>
               <span className={styles.progressCount}>
                 {progress ? `${progress.done}/${progress.total}` : ''}
               </span>
             </div>
-            <div className={styles.bar}>
-              <div className={styles.barFill} style={{ width: `${percent}%` }} />
-            </div>
+            {/*
+              Indeterminate until the first progress event. Waiting for one left
+              the footer hidden through the entire scan — the slow part — so the
+              dialog looked frozen and then flashed a single film at the end.
+            */}
+            {progress ? (
+              <div className={styles.bar}>
+                <div className={styles.barFill} style={{ width: `${percent}%` }} />
+              </div>
+            ) : (
+              <div className={`${styles.bar} ${styles.barIndeterminate}`} />
+            )}
           </div>
         )}
 

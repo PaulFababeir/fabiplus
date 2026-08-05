@@ -108,11 +108,24 @@
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
+  transition:
+    background 140ms var(--ease-out),
+    color 140ms var(--ease-out);
 }
 
+/*
+ * A translucent overlay rather than `--surface`: the header already sits on a
+ * surface tone, so a solid fill of the same value produced no visible change
+ * and the button read as dead. This lifts against whatever is behind it, and
+ * matches the row-level dismiss buttons elsewhere in the dialog.
+ */
 .close:hover {
-  background: var(--surface);
+  background: rgb(255 255 255 / 8%);
   color: var(--text);
+}
+
+.close:active {
+  background: rgb(255 255 255 / 12%);
 }
 
 .body {
@@ -317,6 +330,7 @@
 }
 
 .bar {
+  position: relative;
   height: 4px;
   margin-top: 8px;
   overflow: hidden;
@@ -328,6 +342,39 @@
   height: 100%;
   background: var(--accent);
   transition: width 200ms var(--ease-out);
+}
+
+/*
+ * Scanning emits no progress events — it is one pass over the folder tree with
+ * nothing to count until it finishes. That is also the slow half of "Check for
+ * new films", so a 0% bar there reads as a frozen dialog. This runs until the
+ * first real count arrives and the bar switches to a determinate fill.
+ */
+.barIndeterminate::after {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  width: 40%;
+  border-radius: inherit;
+  background: var(--accent);
+  animation: barSlide 1.15s var(--ease-out) infinite;
+}
+
+@keyframes barSlide {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(250%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .barIndeterminate::after {
+    animation: none;
+    width: 100%;
+    opacity: 0.4;
+  }
 }
 
 /* --- Re-match list -------------------------------------------------------- */

@@ -2,6 +2,7 @@ import { app, BrowserWindow, dialog, ipcMain, protocol } from 'electron';
 import { readFile, realpath } from 'node:fs/promises';
 import { join, resolve as resolvePath } from 'node:path';
 
+import { DISCORD_APP_ID } from '@shared/constants';
 import { IPC } from '@shared/ipc';
 import { isVtt, srtToVtt } from '@shared/subtitles';
 import type {
@@ -370,14 +371,18 @@ function registerIpc(): void {
 
   ipcMain.handle(IPC.discordSet, async (_event, activity: unknown): Promise<string | null> => {
     const config = await loadConfig();
-    if (!config.discordPresence || !config.discordAppId) {
+    if (!config.discordPresence) {
       presence.disconnect();
       return null;
     }
 
+    // A stored override stays honoured so an existing install keeps whatever it
+    // was pointed at; everyone else gets the bundled application.
+    const appId = config.discordAppId ?? DISCORD_APP_ID;
+
     // Silent failure here means Discord is not running, which is normal and not
     // worth surfacing to the user — but it should still be findable in a log.
-    if (!(await presence.connect(config.discordAppId))) {
+    if (!(await presence.connect(appId))) {
       console.warn('[discord] could not reach the Discord client');
       return null;
     }

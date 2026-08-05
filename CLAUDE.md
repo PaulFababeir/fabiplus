@@ -10,11 +10,11 @@ returns is cached to disk so the app runs with the network off.
 ```bash
 npm run dev          # electron-vite dev, HMR on the renderer
 npm start            # run the production build
-npm run build        # tsc --noEmit && electron-vite build
-npm test             # 175 tests, node:test via tsx
+npm run build        # tsc --build && electron-vite build
+npm test             # 185 tests, node:test via tsx
 npm run typecheck    # tsc --build — see below, --noEmit checks nothing here
 npm run scan:report  # print the parse table for every folder, no network
-npm run dist         # NSIS installer into release/ (~97 MB)
+npm run dist         # NSIS installer into release/ (~102 MB)
 npm run release      # same, published to GitHub Releases
 ```
 
@@ -26,7 +26,7 @@ under `src/main/` or `src/preload/` restarts the app; renderer edits hot-reload.
 
 ```
 src/main/          Electron main. Scanner, TMDB provider, matcher, stores.
-                   All 136 tests live here or in shared.
+                   All 185 tests live here or in shared.
 src/preload/       The entire renderer API surface (contextBridge).
 src/renderer/      React UI. No Node access.
 src/shared/        Types, constants, and pure logic both processes need.
@@ -241,8 +241,8 @@ passes `--tsconfig tsconfig.node.json`.
 
 ## Discord Rich Presence
 
-Opt-in, off by default, configured in Settings with an application ID from the
-Discord developer portal. `discord-presence.ts` speaks the IPC protocol directly
+Opt-in, off by default — a single toggle in Settings, nothing to configure.
+`discord-presence.ts` speaks the IPC protocol directly
 — four opcodes and a length-prefixed JSON frame — rather than depending on
 `discord-rpc`, which is unmaintained and pulls in an OAuth stack this needs none
 of. Nothing contacts Discord's servers; it writes to the local client's named
@@ -262,9 +262,17 @@ renders — Discord fetches the image from its own servers and a path on this di
 is meaningless to it. An out-of-range pick falls back to the first poster, since
 a choice outlives a refetch that returns fewer posters.
 
-The **application ID** is the whole identity of the presence: Discord looks it up
-to get the name shown on the first line. That name comes from the developer
-portal, not from this codebase. No other portal configuration is required.
+The **application ID is bundled** as `DISCORD_APP_ID` in `shared/constants.ts`,
+not asked for in Settings. It is a public identifier, not a credential: it is
+already broadcast in every presence payload to anyone who can see the profile,
+and grants nothing on its own — the client secret and bot token are the secrets,
+and neither is used, since Rich Presence over the local socket is unauthenticated.
+Requiring every user to register their own application was setup friction for no
+benefit; all the ID decides is whose application *name* appears on the first line
+while browsing.
+
+`config.discordAppId` survives as an override so an install that already stored
+one keeps it (`config.discordAppId ?? DISCORD_APP_ID`). Nothing writes it now.
 
 ### What it publishes
 

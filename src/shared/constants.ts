@@ -27,6 +27,22 @@ export const REJECT_BELOW = 0.45;
 export const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p';
 
 /**
+ * The Discord application this app publishes its Rich Presence under.
+ *
+ * Hardcoded on purpose, and safe to commit: an application ID is a public
+ * identifier, not a credential. It is already broadcast in every presence
+ * payload to anyone who can see the profile, and it grants nothing on its own —
+ * the client secret and bot token are the secrets, and neither is used here.
+ * Rich Presence over the local socket needs no authentication at all.
+ *
+ * It is a constant rather than a setting because the ID only decides whose
+ * application *name* appears on the first line while browsing. Asking every
+ * user to register their own application to see that line was real setup
+ * friction for no benefit.
+ */
+export const DISCORD_APP_ID = '1533694975093768232';
+
+/**
  * Required by the TMDB free-tier terms, rendered in the sidebar footer.
  */
 export const TMDB_ATTRIBUTION =
