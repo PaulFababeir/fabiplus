@@ -18,9 +18,29 @@
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
+  /*
+   * The button sits inside a frameless window whose title bar is a drag region,
+   * and a drag region swallows mouse input for its whole band regardless of
+   * paint order — z-index does not exempt anything from it. Declaring no-drag
+   * here means these never depend on where a dialog happens to be positioned.
+   */
+  -webkit-app-region: no-drag;
   transition:
     background 140ms var(--ease-out),
     color 140ms var(--ease-out);
+}
+
+/*
+ * The glyph must never be the hit target.
+ *
+ * SVG defaults to `pointer-events: visiblePainted`, so only the painted stroke
+ * responds and the gaps inside the mark do not. That leaves the middle of the
+ * button behaving differently from its edges — hover catching around the rim
+ * but dying over the centre. Taking the glyph out of hit-testing entirely makes
+ * the button the single target across its whole area.
+ */
+.button > svg {
+  pointer-events: none;
 }
 
 .button:hover:not(:disabled),
