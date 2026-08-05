@@ -4,6 +4,8 @@
   "description": "Offline local movie library and player",
   "main": "./out/main/index.js",
   "private": true,
+  "author": "Paul Fababeir",
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "dev": "electron-vite dev",
@@ -54,14 +56,17 @@
           ]
         }
       ],
-      "artifactName": "${productName}-${version}-setup.${ext}"
+      "artifactName": "${productName}-${version}-setup.${ext}",
+      "icon": "assets/icon.ico"
     },
     "nsis": {
       "perMachine": false,
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "shortcutName": "Movie Library"
+      "shortcutName": "Movie Library",
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico"
     },
     "publish": [
       {

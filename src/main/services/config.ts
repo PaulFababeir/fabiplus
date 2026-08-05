@@ -26,7 +26,10 @@ export function libraryPath(): string {
 function defaults(): AppConfig {
   return {
     schemaVersion: SCHEMA_VERSION,
-    movieRoots: ['D:/Movies'],
+    // Empty, not a guess. A path that happens to exist on the developer's
+    // machine scans nothing on anyone else's and shows an empty library with
+    // no explanation; the UI prompts for a folder instead.
+    movieRoots: [],
     seriesRoots: [],
     tmdbApiKey: null,
     lastProfileId: null,

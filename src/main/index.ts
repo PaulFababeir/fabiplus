@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, protocol } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, protocol } from 'electron';
 import { readFile, realpath } from 'node:fs/promises';
 import { join, resolve as resolvePath, sep } from 'node:path';
 
@@ -128,6 +128,25 @@ function registerIpc(): void {
     return saveConfig({ ...config, lastProfileId: typeof id === 'string' ? id : null });
   });
 
+  ipcMain.handle(IPC.configSetMovieRoots, async (_event, roots: unknown): Promise<AppConfig> => {
+    const config = await loadConfig();
+    const next = Array.isArray(roots)
+      ? [...new Set(roots.filter((r): r is string => typeof r === 'string' && r.trim() !== ''))]
+      : [];
+    return saveConfig({ ...config, movieRoots: next });
+  });
+
+  ipcMain.handle(IPC.configPickFolder, async (): Promise<string | null> => {
+    const window = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
+    const result = window
+      ? await dialog.showOpenDialog(window, { properties: ['openDirectory'] })
+      : await dialog.showOpenDialog({ properties: ['openDirectory'] });
+
+    // Cancelling is a normal outcome, not an error — the caller keeps its roots.
+    if (result.canceled) return null;
+    return result.filePaths[0] ?? null;
+  });
+
   ipcMain.handle(IPC.configSetTranslucent, async (_event, on: unknown): Promise<AppConfig> => {
     const config = await loadConfig();
     const enabled = on === true;
@@ -157,7 +176,7 @@ function registerIpc(): void {
     const scan = await scanRoots(config.movieRoots, 'movie');
     const merged = mergeScan(existing, scan, config.movieRoots);
 
-    if (wouldDestroyMetadata(existing, merged)) {
+    if (wouldDestroyMetadata(existing, merged, config.movieRoots)) {
       console.error('[library] rescan would drop all metadata; keeping the stored catalog');
       return existing;
     }
@@ -233,7 +252,7 @@ function registerIpc(): void {
 
     const scan = await scanRoots(config.movieRoots, 'movie');
     const merged = mergeScan(existing, scan, config.movieRoots);
-    if (wouldDestroyMetadata(existing, merged)) {
+    if (wouldDestroyMetadata(existing, merged, config.movieRoots)) {
       console.error('[library] rescan would drop all metadata; keeping the stored catalog');
       return { ...empty, fatalError: 'Rescan looked wrong and was refused. Nothing was changed.' };
     }

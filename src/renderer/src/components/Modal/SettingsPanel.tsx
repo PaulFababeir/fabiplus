@@ -23,6 +23,7 @@ export function SettingsPanel(): React.JSX.Element {
   const [discordId, setDiscordId] = useState('');
   const [update, setUpdate] = useState<UpdateStatus | null>(null);
   const [checking, setChecking] = useState(false);
+  const [roots, setRoots] = useState<string[]>([]);
 
   useEffect(() => {
     void window.api.getConfig().then((config) => setHasKey(config.tmdbApiKey !== null));
@@ -30,8 +31,30 @@ export function SettingsPanel(): React.JSX.Element {
     void window.api.getConfig().then((config) => {
       setDiscordOn(config.discordPresence);
       setDiscordId(config.discordAppId ?? '');
+      setRoots(config.movieRoots);
     });
   }, []);
+
+  /**
+   * Adding a folder rescans straight away — the alternative is a library that
+   * stays empty until the user finds the Rescan button, which reads as broken.
+   */
+  const addRoot = async (): Promise<void> => {
+    const picked = await window.api.pickFolder();
+    if (picked === null || roots.includes(picked)) return;
+
+    const next = [...roots, picked];
+    setRoots(next);
+    await window.api.setMovieRoots(next);
+    await rescan();
+  };
+
+  const removeRoot = async (path: string): Promise<void> => {
+    const next = roots.filter((r) => r !== path);
+    setRoots(next);
+    await window.api.setMovieRoots(next);
+    await rescan();
+  };
 
   const saveDiscord = async (enabled: boolean, appId: string): Promise<void> => {
     setDiscordOn(enabled);
@@ -114,6 +137,47 @@ export function SettingsPanel(): React.JSX.Element {
         </div>
 
         <div className={styles.body}>
+          <label className={styles.label}>Movie folders</label>
+
+          {roots.length === 0 ? (
+            <p className={styles.note}>
+              No folders yet. Add the folder holding your films — each film in its own
+              subfolder — and it will be scanned straight away.
+            </p>
+          ) : (
+            <ul className={styles.rootList}>
+              {roots.map((root) => (
+                <li key={root} className={styles.rootRow}>
+                  <span className={styles.rootPath} title={root}>
+                    {root}
+                  </span>
+                  <button
+                    type="button"
+                    className={styles.rootRemove}
+                    aria-label={`Remove ${root}`}
+                    disabled={busy}
+                    onClick={() => void removeRoot(root)}
+                  >
+                    <Icon name="close" size={12} />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <div className={styles.actions}>
+            <button
+              type="button"
+              className={`${styles.button} ${roots.length === 0 ? styles.primary : ''}`}
+              disabled={busy}
+              onClick={() => void addRoot()}
+            >
+              Add folder…
+            </button>
+          </div>
+
+          <div className={styles.divider} />
+
           <label className={styles.label} htmlFor="tmdb-key">
             TMDB API key
           </label>

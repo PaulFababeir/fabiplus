@@ -9,6 +9,10 @@ release/
 .vite/
 *.tsbuildinfo
 
+# electron-vite writes a timestamped copy of the config beside it while
+# bundling and does not always clean it up after a crash or a killed run.
+electron.vite.config.*.mjs
+
 # Design sources — Figma is the source of truth, the .fig export is a binary
 # snapshot that bloats history and never merges.
 *.fig

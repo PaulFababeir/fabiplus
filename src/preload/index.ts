@@ -40,6 +40,9 @@ const api: RendererApi = {
     ipcRenderer.invoke(IPC.videoColour, path) as Promise<VideoColourInfo>,
 
   getAppVersion: () => ipcRenderer.invoke(IPC.appVersion) as Promise<string>,
+  setMovieRoots: (roots) =>
+    ipcRenderer.invoke(IPC.configSetMovieRoots, roots) as Promise<AppConfig>,
+  pickFolder: () => ipcRenderer.invoke(IPC.configPickFolder) as Promise<string | null>,
   setDiscordActivity: (activity) =>
     ipcRenderer.invoke(IPC.discordSet, activity) as Promise<string | null>,
   setDiscordConfig: (enabled, appId) =>

@@ -33,7 +33,8 @@ export default function App(): React.JSX.Element {
     playback,
     presenceEpoch,
     setTranslucent,
-    setRematchOpen
+    setRematchOpen,
+    toggleSettings
   } = useUi();
 
   useEffect(() => {
@@ -115,6 +116,23 @@ export default function App(): React.JSX.Element {
 
           {loading ? (
             <p className={styles.status}>Scanning library…</p>
+          ) : items.length === 0 ? (
+            /* A fresh install scans nothing until a folder is chosen. Without
+               this the grid is simply blank, which reads as a broken app. */
+            <div className={styles.empty}>
+              <h2 className={styles.emptyTitle}>No films yet</h2>
+              <p className={styles.emptyBody}>
+                Choose the folder your films live in — each one in its own subfolder — and
+                they will be scanned and matched automatically.
+              </p>
+              <button
+                type="button"
+                className={styles.emptyAction}
+                onClick={() => toggleSettings()}
+              >
+                Choose a folder
+              </button>
+            </div>
           ) : (
             <>
               <ContinueWatching items={items} profileState={profileState} />

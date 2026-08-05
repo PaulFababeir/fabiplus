@@ -18,6 +18,8 @@ export const IPC = {
   configSetLastProfile: 'config:set-last-profile',
   configSetTranslucent: 'config:set-translucent',
   configSetVideoBrightness: 'config:set-video-brightness',
+  configSetMovieRoots: 'config:set-movie-roots',
+  configPickFolder: 'config:pick-folder',
 
   libraryGet: 'library:get',
   libraryScan: 'library:scan',
@@ -54,6 +56,13 @@ export interface RendererApi {
   /** Applies immediately — no restart needed. */
   setTranslucent(enabled: boolean): Promise<AppConfig>;
   setVideoBrightness(value: number): Promise<AppConfig>;
+  /** Replaces the list of folders scanned for films. */
+  setMovieRoots(roots: string[]): Promise<AppConfig>;
+  /**
+   * Opens the native folder chooser. Resolves to null if the user cancels —
+   * which is not an error and must not clear the existing roots.
+   */
+  pickFolder(): Promise<string | null>;
 
   /** Reads the stored catalog without touching the disk scan. */
   getLibrary(): Promise<LibraryCatalog>;

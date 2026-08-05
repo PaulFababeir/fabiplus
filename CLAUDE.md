@@ -11,7 +11,7 @@ returns is cached to disk so the app runs with the network off.
 npm run dev          # electron-vite dev, HMR on the renderer
 npm start            # run the production build
 npm run build        # tsc --noEmit && electron-vite build
-npm test             # 164 tests, node:test via tsx
+npm test             # 175 tests, node:test via tsx
 npm run typecheck    # tsc --build — see below, --noEmit checks nothing here
 npm run scan:report  # print the parse table for every folder, no network
 npm run dist         # NSIS installer into release/ (~97 MB)
@@ -134,6 +134,29 @@ hid fifteen real errors, including a test asserting against a field that had
 been renamed. Relatedly, the web project must **exclude** `*.test.ts`: tests are
 node programs, and compiled under the renderer's `types` every `node:` import
 fails.
+
+**Catalog merge logic lives in `library-merge.ts`, not `library.ts`.** The
+latter reaches `config.ts` for file paths, which imports `electron` — so
+anything importing it dies under `node:test` with "does not provide an export
+named 'app'". `mergeScan` and `wouldDestroyMetadata` are the code that can
+destroy an enriched catalog, so they sit in a module a test can actually load.
+`library.ts` re-exports them; callers are unaffected.
+
+**The app icon lives in `assets/`, not `build/`.** electron-builder's default
+`buildResources` location is `build/`, which `.gitignore` excludes as build
+output — an icon put there is never committed and every clean checkout silently
+falls back to the Electron logo. `win.icon`, `nsis.installerIcon` and
+`nsis.uninstallerIcon` therefore point at `assets/icon.ico` explicitly. It is
+the photo-portfolio mark, rasterised from that project's `favicon.svg`, and it
+must carry a 256×256 entry or electron-builder refuses it.
+
+**`movieRoots` defaults to empty, deliberately.** It was `['D:/Movies']`, which
+scanned nothing on any other machine and showed a blank grid with no
+explanation. The folder picker (`config:pick-folder`) and the first-run empty
+state in `App.tsx` are what replace it. Relatedly, `wouldDestroyMetadata` takes
+the roots and returns false when there are none: removing the last folder is a
+deliberate act, and without that the catalog refuses to empty and the films stay
+on screen.
 
 **`readJsonSafe` vs `readJsonOrFail`.** Only a *missing* file may fall back to
 empty. Treating an unreadable file as empty lets a caller conclude "nothing here
@@ -296,16 +319,15 @@ profiles, poster picker, Continue Watching, the player (seek, subtitles with
 
 **Known gaps:**
 
-- **Library roots are hardcoded to `D:/Movies`** in `config.ts`, with no folder
-  picker and no IPC to change them. A fresh install on any other machine scans
-  a path that does not exist and shows an empty library with no explanation.
-  This is the blocker for anyone else installing the app.
 - **`.mkv` and 10-bit HEVC do not play.** Chromium can't decode them; the player
   shows a clear error naming the format. Bundling mpv is the real fix and also
   solves HDR tone mapping properly.
 - **Series is unwired.** The Movies/Series toggle is UI only — no series files
   exist and the scanner has no season/episode model.
-- **`lib/selectors.ts` has no tests** despite load-bearing null handling.
+- **`lib/selectors.ts` has no tests** despite load-bearing null handling. Note
+  the test runner only reaches `src/main`, `src/shared` and `scripts` — a
+  renderer test would need `tsconfig.node.json` to include it, since
+  `tsconfig.web.json` now excludes `*.test.ts`.
 - **The grid is not virtualized.** Fine at 79; not at thousands.
 - **Profile rename** exists in the store and IPC but has no UI.
 

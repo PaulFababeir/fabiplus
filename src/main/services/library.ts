@@ -1,9 +1,11 @@
 import { copyFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import type { LibraryCatalog, LibraryItem, ScanResult } from '@shared/types';
+import type { LibraryCatalog } from '@shared/types';
 import { readJsonOrFail, writeJsonAtomic } from './atomic-json.js';
 import { libraryPath, userDataDir } from './config.js';
+// Re-exported so callers keep importing catalog handling from one place.
+export { mergeScan, wouldDestroyMetadata } from './library-merge.js';
 
 const SCHEMA_VERSION = 1;
 
@@ -67,55 +69,4 @@ export async function backupLibrary(): Promise<void> {
   } catch {
     // A missing backup is not worth failing enrichment over.
   }
-}
-
-/**
- * Folds a fresh disk scan into the stored catalog.
- *
- * Scanning is the authority on what exists and where; the stored catalog is
- * the authority on metadata. Films still present keep their metadata and match
- * so a rescan never triggers a full re-download, while renamed or deleted
- * folders drop out.
- */
-export function mergeScan(
-  existing: LibraryCatalog,
-  scan: ScanResult,
-  roots: string[]
-): LibraryCatalog {
-  const previous = new Map(existing.items.map((item) => [item.id, item]));
-
-  const items: LibraryItem[] = scan.items.map((scanned) => {
-    const prior = previous.get(scanned.id);
-    if (!prior) return scanned;
-
-    return {
-      ...scanned,
-      // Preserve the original discovery date rather than resetting it on
-      // every rescan — "recently added" depends on it.
-      addedAt: prior.addedAt,
-      metadata: prior.metadata,
-      match: prior.match
-    };
-  });
-
-  return {
-    schemaVersion: SCHEMA_VERSION,
-    scannedAt: new Date().toISOString(),
-    roots,
-    items
-  };
-}
-
-/**
- * Guards against a rescan wiping enrichment. If the stored catalog had
- * metadata and the merged result has none, something is wrong with the merge
- * (renamed roots, changed id scheme) and the write should be refused.
- */
-export function wouldDestroyMetadata(
-  existing: LibraryCatalog,
-  merged: LibraryCatalog
-): boolean {
-  const had = existing.items.filter((i) => i.metadata !== null).length;
-  const keeps = merged.items.filter((i) => i.metadata !== null).length;
-  return had > 0 && keeps === 0;
 }
