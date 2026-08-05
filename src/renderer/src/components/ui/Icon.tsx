@@ -3,7 +3,7 @@
  * renderer has no icon-font dependency and the CSP can stay strict.
  */
 
-type IconName =
+export type IconName =
   | 'search'
   | 'chevron-down'
   | 'chevron-left'

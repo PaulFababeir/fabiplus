@@ -215,6 +215,14 @@ poster choices with it.
 anywhere; **value** imports need runtime resolution, which is why `npm test`
 passes `--tsconfig tsconfig.node.json`.
 
+**Icon-only buttons go through `ui/IconButton`.** There were five hand-rolled
+versions — three sizes, two shapes, and three of them changed only the glyph
+colour on hover, which is nearly invisible on a dark surface and read as a dead
+control. Worse, the modal header used a rounded square while the row-level
+button beside it used a circle, with both on screen at once. Call sites pass a
+`className` for **placement only**; anything affecting how it looks on hover
+belongs in the component or the divergence starts again.
+
 ### CSS traps
 
 - **`scrollbar-width` makes Chromium ignore every `::-webkit-scrollbar` rule**

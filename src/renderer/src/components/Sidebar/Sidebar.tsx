@@ -8,6 +8,7 @@ import { PosterPicker } from '@renderer/components/Modal/PosterPicker';
 import { PosterLightbox } from './PosterLightbox';
 import { useUi } from '@renderer/state/useUi';
 import { Icon } from '@renderer/components/ui/Icon';
+import { IconButton } from '@renderer/components/ui/IconButton';
 import styles from './Sidebar.module.css';
 
 type Tab = 'cast' | 'crew' | 'details' | 'genres';
@@ -61,14 +62,13 @@ export function Sidebar({ item, profileState }: SidebarProps): React.JSX.Element
 
   return (
     <aside className={styles.panel}>
-      <button
-        type="button"
+      <IconButton
+        icon="close"
+        label="Close details"
+        onArtwork
         className={styles.close}
-        aria-label="Close details"
         onClick={() => select(null)}
-      >
-        <Icon name="close" size={16} />
-      </button>
+      />
 
       {/*
         The frame keeps its box when hidden — only its contents go. Collapsing

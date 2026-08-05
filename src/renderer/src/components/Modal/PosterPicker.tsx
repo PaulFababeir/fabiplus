@@ -5,7 +5,7 @@ import type { LibraryItem } from '@shared/types';
 import { displayTitle } from '@renderer/lib/selectors';
 import { useOnEscape } from '@renderer/lib/useDismiss';
 import { useProfile } from '@renderer/state/useProfile';
-import { Icon } from '@renderer/components/ui/Icon';
+import { IconButton } from '@renderer/components/ui/IconButton';
 import styles from './Modal.module.css';
 
 interface PosterPickerProps {
@@ -38,9 +38,7 @@ export function PosterPicker({ item, chosenIndex, onClose }: PosterPickerProps):
       >
         <div className={styles.head}>
           <h2 className={styles.heading}>Choose a poster — {displayTitle(item)}</h2>
-          <button type="button" className={styles.close} aria-label="Close" onClick={onClose}>
-            <Icon name="close" size={15} />
-          </button>
+          <IconButton icon="close" label="Close" onClick={onClose} />
         </div>
 
         <div className={styles.body}>

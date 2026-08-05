@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 
 import { useUi } from '@renderer/state/useUi';
 import { Icon } from '@renderer/components/ui/Icon';
+import { IconButton } from '@renderer/components/ui/IconButton';
 import { ProfileMenu } from './ProfileMenu';
 import styles from './TopBar.module.css';
 
@@ -41,14 +42,13 @@ export function TopBar(): React.JSX.Element {
           }}
         />
         {draft && (
-          <button
-            type="button"
+          <IconButton
+            icon="close"
+            label="Clear search"
+            size="sm"
             className={styles.clear}
-            aria-label="Clear search"
             onClick={() => setDraft('')}
-          >
-            <Icon name="close" size={12} />
-          </button>
+          />
         )}
       </div>
 

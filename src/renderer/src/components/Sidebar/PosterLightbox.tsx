@@ -1,5 +1,5 @@
 import { useOnEscape } from '@renderer/lib/useDismiss';
-import { Icon } from '@renderer/components/ui/Icon';
+import { IconButton } from '@renderer/components/ui/IconButton';
 import styles from './PosterLightbox.module.css';
 
 interface PosterLightboxProps {
@@ -16,9 +16,14 @@ export function PosterLightbox({ src, onClose }: PosterLightboxProps): React.JSX
 
   return (
     <div className={styles.scrim} onMouseDown={onClose} role="dialog" aria-label="Poster">
-      <button type="button" className={styles.close} aria-label="Close" onClick={onClose}>
-        <Icon name="close" size={18} />
-      </button>
+      <IconButton
+        icon="close"
+        label="Close"
+        size="lg"
+        onArtwork
+        className={styles.close}
+        onClick={onClose}
+      />
       <img
         className={styles.image}
         src={src}

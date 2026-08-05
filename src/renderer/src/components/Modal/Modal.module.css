@@ -98,36 +98,6 @@
   font-weight: 700;
 }
 
-.close {
-  display: grid;
-  width: 28px;
-  height: 28px;
-  place-items: center;
-  border: none;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--text-muted);
-  cursor: pointer;
-  transition:
-    background 140ms var(--ease-out),
-    color 140ms var(--ease-out);
-}
-
-/*
- * A translucent overlay rather than `--surface`: the header already sits on a
- * surface tone, so a solid fill of the same value produced no visible change
- * and the button read as dead. This lifts against whatever is behind it, and
- * matches the row-level dismiss buttons elsewhere in the dialog.
- */
-.close:hover {
-  background: rgb(255 255 255 / 8%);
-  color: var(--text);
-}
-
-.close:active {
-  background: rgb(255 255 255 / 12%);
-}
-
 .body {
   flex: 1 1 auto;
   min-height: 0;
@@ -293,29 +263,6 @@
   color: var(--text-muted);
 }
 
-.rootRemove {
-  flex: 0 0 auto;
-  display: grid;
-  place-items: center;
-  width: 22px;
-  height: 22px;
-  border: 0;
-  border-radius: 50%;
-  background: transparent;
-  color: var(--text-dim);
-  cursor: pointer;
-  transition: background 140ms var(--ease-out), color 140ms var(--ease-out);
-}
-
-.rootRemove:hover:not(:disabled) {
-  background: rgb(255 255 255 / 8%);
-  color: var(--text);
-}
-
-.rootRemove:disabled {
-  opacity: 0.4;
-  cursor: default;
-}
 
 .error {
   margin: 12px 0 0;

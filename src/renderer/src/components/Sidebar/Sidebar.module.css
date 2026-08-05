@@ -169,28 +169,16 @@
 }
 
 /* Closes the panel. Replaces the old click-anywhere-to-collapse behaviour. */
+/*
+ * Placement only — the look lives in IconButton. The negative margin pulls the
+ * poster back up so the button overlays it rather than reserving a row.
+ */
 .close {
   position: sticky;
   top: 10px;
   align-self: flex-end;
-  display: grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  margin-bottom: -26px;
-  padding: 0;
-  border: none;
-  background: transparent;
-  color: rgb(232 232 234 / 65%);
-  cursor: pointer;
+  margin-bottom: -28px;
   z-index: 5;
-  /* Artwork sits behind it, so the glyph needs its own separation. */
-  filter: drop-shadow(0 1px 3px rgb(0 0 0 / 70%));
-  transition: color 140ms var(--ease-out);
-}
-
-.close:hover {
-  color: var(--text);
 }
 
 /* --- Poster --------------------------------------------------------------- */

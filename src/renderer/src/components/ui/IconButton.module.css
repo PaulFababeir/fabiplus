@@ -1,0 +1,64 @@
+/*
+ * One treatment for every icon-only button — dismissing a dialog, clearing the
+ * search, dropping a folder.
+ *
+ * These were five separate implementations at three sizes and two shapes, and
+ * three of them changed only the glyph colour on hover. On a dark surface that
+ * shift is almost invisible, so the buttons read as dead; and the modal header
+ * used a rounded square while the row-level one beside it used a circle, which
+ * was plainly visible with both on screen at once.
+ */
+.button {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition:
+    background 140ms var(--ease-out),
+    color 140ms var(--ease-out);
+}
+
+.button:hover:not(:disabled),
+.button:focus-visible {
+  background: rgb(255 255 255 / 8%);
+  color: var(--text);
+}
+
+.button:active:not(:disabled) {
+  background: rgb(255 255 255 / 14%);
+}
+
+.button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.sm {
+  width: 22px;
+  height: 22px;
+}
+
+.md {
+  width: 28px;
+  height: 28px;
+}
+
+.lg {
+  width: 32px;
+  height: 32px;
+}
+
+/*
+ * Sitting on artwork rather than a panel: the glyph needs its own separation
+ * from whatever is behind it, and it starts dimmer so it does not fight the
+ * poster.
+ */
+.onArtwork {
+  color: rgb(232 232 234 / 70%);
+  filter: drop-shadow(0 1px 3px rgb(0 0 0 / 70%));
+}

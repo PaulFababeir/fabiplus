@@ -19,23 +19,9 @@
   object-fit: contain;
 }
 
+/* Placement only — the look lives in IconButton. */
 .close {
   position: absolute;
   top: 18px;
   right: 22px;
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  border: none;
-  background: transparent;
-  color: rgb(232 232 234 / 70%);
-  cursor: pointer;
-  filter: drop-shadow(0 1px 3px rgb(0 0 0 / 70%));
-  transition: color 140ms var(--ease-out);
-}
-
-.close:hover {
-  color: var(--text);
 }

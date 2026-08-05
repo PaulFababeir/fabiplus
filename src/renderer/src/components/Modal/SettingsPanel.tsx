@@ -5,7 +5,7 @@ import type { UpdateStatus } from '@shared/types';
 import { useLibrary } from '@renderer/state/useLibrary';
 import { useProfile } from '@renderer/state/useProfile';
 import { useUi } from '@renderer/state/useUi';
-import { Icon } from '@renderer/components/ui/Icon';
+import { IconButton } from '@renderer/components/ui/IconButton';
 import { Toggle } from '@renderer/components/ui/Toggle';
 import styles from './Modal.module.css';
 
@@ -134,9 +134,7 @@ export function SettingsPanel(): React.JSX.Element {
       >
         <div className={styles.head}>
           <h2 className={styles.heading}>Settings</h2>
-          <button type="button" className={styles.close} aria-label="Close" onClick={toggleSettings}>
-            <Icon name="close" size={15} />
-          </button>
+          <IconButton icon="close" label="Close" onClick={toggleSettings} />
         </div>
 
         <div className={styles.body}>
@@ -154,15 +152,13 @@ export function SettingsPanel(): React.JSX.Element {
                   <span className={styles.rootPath} title={root}>
                     {root}
                   </span>
-                  <button
-                    type="button"
-                    className={styles.rootRemove}
-                    aria-label={`Remove ${root}`}
+                  <IconButton
+                    icon="close"
+                    label={`Remove ${root}`}
+                    size="sm"
                     disabled={busy}
                     onClick={() => void removeRoot(root)}
-                  >
-                    <Icon name="close" size={12} />
-                  </button>
+                  />
                 </li>
               ))}
             </ul>

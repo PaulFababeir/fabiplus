@@ -74,20 +74,9 @@
   color: var(--text-dim);
 }
 
+/* Placement only — the look lives in IconButton. */
 .clear {
-  display: grid;
-  place-items: center;
-  width: 18px;
-  height: 18px;
-  border: none;
-  border-radius: 50%;
-  background: transparent;
-  color: var(--text-dim);
-  cursor: pointer;
-}
-
-.clear:hover {
-  color: var(--text);
+  margin-right: -4px;
 }
 
 /* Square, so it reads as a box rather than a shrunken pill. */

@@ -6,7 +6,7 @@ import { displayTitle, needsReviewItems } from '@renderer/lib/selectors';
 import { useLibrary } from '@renderer/state/useLibrary';
 import { useOnEscape } from '@renderer/lib/useDismiss';
 import { useUi } from '@renderer/state/useUi';
-import { Icon } from '@renderer/components/ui/Icon';
+import { IconButton } from '@renderer/components/ui/IconButton';
 import styles from './Modal.module.css';
 
 /**
@@ -39,9 +39,7 @@ export function RematchDialog(): React.JSX.Element {
           <h2 className={styles.heading}>
             {target ? `Fix match — ${displayTitle(target)}` : `Confirm matches (${listed.length})`}
           </h2>
-          <button type="button" className={styles.close} aria-label="Close" onClick={close}>
-            <Icon name="close" size={15} />
-          </button>
+          <IconButton icon="close" label="Close" onClick={close} />
         </div>
 
         <div className={styles.body}>
