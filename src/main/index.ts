@@ -1,6 +1,6 @@
 import { app, BrowserWindow, dialog, ipcMain, protocol } from 'electron';
 import { readFile, realpath } from 'node:fs/promises';
-import { join, resolve as resolvePath, sep } from 'node:path';
+import { join, resolve as resolvePath } from 'node:path';
 
 import { IPC } from '@shared/ipc';
 import { isVtt, srtToVtt } from '@shared/subtitles';
@@ -16,6 +16,7 @@ import type {
   VideoColourInfo
 } from '@shared/types';
 import { imageCacheDir, loadConfig, saveConfig } from './services/config.js';
+import { isInside } from './services/path-containment.js';
 import { serveFile } from './services/media-server.js';
 import { isHdrTagged, probeVideoColour } from './services/video-colour.js';
 import { checkForUpdate, currentVersion, downloadUpdate } from './services/updater.js';
@@ -89,13 +90,6 @@ protocol.registerSchemesAsPrivileged([
 async function allowedRoots(): Promise<string[]> {
   const config = await loadConfig();
   return [...config.movieRoots, ...config.seriesRoots, imageCacheDir()].map((p) => resolvePath(p));
-}
-
-function isInside(child: string, parent: string): boolean {
-  // Windows paths are case-insensitive; compare in a single case.
-  const a = child.toLowerCase();
-  const b = parent.toLowerCase();
-  return a === b || a.startsWith(b.endsWith(sep) ? b : b + sep);
 }
 
 /**
@@ -516,6 +510,38 @@ async function createWindow(): Promise<void> {
 }
 
 /**
+ * Refuses renderer-initiated windows and navigation.
+ *
+ * A window opened from the renderer inherits this preload, and with it the
+ * whole `window.api` surface — file reads, config writes, the catalog.
+ * Navigation is the same hole from the other direction: the CSP governs what a
+ * document may *load*, not where the top-level frame may *go*, so without this
+ * one injected link could replace the app with a remote page holding those
+ * privileges.
+ *
+ * A flat deny is right rather than an allowlist because the UI has no external
+ * links and never opens a second window — the only legitimate navigation is the
+ * dev server reloading itself.
+ *
+ * Registered per-contents at the app level so any window added later is covered
+ * without having to remember this.
+ */
+function hardenWebContents(): void {
+  app.on('web-contents-created', (_event, contents) => {
+    contents.setWindowOpenHandler(() => ({ action: 'deny' }));
+
+    contents.on('will-navigate', (event, url) => {
+      const devUrl = process.env['ELECTRON_RENDERER_URL'];
+      if (isDev && devUrl && url.startsWith(devUrl)) return;
+      event.preventDefault();
+    });
+
+    // No <webview> is used; deny rather than leave the door ajar.
+    contents.on('will-attach-webview', (event) => event.preventDefault());
+  });
+}
+
+/**
  * All state lives in plain JSON files with no locking, so a second instance
  * would race the first and silently clobber it — that is how a profile ends
  * up orphaned. Refuse to start twice; focus the existing window instead.
@@ -532,6 +558,7 @@ if (!app.requestSingleInstanceLock()) {
   });
 
   void app.whenReady().then(() => {
+    hardenWebContents();
     registerMovieProtocol();
     registerIpc();
     void createWindow();

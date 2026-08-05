@@ -338,6 +338,40 @@ Three traps cost real debugging time here, all silent:
 `scripts/discord-probe.ts <appId>` connects, handshakes and sends one activity,
 logging every frame — the fastest way to tell a protocol fault from an app one.
 
+## Security posture
+
+The repo is public. Nothing secret has ever been committed — the TMDB key lives
+in `%APPDATA%/movie-app/config.json`, which is outside the repo, and the only
+key-shaped string in history is a deliberately fake JWT in `tmdb.test.ts`.
+
+The renderer is treated as untrusted. That is not paranoia about the user; it is
+what keeps a bug in a subtitle file, a filename, or a TMDB response from
+becoming file-system access.
+
+- `contextIsolation: true`, `nodeIntegration: false`. The preload is the entire
+  API surface.
+- `sandbox: false` is **forced by the ESM preload** — Electron only loads
+  sandboxed preloads as CommonJS, and electron-vite emits `index.mjs`. The pair
+  above plus the CSP is what carries the weight instead. Do not "fix" this
+  without also converting the preload.
+- CSP in `index.html`: no `unsafe-eval`, `script-src 'self'`. `style-src` needs
+  `'unsafe-inline'` for motion's inline transforms.
+- `hardenWebContents()` denies renderer-opened windows, navigation and webview
+  attachment. A renderer-opened window inherits the preload and with it
+  `window.api`; the CSP governs what a document may *load*, never where the top
+  frame may *go*. The UI has no external links, so a flat deny is correct.
+- Every path from the renderer goes through `resolveAllowedPath` — `movie://`,
+  `subtitleLoad` and `videoColour` alike. It calls `realpath` **before**
+  `isInside`, so a symlink inside the library cannot point out of it.
+- `isInside` lives in `path-containment.ts`, apart from `index.ts`, purely so it
+  can be tested — it is the actual traversal boundary and `index.ts` imports
+  `electron`, which no test can load. Its separator check is what stops
+  `D:/Movies-private` passing as inside `D:/Movies`.
+- Cache filenames are SHA-1 digests, so a hostile `remotePath` cannot escape the
+  cache directory.
+
+`npm audit` is clean; keep it that way before tagging a release.
+
 ## Conventions
 
 - **Commits**: conventional prefix, lowercase, terse (2–5 words), subject only,
