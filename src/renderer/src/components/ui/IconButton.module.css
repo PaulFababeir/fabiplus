@@ -30,18 +30,6 @@
     color 140ms var(--ease-out);
 }
 
-/*
- * The glyph must never be the hit target.
- *
- * SVG defaults to `pointer-events: visiblePainted`, so only the painted stroke
- * responds and the gaps inside the mark do not. That leaves the middle of the
- * button behaving differently from its edges — hover catching around the rim
- * but dying over the centre. Taking the glyph out of hit-testing entirely makes
- * the button the single target across its whole area.
- */
-.button > svg {
-  pointer-events: none;
-}
 
 .button:hover:not(:disabled),
 .button:focus-visible {

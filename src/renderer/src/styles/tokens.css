@@ -94,3 +94,20 @@ body {
 .titlebar-drag select {
   -webkit-app-region: no-drag;
 }
+
+/*
+ * An icon is never its own hit target.
+ *
+ * SVG defaults to `pointer-events: visiblePainted`, so only the painted stroke
+ * responds and the gaps inside a glyph do not. Inside an icon-only button that
+ * leaves the middle dead while the rim still reacts — hover catching around the
+ * edge and dying over the centre. It bit the settings close button and the
+ * player's back button independently, and every other icon control in the
+ * player had it latent, so it is settled once here rather than per component.
+ *
+ * The button is always the thing being pointed at; nothing in this UI wants a
+ * glyph to receive events on its own.
+ */
+button > svg {
+  pointer-events: none;
+}
