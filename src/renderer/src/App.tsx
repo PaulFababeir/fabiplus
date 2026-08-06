@@ -21,6 +21,7 @@ export default function App(): React.JSX.Element {
   const { catalog, loading, error, load, setProgress } = useLibrary();
   const { state: profileState, load: loadProfiles } = useProfile();
   const {
+    kind,
     search,
     genre,
     sort,
@@ -51,10 +52,12 @@ export default function App(): React.JSX.Element {
   useEffect(() => window.api.onEnrichProgress(setProgress), [setProgress]);
 
   const items = useMemo(() => catalog?.items ?? [], [catalog]);
-  const genres = useMemo(() => genresOf(items), [items]);
+  // Pills describe the view you are in, not the whole catalog.
+  const ofKind = useMemo(() => items.filter((i) => i.kind === kind), [items, kind]);
+  const genres = useMemo(() => genresOf(ofKind), [ofKind]);
   const visible = useMemo(
-    () => filterAndSort({ items, search, genre, sort }),
-    [items, search, genre, sort]
+    () => filterAndSort({ items, kind, search, genre, sort }),
+    [items, kind, search, genre, sort]
   );
   const selected = useMemo(
     () => items.find((item) => item.id === selectedId) ?? null,
@@ -116,14 +119,17 @@ export default function App(): React.JSX.Element {
 
           {loading ? (
             <p className={styles.status}>Scanning library…</p>
-          ) : items.length === 0 ? (
+          ) : ofKind.length === 0 ? (
             /* A fresh install scans nothing until a folder is chosen. Without
                this the grid is simply blank, which reads as a broken app. */
             <div className={styles.empty}>
-              <h2 className={styles.emptyTitle}>No films yet</h2>
+              <h2 className={styles.emptyTitle}>
+                {kind === 'movie' ? 'No films yet' : 'No shows yet'}
+              </h2>
               <p className={styles.emptyBody}>
-                Choose the folder your films live in — each one in its own subfolder — and
-                they will be scanned and matched automatically.
+                {kind === 'movie'
+                  ? 'Choose the folder your films live in — each one in its own subfolder — and they will be scanned and matched automatically.'
+                  : 'Choose the folder your shows live in — one subfolder per show, with a folder per season inside it.'}
               </p>
               <button
                 type="button"

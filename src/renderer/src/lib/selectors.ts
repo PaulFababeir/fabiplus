@@ -1,4 +1,4 @@
-import type { LibraryItem, ProfileState, SortKey } from '@shared/types';
+import type { LibraryItem, MediaKind, ProfileState, SortKey } from '@shared/types';
 
 /** Derived views over the catalog. Pure, so they stay cheap to memoize. */
 
@@ -75,13 +75,16 @@ function compare(a: LibraryItem, b: LibraryItem, sort: SortKey): number {
 
 export interface FilterArgs {
   items: LibraryItem[];
+  /** Films and shows share one catalog, so the view has to pick a side. */
+  kind: MediaKind;
   search: string;
   genre: string | null;
   sort: SortKey;
 }
 
-export function filterAndSort({ items, search, genre, sort }: FilterArgs): LibraryItem[] {
+export function filterAndSort({ items, kind, search, genre, sort }: FilterArgs): LibraryItem[] {
   return items
+    .filter((item) => item.kind === kind)
     .filter((item) => (genre === null ? true : (item.metadata?.genres ?? []).includes(genre)))
     .filter((item) => matchesSearch(item, search))
     .sort((a, b) => compare(a, b, sort));

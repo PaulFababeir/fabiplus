@@ -1,10 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
+import type { MediaKind } from '@shared/types';
 import { useUi } from '@renderer/state/useUi';
+import { useOnClickOutside, useOnEscape } from '@renderer/lib/useDismiss';
 import { Icon } from '@renderer/components/ui/Icon';
 import { IconButton } from '@renderer/components/ui/IconButton';
 import { ProfileMenu } from './ProfileMenu';
 import styles from './TopBar.module.css';
+
+/** The two library views. Order here is the order in the menu. */
+const KINDS: Record<MediaKind, string> = { movie: 'Movies', series: 'Series' };
 
 /** Debounce so a 79-item filter doesn't run on every keystroke. */
 const SEARCH_DEBOUNCE_MS = 150;
@@ -12,6 +17,11 @@ const SEARCH_DEBOUNCE_MS = 150;
 export function TopBar(): React.JSX.Element {
   const { kind, setKind, search, setSearch, toggleSettings } = useUi();
   const [draft, setDraft] = useState(search);
+  const [kindOpen, setKindOpen] = useState(false);
+  const kindRef = useRef<HTMLDivElement>(null);
+
+  useOnEscape(() => setKindOpen(false));
+  useOnClickOutside(kindRef, () => setKindOpen(false));
 
   useEffect(() => {
     const id = setTimeout(() => setSearch(draft), SEARCH_DEBOUNCE_MS);
@@ -20,15 +30,39 @@ export function TopBar(): React.JSX.Element {
 
   return (
     <header className={`${styles.bar} titlebar-drag`}>
-      <button
-        type="button"
-        className={styles.kind}
-        // Series has no library root yet, so this toggles but stays on movies.
-        onClick={() => setKind(kind === 'movie' ? 'series' : 'movie')}
-      >
-        <span className={styles.kindLabel}>{kind === 'movie' ? 'Movies' : 'Series'}</span>
-        <Icon name="chevron-down" size={14} />
-      </button>
+      <div className={styles.kindWrap} ref={kindRef}>
+        <button
+          type="button"
+          className={styles.kind}
+          aria-haspopup="listbox"
+          aria-expanded={kindOpen}
+          onClick={() => setKindOpen((open) => !open)}
+        >
+          <span className={styles.kindLabel}>{KINDS[kind]}</span>
+          <Icon name="chevron-down" size={14} />
+        </button>
+
+        {kindOpen && (
+          <div className={styles.kindMenu} role="listbox">
+            {(Object.keys(KINDS) as MediaKind[]).map((option) => (
+              <button
+                key={option}
+                type="button"
+                role="option"
+                aria-selected={kind === option}
+                className={styles.kindOption}
+                data-active={kind === option}
+                onClick={() => {
+                  setKind(option);
+                  setKindOpen(false);
+                }}
+              >
+                {KINDS[option]}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
       <div className={styles.search}>
         <Icon name="search" size={14} />

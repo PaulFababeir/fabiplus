@@ -16,6 +16,12 @@
 
 /* --- Movies / Series selector --------------------------------------------- */
 
+/* Anchors the menu; the button keeps its own width. */
+.kindWrap {
+  position: relative;
+  flex: 0 0 auto;
+}
+
 .kind {
   display: flex;
   align-items: center;
@@ -34,6 +40,50 @@
 
 .kind:hover {
   background: var(--surface-hover);
+}
+
+/*
+ * Above the sidebar and its backdrop, which carry their own stacking; a menu
+ * that opens behind the artwork reads as the control doing nothing.
+ */
+.kindMenu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 60;
+  min-width: 100%;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  box-shadow: 0 18px 40px rgb(0 0 0 / 55%);
+}
+
+.kindOption {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 13.5px;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background 140ms var(--ease-out),
+    color 140ms var(--ease-out);
+}
+
+.kindOption:hover {
+  background: rgb(255 255 255 / 6%);
+  color: var(--text);
+}
+
+.kindOption[data-active='true'] {
+  color: var(--text);
+  font-weight: 600;
 }
 
 .kindLabel {
