@@ -38,6 +38,8 @@ const api: RendererApi = {
   searchProvider: (query, year, kind) =>
     ipcRenderer.invoke(IPC.librarySearchProvider, query, year, kind) as Promise<ReviewCandidate[]>,
   loadSubtitle: (path) => ipcRenderer.invoke(IPC.subtitleLoad, path) as Promise<string | null>,
+  embeddedSubtitles: (path) =>
+    ipcRenderer.invoke(IPC.subtitleEmbedded, path) as Promise<SubtitleFile[]>,
   prepareVideo: (path) => ipcRenderer.invoke(IPC.videoPrepare, path) as Promise<PrepareResult>,
   probeVideoColour: (path) =>
     ipcRenderer.invoke(IPC.videoColour, path) as Promise<VideoColourInfo>,

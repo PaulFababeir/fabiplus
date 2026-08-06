@@ -14,6 +14,7 @@ const film: PresenceFilm = {
   title: 'Interstellar',
   year: 2014,
   genre: 'Adventure',
+  episodeLine: null,
   image: 'https://image.tmdb.org/t/p/w500/poster.jpg'
 };
 
@@ -21,6 +22,7 @@ const solanin: PresenceFilm = {
   title: 'Solanin',
   year: 2010,
   genre: null,
+  episodeLine: null,
   image: 'poster'
 };
 
@@ -49,6 +51,14 @@ describe('buildPresence', () => {
     assert.equal(activity.state, 'Fabi+ · 2014 · Adventure');
     // The prominent line is left for the countdown while playing.
     assert.equal(activity.details, '');
+  });
+
+  /** Year and genre are identical for every episode; the episode is not. */
+  it('shows season and episode instead of year and genre for a show', () => {
+    const episode = { ...film, episodeLine: 'Season 1 · The Great Game' };
+    const activity = buildPresence({ ...base, film: episode, playing: true, remainingSec: 60 });
+    assert.equal(activity.name, 'Interstellar');
+    assert.equal(activity.state, 'Fabi+ · Season 1 · The Great Game');
   });
 
   it('omits the app name until Discord has reported it', () => {

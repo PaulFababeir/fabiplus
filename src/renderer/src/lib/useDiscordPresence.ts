@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { buildPresence, discordArtwork, type PresenceFilm } from '@shared/presence';
-import type { LibraryItem, ProfileState } from '@shared/types';
+import type { Episode, LibraryItem, ProfileState } from '@shared/types';
 import type { PlaybackStatus } from '@renderer/state/useUi';
 import { displayTitle, displayYear } from './selectors';
 
@@ -16,20 +16,37 @@ import { displayTitle, displayYear } from './selectors';
  * update and blank it again.
  */
 
-function toFilm(item: LibraryItem | null, profile: ProfileState | null): PresenceFilm | null {
+function toFilm(
+  item: LibraryItem | null,
+  profile: ProfileState | null,
+  episode: Episode | null = null
+): PresenceFilm | null {
   if (!item) return null;
+
+  const season = (item.seasons ?? []).find((s) =>
+    s.episodes.some((e) => e.id === episode?.id)
+  );
+
   return {
     title: displayTitle(item),
     year: displayYear(item),
     genre: item.metadata?.genres[0] ?? null,
+    episodeLine:
+      episode === null
+        ? null
+        : [season?.label, episode.title ?? (episode.number === null ? null : `Episode ${episode.number}`)]
+            .filter(Boolean)
+            .join(' · '),
     // The profile's poster pick, so Discord shows the artwork the library does.
     image: discordArtwork(item, profile?.posterChoice[item.id] ?? 0)
   };
 }
 
 interface PresenceArgs {
-  /** The film open in the player, or null in the library view. */
+  /** The film or show open in the player, or null in the library view. */
   playing: LibraryItem | null;
+  /** The episode being played, when the item is a show. */
+  episode: Episode | null;
   /** The film chosen in the library. */
   selected: LibraryItem | null;
   playback: PlaybackStatus;
@@ -42,6 +59,7 @@ interface PresenceArgs {
 
 export function useDiscordPresence({
   playing,
+  episode,
   selected,
   playback,
   profile,
@@ -59,7 +77,7 @@ export function useDiscordPresence({
   const activity = useMemo(
     () =>
       buildPresence({
-        film: toFilm(playing, profile),
+        film: toFilm(playing, profile, episode),
         playing: playback.playing,
         remainingSec:
           playback.durationSec > 0
@@ -69,7 +87,7 @@ export function useDiscordPresence({
         libraryCount,
         appName
       }),
-    [playing, selected, playback, profile, libraryCount, appName]
+    [playing, episode, selected, playback, profile, libraryCount, appName]
   );
 
   // Compared by value: the shell re-renders on every keystroke in the search

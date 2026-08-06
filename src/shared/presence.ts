@@ -62,6 +62,12 @@ export interface PresenceFilm {
   title: string;
   year: number | null;
   genre: string | null;
+  /**
+   * For an episode: what to show instead of year and genre. "Season 1 · The
+   * Great Game" says more about what is on screen than "2010 · Crime" does,
+   * which is identical for every episode of the show.
+   */
+  episodeLine: string | null;
   /** Asset key or image URL. */
   image: string;
 }
@@ -86,7 +92,8 @@ export interface PresenceInput {
 
 /** The grey line under the title: "Fabi+ · 2013 · Horror". */
 function describe(film: PresenceFilm, appName: string | null): string {
-  return [appName, film.year, film.genre].filter(Boolean).join(' · ');
+  const detail = film.episodeLine !== null ? [film.episodeLine] : [film.year, film.genre];
+  return [appName, ...detail].filter(Boolean).join(' · ');
 }
 
 export function buildPresence(input: PresenceInput): DiscordActivity {

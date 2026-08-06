@@ -22,6 +22,7 @@ import type {
 import { imageCacheDir, loadConfig, saveConfig } from './services/config.js';
 import { isInside } from './services/path-containment.js';
 import { prepareVideo, remuxCacheDir } from './services/transcode.js';
+import { extractEmbeddedSubtitles, subsCacheDir } from './services/embedded-subs.js';
 import { serveFile } from './services/media-server.js';
 import { isHdrTagged, probeVideoColour } from './services/video-colour.js';
 import { checkForUpdate, currentVersion, downloadUpdate } from './services/updater.js';
@@ -94,7 +95,7 @@ protocol.registerSchemesAsPrivileged([
 /** Directories the renderer is allowed to read through movie://. */
 async function allowedRoots(): Promise<string[]> {
   const config = await loadConfig();
-  return [...config.movieRoots, ...config.seriesRoots, imageCacheDir(), remuxCacheDir()].map(
+  return [...config.movieRoots, ...config.seriesRoots, imageCacheDir(), remuxCacheDir(), subsCacheDir()].map(
     (p) => resolvePath(p)
   );
 }
@@ -380,6 +381,15 @@ function registerIpc(): void {
     if (!safe) return [];
 
     return rescanSubtitles(safe);
+  });
+
+  ipcMain.handle(IPC.subtitleEmbedded, async (_event, path: unknown): Promise<SubtitleFile[]> => {
+    if (typeof path !== 'string') return [];
+    const safe = await resolveAllowedPath(path);
+    if (!safe) return [];
+
+    const info = await stat(safe);
+    return extractEmbeddedSubtitles(safe, info.size, info.mtimeMs);
   });
 
   ipcMain.handle(IPC.videoPrepare, async (event, path: unknown): Promise<PrepareResult> => {

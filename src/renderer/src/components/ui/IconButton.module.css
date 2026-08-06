@@ -61,6 +61,11 @@
   height: 32px;
 }
 
+.xl {
+  width: 42px;
+  height: 42px;
+}
+
 /*
  * Sitting on artwork rather than a panel: the glyph needs its own separation
  * from whatever is behind it, and it starts dimmer so it does not fight the

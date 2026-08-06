@@ -99,6 +99,7 @@ export default function App(): React.JSX.Element {
   // presence never falls back to Discord's bare detected-app line.
   useDiscordPresence({
     playing,
+    episode,
     selected,
     playback,
     profile: profileState,

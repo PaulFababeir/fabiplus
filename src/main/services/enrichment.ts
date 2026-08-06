@@ -4,12 +4,18 @@ import type {
   EnrichmentSummary,
   LibraryItem,
   Metadata,
-  ReviewItem
+  ReviewItem,
+  Season
 } from '@shared/types';
 import { POSTERS_PER_MOVIE } from '@shared/constants';
 import { cacheImage } from './image-cache.js';
 import { decideMatch } from './metadata/matcher.js';
-import { ProviderError, type MetadataProvider, type ProviderDetails } from './metadata/provider.js';
+import {
+  ProviderError,
+  type MetadataProvider,
+  type ProviderDetails,
+  type ProviderEpisode
+} from './metadata/provider.js';
 
 /**
  * Walks the catalog and fills in metadata, artwork and a match confidence for
@@ -106,9 +112,59 @@ export async function applyManualMatch(
 
   return {
     ...item,
+    seasons: await enrichSeasons(item, provider, remoteId),
     metadata: toMetadata(details, provider.id, posters, backdrop),
     match: { strategy: 'manual', confidence: 1, correctedByUser: true }
   };
+}
+
+
+/**
+ * Fills in episode titles and runtimes from the provider.
+ *
+ * Runtime is the reason this exists: it appears nowhere in a filename, so the
+ * episode list has no subtext without it. Titles are taken too when the parser
+ * could not recover one, but a filename title wins — it describes the file the
+ * user actually has, which matters for releases whose numbering drifts from
+ * the provider's.
+ *
+ * Seasons the provider does not know (an "Unaired Pilot" folder) are left as
+ * they were rather than dropped.
+ */
+async function enrichSeasons(
+  item: LibraryItem,
+  provider: MetadataProvider,
+  remoteId: number
+): Promise<Season[] | null> {
+  if (item.kind !== 'series' || item.seasons === null) return item.seasons;
+
+  const seasons: Season[] = [];
+  for (const season of item.seasons) {
+    if (season.number === null) {
+      seasons.push(season);
+      continue;
+    }
+
+    const remote = await provider
+      .fetchSeason(remoteId, season.number)
+      .catch(() => [] as ProviderEpisode[]);
+    const byNumber = new Map(remote.map((e) => [e.episodeNumber, e]));
+
+    seasons.push({
+      ...season,
+      episodes: season.episodes.map((episode) => {
+        const match = episode.number === null ? undefined : byNumber.get(episode.number);
+        if (!match) return episode;
+        return {
+          ...episode,
+          title: episode.title ?? (match.name === '' ? null : match.name),
+          runtimeMin: match.runtimeMin
+        };
+      })
+    });
+  }
+
+  return seasons;
 }
 
 /** Runs `worker` over `items` with a bounded number in flight. */
@@ -197,6 +253,7 @@ export async function enrichLibrary(
 
       byId.set(item.id, {
         ...item,
+        seasons: await enrichSeasons(item, provider, decision.best!.candidate.id),
         metadata: toMetadata(details, provider.id, posters, backdrop),
         match: {
           strategy: decision.best.strategy,

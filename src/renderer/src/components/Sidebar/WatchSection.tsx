@@ -89,6 +89,13 @@ export function WatchSection({ item, profileState }: WatchSectionProps): React.J
 
           return (
             <li key={episode.id} className={styles.row} data-watched={watched?.finished === true}>
+              <IconButton
+                icon="play"
+                label={`Play ${episode.title ?? `episode ${number ?? ''}`}`}
+                size="sm"
+                onClick={() => play(item.id, episode.id)}
+              />
+
               <span className={styles.number}>{number ?? '—'}</span>
 
               <span className={styles.text}>
@@ -101,13 +108,6 @@ export function WatchSection({ item, profileState }: WatchSectionProps): React.J
                     .join(' · ') || '—'}
                 </span>
               </span>
-
-              <IconButton
-                icon="play"
-                label={`Play ${episode.title ?? `episode ${number ?? ''}`}`}
-                size="sm"
-                onClick={() => play(item.id, episode.id)}
-              />
             </li>
           );
         })}

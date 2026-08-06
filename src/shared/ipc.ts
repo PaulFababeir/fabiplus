@@ -35,6 +35,7 @@ export const IPC = {
   subtitleLoad: 'player:subtitle-load',
   subtitleRescan: 'player:subtitle-rescan',
   videoPrepare: 'player:video-prepare',
+  subtitleEmbedded: 'player:subtitle-embedded',
   videoPrepareProgress: 'player:video-prepare-progress',
   videoColour: 'player:video-colour',
   updateCheck: 'update:check',
@@ -103,6 +104,12 @@ export interface RendererApi {
    * the app is open. Cheaper and less alarming than a full library rescan.
    */
   rescanSubtitles(folderPath: string): Promise<SubtitleFile[]>;
+
+  /**
+   * Subtitles stored inside the video file, extracted to WebVTT on first use.
+   * Matroska routinely carries them and `<track>` cannot read them in place.
+   */
+  embeddedSubtitles(path: string): Promise<SubtitleFile[]>;
 
   /**
    * Returns a path the player can actually load. Files whose audio Chromium

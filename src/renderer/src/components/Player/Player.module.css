@@ -60,6 +60,18 @@
   transform: translateY(-11%);
 }
 
+/*
+ * The window's title bar is a drag region, and a drag region swallows mouse
+ * input for its whole band regardless of what is painted above it. The player
+ * covers the window, so its back button sat inside that band and only responded
+ * below it — hover catching at the edges and dying near the top. Nothing here
+ * should ever drag the window.
+ */
+.root,
+.chrome {
+  -webkit-app-region: no-drag;
+}
+
 /* Chrome fades out together while the pointer is idle. */
 .chrome {
   position: absolute;
@@ -100,27 +112,9 @@
   background: linear-gradient(to bottom, rgb(0 0 0 / 72%) 0%, rgb(0 0 0 / 30%) 55%, transparent 100%);
 }
 
+/* Placement only — the look lives in IconButton. */
 .back {
-  display: grid;
-  flex: 0 0 auto;
-  place-items: center;
-  width: 42px;
-  height: 42px;
   margin: -2px 0 0 -8px;
-  border: none;
-  border-radius: 50%;
-  background: transparent;
-  color: rgb(255 255 255 / 85%);
-  cursor: pointer;
-  transition:
-    background 140ms var(--ease-out),
-    color 140ms var(--ease-out);
-}
-
-.back:hover,
-.back:focus-visible {
-  background: rgb(255 255 255 / 22%);
-  color: #fff;
 }
 
 .titles {

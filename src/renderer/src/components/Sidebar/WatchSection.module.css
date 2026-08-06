@@ -10,8 +10,10 @@
   font-size: 12px;
 }
 
+/* Hugs its content rather than stretching across the sidebar. */
 .picker {
   position: relative;
+  align-self: flex-start;
 }
 
 .pickerButton {
@@ -33,12 +35,19 @@
   background: var(--surface-hover);
 }
 
+/*
+ * Sized to the longest label plus its count, not to the sidebar. `max-content`
+ * with a floor of the button width keeps a two-item menu from being narrower
+ * than the control that opened it.
+ */
 .pickerMenu {
   position: absolute;
   top: calc(100% + 5px);
   left: 0;
   z-index: 20;
+  width: max-content;
   min-width: 100%;
+  max-width: 100%;
   padding: 5px;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);

@@ -7,6 +7,7 @@ import { displayTitle, displayYear } from '@renderer/lib/selectors';
 import { useProfile } from '@renderer/state/useProfile';
 import { useUi } from '@renderer/state/useUi';
 import { Icon } from '@renderer/components/ui/Icon';
+import { IconButton } from '@renderer/components/ui/IconButton';
 import { useOnClickOutside } from '@renderer/lib/useDismiss';
 import { useScrubPreview } from './useScrubPreview';
 import styles from './Player.module.css';
@@ -179,6 +180,24 @@ export function Player({ item, episode, startAt }: PlayerProps): React.JSX.Eleme
     () => setSubtitleFiles(episode?.subtitles ?? item.subtitles),
     [episode, item.subtitles]
   );
+
+  /**
+   * Tracks stored inside the container, which `<track>` cannot read in place.
+   * Appended to whatever sits beside the file, so a sidecar still comes first.
+   */
+  useEffect(() => {
+    let cancelled = false;
+    void window.api.embeddedSubtitles(video.path).then((found) => {
+      if (cancelled || found.length === 0) return;
+      setSubtitleFiles((current) => {
+        const known = new Set(current.map((f) => f.path));
+        return [...current, ...found.filter((f) => !known.has(f.path))];
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [video.path]);
 
   useEffect(() => {
     let cancelled = false;
@@ -609,9 +628,14 @@ export function Player({ item, episode, startAt }: PlayerProps): React.JSX.Eleme
 
       <div className={styles.chrome} data-visible={!chromeHidden}>
         <div className={styles.header}>
-          <button type="button" className={styles.back} aria-label="Back" onClick={stopPlaying}>
-            <Icon name="chevron-left" size={22} />
-          </button>
+          <IconButton
+            icon="chevron-left"
+            label="Back"
+            size="xl"
+            onArtwork
+            className={styles.back}
+            onClick={stopPlaying}
+          />
           <div className={styles.titles}>
             <h1 className={styles.title}>{episode?.title ?? displayTitle(item)}</h1>
             {seriesLine && <div className={styles.subtitleLine}>{seriesLine}</div>}

@@ -51,6 +51,8 @@
   top: calc(100% + 6px);
   left: 0;
   z-index: 60;
+  /* Hugs the longest option instead of inheriting the button's fixed width. */
+  width: max-content;
   min-width: 100%;
   padding: 6px;
   border: 1px solid var(--border);

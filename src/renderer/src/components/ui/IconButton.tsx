@@ -2,14 +2,14 @@ import { Icon, type IconName } from './Icon';
 import styles from './IconButton.module.css';
 
 /** Box and glyph sizes travel together so they cannot drift apart. */
-const GLYPH: Record<'sm' | 'md' | 'lg', number> = { sm: 12, md: 15, lg: 17 };
+const GLYPH: Record<'sm' | 'md' | 'lg' | 'xl', number> = { sm: 12, md: 15, lg: 17, xl: 22 };
 
 interface IconButtonProps {
   icon: IconName;
   /** Accessible name — these buttons have no visible text. */
   label: string;
   onClick: () => void;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
   disabled?: boolean;
   /** Adds a shadow for buttons that sit over a poster rather than a panel. */
   onArtwork?: boolean;
