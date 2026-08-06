@@ -21,7 +21,7 @@ import type {
 } from '@shared/types';
 import { imageCacheDir, loadConfig, saveConfig } from './services/config.js';
 import { isInside } from './services/path-containment.js';
-import { prepareVideo, remuxCacheDir } from './services/transcode.js';
+import { prepareVideo, remuxCacheDir, stopConversions } from './services/transcode.js';
 import { extractEmbeddedSubtitles, subsCacheDir } from './services/embedded-subs.js';
 import { serveFile } from './services/media-server.js';
 import { isHdrTagged, probeVideoColour } from './services/video-colour.js';
@@ -626,6 +626,16 @@ if (!app.requestSingleInstanceLock()) {
     });
   });
 }
+
+/*
+ * A conversion outlives the window otherwise: it holds a file handle, burns CPU
+ * with nothing to show it to, and on Windows an orphaned child keeps the
+ * install directory locked against an update applying on quit.
+ */
+app.on('before-quit', () => {
+  stopConversions();
+  presence.disconnect();
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();

@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { access, mkdir, rename, unlink } from 'node:fs/promises';
+import { access, mkdir, readdir, rename, stat, unlink } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import ffmpegStatic from 'ffmpeg-static';
@@ -19,6 +19,63 @@ import { userDataDir } from './config.js';
  * episode at roughly ten seconds instead of many minutes, and avoids throwing
  * away quality to fix a soundtrack.
  */
+
+/**
+ * Ceiling for the converted-video cache.
+ *
+ * Entries are full-size copies — a 700MB episode yields a 700MB mp4 — so
+ * without a cap this grows without bound and silently eats the disk. Rebuilding
+ * an evicted entry costs about ten seconds, which is a cheap trade.
+ */
+const CACHE_MAX_BYTES = 4 * 1024 * 1024 * 1024;
+
+/**
+ * Every ffmpeg process this module has started and not yet reaped.
+ *
+ * Tracked so they can be killed on quit: a conversion left running holds a file
+ * handle and burns CPU after the window is gone, and on Windows the orphan
+ * keeps the install directory locked against an update.
+ */
+const running = new Set<ReturnType<typeof spawn>>();
+
+/** Stops any conversion still in flight. Called when the app is quitting. */
+export function stopConversions(): void {
+  for (const child of running) child.kill();
+  running.clear();
+}
+
+/**
+ * Deletes the least recently used entries until the cache fits.
+ *
+ * Access time is not reliable across platforms, so this uses mtime: entries are
+ * written once and never modified, making it a faithful "when was this made".
+ */
+export async function pruneCache(maxBytes = CACHE_MAX_BYTES): Promise<void> {
+  const dir = remuxCacheDir();
+  let entries;
+  try {
+    entries = await readdir(dir);
+  } catch {
+    return;
+  }
+
+  const files = [];
+  for (const name of entries) {
+    const full = join(dir, name);
+    const info = await stat(full).catch(() => null);
+    if (info?.isFile()) files.push({ full, size: info.size, mtimeMs: info.mtimeMs });
+  }
+
+  let total = files.reduce((sum, f) => sum + f.size, 0);
+  if (total <= maxBytes) return;
+
+  // Oldest first, dropping entries until the total is back under the ceiling.
+  for (const file of files.sort((a, b) => a.mtimeMs - b.mtimeMs)) {
+    if (total <= maxBytes) break;
+    await unlink(file.full).catch(() => undefined);
+    total -= file.size;
+  }
+}
 
 export function remuxCacheDir(): string {
   return join(userDataDir(), 'cache', 'remux');
@@ -90,6 +147,8 @@ export async function prepareVideo(
   try {
     await runFfmpeg(ffmpeg, path, partial, onProgress);
     await rename(partial, target);
+    // After writing, not before: the new entry is the one that may overflow.
+    await pruneCache();
     return { path: target, converted: true, error: null };
   } catch (err) {
     await unlink(partial).catch(() => undefined);
@@ -124,6 +183,7 @@ function runFfmpeg(
       output
     ]);
 
+    running.add(child);
     let durationSec: number | null = null;
     let stderr = '';
 
@@ -146,8 +206,12 @@ function runFfmpeg(
       }
     });
 
-    child.on('error', (err) => reject(err));
+    child.on('error', (err) => {
+      running.delete(child);
+      reject(err);
+    });
     child.on('close', (code) => {
+      running.delete(child);
       if (code === 0) resolve();
       else reject(new Error(stderr.trim().split('\n').pop() ?? `ffmpeg exited with ${code}`));
     });
