@@ -117,7 +117,40 @@ export function Player({ item, episode, startAt }: PlayerProps): React.JSX.Eleme
   const [hoverX, setHoverX] = useState(0);
   const [scrubbing, setScrubbing] = useState(false);
 
-  const src = useMemo(() => toMovieUrl(video.path), [video.path]);
+  /**
+   * Resolved through main before loading: a file whose audio Chromium cannot
+   * decode is converted once and served from cache, everything else resolves
+   * to itself. Held in state rather than derived so the conversion happens
+   * before the element is given a source, not after it has failed.
+   */
+  const [playablePath, setPlayablePath] = useState<string | null>(null);
+  const [preparing, setPreparing] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    setPlayablePath(null);
+    setPreparing(0);
+
+    const stop = window.api.onPrepareProgress((fraction) => {
+      if (!cancelled) setPreparing(fraction);
+    });
+
+    void window.api.prepareVideo(video.path).then((result) => {
+      if (cancelled) return;
+      if (result.error !== null) setError(`This file could not be prepared. ${result.error}`);
+      setPlayablePath(result.path || video.path);
+    });
+
+    return () => {
+      cancelled = true;
+      stop();
+    };
+  }, [video.path]);
+
+  const src = useMemo(
+    () => (playablePath === null ? '' : toMovieUrl(playablePath)),
+    [playablePath]
+  );
 
   // A file tagged PQ or HLG will be tone-mapped by Chromium; knowing that up
   // front lets the correction be on before the first frame is judged.
@@ -531,7 +564,22 @@ export function Player({ item, episode, startAt }: PlayerProps): React.JSX.Eleme
         ))}
       </video>
 
-      {waiting && !error && <div className={styles.spinner} />}
+      {/*
+        Converting is a one-off wait measured in seconds, not a stall, so it
+        says so rather than showing the same spinner as buffering.
+      */}
+      {playablePath === null && !error ? (
+        <div className={styles.preparing}>
+          <div className={styles.spinner} />
+          <span className={styles.preparingLabel}>
+            {preparing > 0
+              ? `Converting audio for playback… ${Math.round(preparing * 100)}%`
+              : 'Checking this file…'}
+          </span>
+        </div>
+      ) : (
+        waiting && !error && <div className={styles.spinner} />
+      )}
 
       {osd && <div className={styles.osd}>{osd}</div>}
 

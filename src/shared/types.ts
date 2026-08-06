@@ -119,6 +119,14 @@ export interface MatchInfo {
 // Library
 // ---------------------------------------------------------------------------
 
+/** Outcome of making a file playable; see `transcode.ts`. */
+export interface PrepareResult {
+  path: string;
+  /** True when a converted copy is served instead of the original. */
+  converted: boolean;
+  error: string | null;
+}
+
 /** One episode file. */
 export interface Episode {
   /** Stable across rescans: hash of the file path. */

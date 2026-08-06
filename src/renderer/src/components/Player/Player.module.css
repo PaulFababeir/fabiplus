@@ -529,3 +529,25 @@
   margin: 6px 4px;
   background: rgb(255 255 255 / 10%);
 }
+
+/*
+ * Shown while a file's audio is converted. It replaces the bare spinner so a
+ * ten-second wait reads as work in progress rather than a stalled stream.
+ */
+.preparing {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  pointer-events: none;
+}
+
+.preparingLabel {
+  color: rgb(255 255 255 / 78%);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}

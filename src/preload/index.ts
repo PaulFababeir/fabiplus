@@ -8,6 +8,7 @@ import type {
   LibraryCatalog,
   Profile,
   ProfileState,
+  PrepareResult,
   ReviewCandidate,
   SubtitleFile,
   UpdateStatus,
@@ -37,6 +38,7 @@ const api: RendererApi = {
   searchProvider: (query, year, kind) =>
     ipcRenderer.invoke(IPC.librarySearchProvider, query, year, kind) as Promise<ReviewCandidate[]>,
   loadSubtitle: (path) => ipcRenderer.invoke(IPC.subtitleLoad, path) as Promise<string | null>,
+  prepareVideo: (path) => ipcRenderer.invoke(IPC.videoPrepare, path) as Promise<PrepareResult>,
   probeVideoColour: (path) =>
     ipcRenderer.invoke(IPC.videoColour, path) as Promise<VideoColourInfo>,
 
@@ -55,6 +57,13 @@ const api: RendererApi = {
   checkForUpdate: () => ipcRenderer.invoke(IPC.updateCheck) as Promise<UpdateStatus>,
   downloadUpdate: () => ipcRenderer.invoke(IPC.updateDownload) as Promise<UpdateStatus>,
 
+  onPrepareProgress: (listener) => {
+    const handler = (_event: IpcRendererEvent, fraction: number): void => listener(fraction);
+    ipcRenderer.on(IPC.videoPrepareProgress, handler);
+    return () => {
+      ipcRenderer.removeListener(IPC.videoPrepareProgress, handler);
+    };
+  },
   onEnrichProgress: (listener) => {
     const handler = (_event: IpcRendererEvent, progress: EnrichmentProgress): void =>
       listener(progress);

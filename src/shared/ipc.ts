@@ -5,6 +5,7 @@ import type {
   EnrichmentSummary,
   LibraryCatalog,
   MediaKind,
+  PrepareResult,
   Profile,
   ProfileState,
   ReviewCandidate,
@@ -33,6 +34,8 @@ export const IPC = {
   librarySearchProvider: 'library:search-provider',
   subtitleLoad: 'player:subtitle-load',
   subtitleRescan: 'player:subtitle-rescan',
+  videoPrepare: 'player:video-prepare',
+  videoPrepareProgress: 'player:video-prepare-progress',
   videoColour: 'player:video-colour',
   updateCheck: 'update:check',
   updateDownload: 'update:download',
@@ -101,6 +104,13 @@ export interface RendererApi {
    */
   rescanSubtitles(folderPath: string): Promise<SubtitleFile[]>;
 
+  /**
+   * Returns a path the player can actually load. Files whose audio Chromium
+   * cannot decode (AC-3, DTS, TrueHD) are converted once and cached; the video
+   * stream is copied untouched. Everything else resolves to the original.
+   */
+  prepareVideo(path: string): Promise<PrepareResult>;
+
   /** Reads a file's declared colour tags so the player can spot HDR content. */
   probeVideoColour(path: string): Promise<VideoColourInfo>;
 
@@ -117,6 +127,9 @@ export interface RendererApi {
    */
   setDiscordActivity(activity: DiscordActivity | null): Promise<string | null>;
   setDiscordConfig(enabled: boolean, appId: string | null): Promise<AppConfig>;
+
+  /** Subscribes to conversion progress, 0–1. Returns an unsubscribe function. */
+  onPrepareProgress(listener: (fraction: number) => void): () => void;
 
   /** Subscribes to enrichment progress. Returns an unsubscribe function. */
   onEnrichProgress(listener: (progress: EnrichmentProgress) => void): () => void;

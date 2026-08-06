@@ -1,5 +1,5 @@
 import { app, BrowserWindow, dialog, ipcMain, protocol } from 'electron';
-import { readFile, realpath } from 'node:fs/promises';
+import { readFile, realpath, stat } from 'node:fs/promises';
 import { join, resolve as resolvePath } from 'node:path';
 
 import { DISCORD_APP_ID } from '@shared/constants';
@@ -11,6 +11,7 @@ import type {
   EnrichmentSummary,
   LibraryCatalog,
   MediaKind,
+  PrepareResult,
   Profile,
   ProfileState,
   ReviewCandidate,
@@ -20,6 +21,7 @@ import type {
 } from '@shared/types';
 import { imageCacheDir, loadConfig, saveConfig } from './services/config.js';
 import { isInside } from './services/path-containment.js';
+import { prepareVideo, remuxCacheDir } from './services/transcode.js';
 import { serveFile } from './services/media-server.js';
 import { isHdrTagged, probeVideoColour } from './services/video-colour.js';
 import { checkForUpdate, currentVersion, downloadUpdate } from './services/updater.js';
@@ -92,7 +94,9 @@ protocol.registerSchemesAsPrivileged([
 /** Directories the renderer is allowed to read through movie://. */
 async function allowedRoots(): Promise<string[]> {
   const config = await loadConfig();
-  return [...config.movieRoots, ...config.seriesRoots, imageCacheDir()].map((p) => resolvePath(p));
+  return [...config.movieRoots, ...config.seriesRoots, imageCacheDir(), remuxCacheDir()].map(
+    (p) => resolvePath(p)
+  );
 }
 
 /**
@@ -376,6 +380,22 @@ function registerIpc(): void {
     if (!safe) return [];
 
     return rescanSubtitles(safe);
+  });
+
+  ipcMain.handle(IPC.videoPrepare, async (event, path: unknown): Promise<PrepareResult> => {
+    if (typeof path !== 'string') {
+      return { path: '', converted: false, error: 'No file given.' };
+    }
+
+    const safe = await resolveAllowedPath(path);
+    if (!safe) return { path: '', converted: false, error: 'That file is outside your library.' };
+
+    const info = await stat(safe);
+    return prepareVideo(safe, info.size, info.mtimeMs, (fraction) => {
+      if (!event.sender.isDestroyed()) {
+        event.sender.send(IPC.videoPrepareProgress, fraction);
+      }
+    });
   });
 
   ipcMain.handle(IPC.videoColour, async (_event, path: unknown): Promise<VideoColourInfo> => {
