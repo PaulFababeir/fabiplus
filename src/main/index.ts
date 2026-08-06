@@ -10,6 +10,7 @@ import type {
   DiscordActivity,
   EnrichmentSummary,
   LibraryCatalog,
+  MediaKind,
   Profile,
   ProfileState,
   ReviewCandidate,
@@ -327,13 +328,14 @@ function registerIpc(): void {
 
   ipcMain.handle(
     IPC.librarySearchProvider,
-    async (_event, query: unknown, year: unknown): Promise<ReviewCandidate[]> => {
+    async (_event, query: unknown, year: unknown, kind: unknown): Promise<ReviewCandidate[]> => {
       const config = await loadConfig();
       if (!config.tmdbApiKey || typeof query !== 'string' || query.trim() === '') return [];
 
       const parsedYear = typeof year === 'number' ? year : null;
+      const mediaKind: MediaKind = kind === 'series' ? 'series' : 'movie';
       const provider = new TmdbProvider(config.tmdbApiKey);
-      const candidates = await provider.search(query.trim(), parsedYear);
+      const candidates = await provider.search(query.trim(), parsedYear, mediaKind);
 
       return rankCandidates(query.trim(), parsedYear, candidates)
         .slice(0, 8)

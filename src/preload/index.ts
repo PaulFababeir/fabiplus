@@ -34,8 +34,8 @@ const api: RendererApi = {
   fetchNewLibrary: () => ipcRenderer.invoke(IPC.libraryFetchNew) as Promise<EnrichmentSummary>,
   rematch: (movieId, remoteId) =>
     ipcRenderer.invoke(IPC.libraryRematch, movieId, remoteId) as Promise<LibraryCatalog>,
-  searchProvider: (query, year) =>
-    ipcRenderer.invoke(IPC.librarySearchProvider, query, year) as Promise<ReviewCandidate[]>,
+  searchProvider: (query, year, kind) =>
+    ipcRenderer.invoke(IPC.librarySearchProvider, query, year, kind) as Promise<ReviewCandidate[]>,
   loadSubtitle: (path) => ipcRenderer.invoke(IPC.subtitleLoad, path) as Promise<string | null>,
   probeVideoColour: (path) =>
     ipcRenderer.invoke(IPC.videoColour, path) as Promise<VideoColourInfo>,

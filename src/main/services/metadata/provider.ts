@@ -1,4 +1,4 @@
-import type { CastMember, CrewMember } from '@shared/types';
+import type { CastMember, CrewMember, MediaKind } from '@shared/types';
 import type { Candidate } from './matcher.js';
 
 /**
@@ -37,11 +37,29 @@ export interface ProviderDetails {
   backdrops: RemoteImage[];
 }
 
+/** One episode as the provider knows it. */
+export interface ProviderEpisode {
+  episodeNumber: number;
+  name: string;
+  overview: string;
+  runtimeMin: number | null;
+  airDate: string | null;
+}
+
 export interface MetadataProvider {
   /** Stable identifier stored on each Metadata record, e.g. "tmdb". */
   readonly id: string;
-  search(title: string, year: number | null): Promise<Candidate[]>;
-  fetchDetails(remoteId: number): Promise<ProviderDetails>;
+  /**
+   * `kind` picks the endpoint. A show searched against the film endpoint does
+   * not merely rank badly — it cannot be found at all.
+   */
+  search(title: string, year: number | null, kind?: MediaKind): Promise<Candidate[]>;
+  fetchDetails(remoteId: number, kind?: MediaKind): Promise<ProviderDetails>;
+  /**
+   * Episode titles and runtimes for one season. Runtime is not present in
+   * filenames, so this is the only source for the per-episode subtext.
+   */
+  fetchSeason(remoteId: number, seasonNumber: number): Promise<ProviderEpisode[]>;
   /**
    * Absolute URL for a remote image. `thumb` is the small size used by the
    * re-match dialog, which streams straight from the provider rather than

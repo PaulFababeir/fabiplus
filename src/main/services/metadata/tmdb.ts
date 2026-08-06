@@ -1,9 +1,11 @@
 import type { CastMember, CrewMember } from '@shared/types';
+import type { MediaKind } from '@shared/types';
 import type { Candidate } from './matcher.js';
 import {
   ProviderError,
   type MetadataProvider,
   type ProviderDetails,
+  type ProviderEpisode,
   type RemoteImage
 } from './provider.js';
 
@@ -33,11 +35,19 @@ const MAX_CAST = 30;
 
 type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
 
+/**
+ * One shape for both endpoints. TV carries `name`/`first_air_date` where film
+ * carries `title`/`release_date`, so both are optional and read through
+ * `pickTitle`/`pickDate` rather than duplicating the mapping.
+ */
 interface TmdbSearchResult {
   id: number;
   title?: string;
   original_title?: string;
   release_date?: string;
+  name?: string;
+  original_name?: string;
+  first_air_date?: string;
   popularity?: number;
   poster_path?: string | null;
   overview?: string;
@@ -57,6 +67,12 @@ interface TmdbDetails {
   original_title?: string;
   release_date?: string;
   runtime?: number | null;
+  name?: string;
+  original_name?: string;
+  first_air_date?: string;
+  /** TV carries a list of typical runtimes rather than one exact figure. */
+  episode_run_time?: number[];
+  created_by?: Array<{ name?: string }>;
   tagline?: string;
   overview?: string;
   vote_average?: number;
@@ -66,6 +82,19 @@ interface TmdbDetails {
     crew?: Array<{ name?: string; job?: string; department?: string }>;
   };
   images?: { posters?: TmdbImage[]; backdrops?: TmdbImage[] };
+}
+
+/** TV puts the title in `name`; film puts it in `title`. */
+function pickTitle(r: { title?: string; name?: string }): string {
+  return r.title ?? r.name ?? '';
+}
+
+function pickOriginal(r: { original_title?: string; original_name?: string }): string {
+  return r.original_title ?? r.original_name ?? '';
+}
+
+function pickDate(r: { release_date?: string; first_air_date?: string }): string | undefined {
+  return r.release_date ?? r.first_air_date;
 }
 
 function yearOf(releaseDate: string | undefined): number | null {
@@ -160,16 +189,27 @@ export class TmdbProvider implements MetadataProvider {
     return (await response.json()) as T;
   }
 
-  async search(title: string, year: number | null): Promise<Candidate[]> {
-    const params: Record<string, string> = { query: title, include_adult: 'false' };
-    if (year !== null) params['year'] = String(year);
+  /**
+   * Searches the endpoint matching the item's kind.
+   *
+   * A show has to go to `/search/tv`: `/search/movie` cannot return it at all,
+   * and for a title like "Sherlock" it happily returns eight unrelated films
+   * instead, which looks like a bad matcher rather than a wrong endpoint.
+   */
+  async search(title: string, year: number | null, kind: MediaKind = 'movie'): Promise<Candidate[]> {
+    const path = kind === 'series' ? '/search/tv' : '/search/movie';
+    // TMDB names the year filter differently per endpoint.
+    const yearKey = kind === 'series' ? 'first_air_date_year' : 'year';
 
-    let data = await this.#get<{ results?: TmdbSearchResult[] }>('/search/movie', params);
+    const params: Record<string, string> = { query: title, include_adult: 'false' };
+    if (year !== null) params[yearKey] = String(year);
+
+    let data = await this.#get<{ results?: TmdbSearchResult[] }>(path, params);
 
     // A wrong year in the folder name yields zero hits; retry unconstrained
-    // rather than declaring the film unmatched.
+    // rather than declaring the title unmatched.
     if ((data.results?.length ?? 0) === 0 && year !== null) {
-      data = await this.#get<{ results?: TmdbSearchResult[] }>('/search/movie', {
+      data = await this.#get<{ results?: TmdbSearchResult[] }>(path, {
         query: title,
         include_adult: 'false'
       });
@@ -177,25 +217,50 @@ export class TmdbProvider implements MetadataProvider {
 
     return (data.results ?? []).map((r) => ({
       id: r.id,
-      title: r.title ?? r.original_title ?? '',
-      originalTitle: r.original_title ?? r.title ?? '',
-      year: yearOf(r.release_date),
+      title: pickTitle(r) || pickOriginal(r),
+      originalTitle: pickOriginal(r) || pickTitle(r),
+      year: yearOf(pickDate(r)),
       popularity: r.popularity ?? 0,
       posterPath: r.poster_path ?? null,
       overview: r.overview ?? ''
     }));
   }
 
+  /**
+   * Episode list for one season. Season 0 is TMDB's home for specials, which
+   * is where the E00 files in a real release belong.
+   */
+  async fetchSeason(remoteId: number, seasonNumber: number): Promise<ProviderEpisode[]> {
+    const data = await this.#get<{
+      episodes?: Array<{
+        episode_number?: number;
+        name?: string;
+        overview?: string;
+        runtime?: number | null;
+        air_date?: string | null;
+      }>;
+    }>(`/tv/${remoteId}/season/${seasonNumber}`);
+
+    return (data.episodes ?? []).map((e) => ({
+      episodeNumber: e.episode_number ?? 0,
+      name: e.name ?? '',
+      overview: e.overview ?? '',
+      runtimeMin: typeof e.runtime === 'number' ? e.runtime : null,
+      airDate: e.air_date ?? null
+    }));
+  }
+
   /** One request pulls details, credits and artwork together. */
-  async fetchDetails(remoteId: number): Promise<ProviderDetails> {
+  async fetchDetails(remoteId: number, kind: MediaKind = 'movie'): Promise<ProviderDetails> {
     // Deliberately NOT filtered with `include_image_language`. Restricting to
     // "en,null" starves non-English films: Solanin (ソラニン) has exactly one
     // untagged poster and the rest are tagged "ja", so the picker had nothing
     // to offer. Fetching every language and ranking client-side in
     // `rankImages` keeps English first without discarding the alternatives.
-    const d = await this.#get<TmdbDetails>(`/movie/${remoteId}`, {
-      append_to_response: 'credits,images'
-    });
+    const d = await this.#get<TmdbDetails>(
+      `${kind === 'series' ? '/tv' : '/movie'}/${remoteId}`,
+      { append_to_response: 'credits,images' }
+    );
 
     const cast: CastMember[] = (d.credits?.cast ?? [])
       .slice(0, MAX_CAST)
@@ -218,11 +283,13 @@ export class TmdbProvider implements MetadataProvider {
 
     return {
       remoteId: d.id,
-      title: d.title ?? d.original_title ?? '',
-      originalTitle: d.original_title ?? d.title ?? '',
-      year: yearOf(d.release_date),
-      releaseDate: d.release_date ?? null,
-      runtimeMin: d.runtime ?? null,
+      title: pickTitle(d) || pickOriginal(d),
+      originalTitle: pickOriginal(d) || pickTitle(d),
+      year: yearOf(pickDate(d)),
+      releaseDate: pickDate(d) ?? null,
+      // A show has no single runtime; its typical episode length is the useful
+      // stand-in, and per-episode figures come from `fetchSeason`.
+      runtimeMin: d.runtime ?? d.episode_run_time?.[0] ?? null,
       tagline: d.tagline?.trim() ? d.tagline.trim() : null,
       overview: d.overview ?? '',
       genres: (d.genres ?? []).map((g) => g.name),

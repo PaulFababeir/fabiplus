@@ -4,6 +4,7 @@ import type {
   EnrichmentProgress,
   EnrichmentSummary,
   LibraryCatalog,
+  MediaKind,
   Profile,
   ProfileState,
   ReviewCandidate,
@@ -82,8 +83,11 @@ export interface RendererApi {
   fetchNewLibrary(): Promise<EnrichmentSummary>;
   /** Forces a film to a specific provider id, overriding the fuzzy match. */
   rematch(movieId: string, remoteId: number): Promise<LibraryCatalog>;
-  /** Free-text provider search, for fixing a match the scorer got wrong. */
-  searchProvider(query: string, year: number | null): Promise<ReviewCandidate[]>;
+  /**
+   * Free-text provider search, for fixing a match the scorer got wrong. `kind`
+   * picks the endpoint — a show cannot be found on the film one.
+   */
+  searchProvider(query: string, year: number | null, kind: MediaKind): Promise<ReviewCandidate[]>;
 
   /**
    * Reads a subtitle file and returns it as WebVTT. `<track>` rejects SubRip,

@@ -101,7 +101,7 @@ export async function applyManualMatch(
   provider: MetadataProvider,
   remoteId: number
 ): Promise<LibraryItem> {
-  const details = await withRetry(() => provider.fetchDetails(remoteId));
+  const details = await withRetry(() => provider.fetchDetails(remoteId, item.kind));
   const { posters, backdrop } = await cacheArtwork(details, provider);
 
   return {
@@ -161,7 +161,7 @@ export async function enrichLibrary(
       }
 
       const candidates = await withRetry(() =>
-        provider.search(item.parsed.searchTitle, item.parsed.year)
+        provider.search(item.parsed.searchTitle, item.parsed.year, item.kind)
       );
       const decision = decideMatch(item.parsed.title, item.parsed.year, candidates);
 
@@ -190,7 +190,9 @@ export async function enrichLibrary(
         return;
       }
 
-      const details = await withRetry(() => provider.fetchDetails(decision.best!.candidate.id));
+      const details = await withRetry(() =>
+        provider.fetchDetails(decision.best!.candidate.id, item.kind)
+      );
       const { posters, backdrop } = await cacheArtwork(details, provider);
 
       byId.set(item.id, {

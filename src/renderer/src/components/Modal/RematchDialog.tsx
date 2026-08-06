@@ -84,7 +84,8 @@ function ReviewRow({ item, busy, soloed, onPick }: ReviewRowProps): React.JSX.El
     setSearching(true);
     setError(null);
     try {
-      setResults(await window.api.searchProvider(title, withYear));
+      // The item's kind picks the endpoint; a show is not on /search/movie.
+      setResults(await window.api.searchProvider(title, withYear, item.kind));
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
