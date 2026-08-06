@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { existsSync } from 'node:fs';
 import { describe, it } from 'node:test';
 
 import { audioNeedsTranscode, headerNeedsTranscode } from './audio-support.js';
@@ -35,7 +36,16 @@ describe('headerNeedsTranscode', () => {
   });
 });
 
-describe('audioNeedsTranscode', () => {
+/**
+ * These read the real library, which only exists on the developer's machine.
+ * CI has no `D:/Series`, and an unreadable file reports "no transcode needed" —
+ * so without this the AC-3 expectation fails on a runner rather than catching a
+ * real regression. The logic itself is covered by `headerNeedsTranscode` above,
+ * which needs no files at all.
+ */
+const HAS_LIBRARY = existsSync(AC3_EPISODE);
+
+describe('audioNeedsTranscode', { skip: HAS_LIBRARY ? false : 'sample library not present' }, () => {
   it('leaves an AAC episode untouched', async () => {
     assert.equal(await audioNeedsTranscode(AAC_EPISODE), false);
   });
