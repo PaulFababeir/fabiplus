@@ -45,7 +45,7 @@ import {
   setPosterChoice,
   setWatchProgress
 } from './services/profiles.js';
-import { rescanSubtitles, scanRoots } from './services/scanner.js';
+import { rescanSubtitles, scanLibrary } from './services/scanner.js';
 
 const isDev = !app.isPackaged;
 
@@ -149,6 +149,14 @@ function registerIpc(): void {
     return saveConfig({ ...config, movieRoots: next });
   });
 
+  ipcMain.handle(IPC.configSetSeriesRoots, async (_event, roots: unknown): Promise<AppConfig> => {
+    const config = await loadConfig();
+    const next = Array.isArray(roots)
+      ? [...new Set(roots.filter((r): r is string => typeof r === 'string' && r.trim() !== ''))]
+      : [];
+    return saveConfig({ ...config, seriesRoots: next });
+  });
+
   ipcMain.handle(IPC.configPickFolder, async (): Promise<string | null> => {
     const window = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
     const result = window
@@ -186,10 +194,11 @@ function registerIpc(): void {
     // Throws if library.json exists but is unreadable, rather than treating
     // it as empty and overwriting an enriched catalog with a bare scan.
     const existing = await loadLibrary();
-    const scan = await scanRoots(config.movieRoots, 'movie');
-    const merged = mergeScan(existing, scan, config.movieRoots);
+    const roots = [...config.movieRoots, ...config.seriesRoots];
+    const scan = await scanLibrary(config.movieRoots, config.seriesRoots);
+    const merged = mergeScan(existing, scan, roots);
 
-    if (wouldDestroyMetadata(existing, merged, config.movieRoots)) {
+    if (wouldDestroyMetadata(existing, merged, roots)) {
       console.error('[library] rescan would drop all metadata; keeping the stored catalog');
       return existing;
     }
@@ -263,9 +272,10 @@ function registerIpc(): void {
     // Captured before the merge — afterwards every item looks equally present.
     const knownIds = new Set(existing.items.map((item) => item.id));
 
-    const scan = await scanRoots(config.movieRoots, 'movie');
-    const merged = mergeScan(existing, scan, config.movieRoots);
-    if (wouldDestroyMetadata(existing, merged, config.movieRoots)) {
+    const roots = [...config.movieRoots, ...config.seriesRoots];
+    const scan = await scanLibrary(config.movieRoots, config.seriesRoots);
+    const merged = mergeScan(existing, scan, roots);
+    if (wouldDestroyMetadata(existing, merged, roots)) {
       console.error('[library] rescan would drop all metadata; keeping the stored catalog');
       return { ...empty, fatalError: 'Rescan looked wrong and was refused. Nothing was changed.' };
     }

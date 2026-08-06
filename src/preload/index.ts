@@ -45,6 +45,8 @@ const api: RendererApi = {
     ipcRenderer.invoke(IPC.subtitleRescan, folderPath) as Promise<SubtitleFile[]>,
   setMovieRoots: (roots) =>
     ipcRenderer.invoke(IPC.configSetMovieRoots, roots) as Promise<AppConfig>,
+  setSeriesRoots: (roots) =>
+    ipcRenderer.invoke(IPC.configSetSeriesRoots, roots) as Promise<AppConfig>,
   pickFolder: () => ipcRenderer.invoke(IPC.configPickFolder) as Promise<string | null>,
   setDiscordActivity: (activity) =>
     ipcRenderer.invoke(IPC.discordSet, activity) as Promise<string | null>,

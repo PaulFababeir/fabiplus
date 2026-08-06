@@ -3,10 +3,12 @@ import { readdir, stat } from 'node:fs/promises';
 import { join, basename, resolve as resolvePath } from 'node:path';
 
 import type {
+  Episode,
   LibraryItem,
   MediaKind,
   ScanIssue,
   ScanResult,
+  Season,
   SubtitleFile,
   VideoFile
 } from '@shared/types';
@@ -17,6 +19,7 @@ import {
   parseReleaseName,
   subtitleLabel
 } from './filename-parser.js';
+import { parseEpisodeName, parseSeasonFolder, parseSeriesFolder } from './episode-parser.js';
 
 /**
  * Anything smaller than this is a sample/trailer, not the feature. The
@@ -121,6 +124,109 @@ function toVideoFile(f: FoundFile): VideoFile {
 }
 
 /**
+ * Builds the season list for one show folder.
+ *
+ * The folder decides which season an episode belongs to; the filename supplies
+ * the episode number and title. That split matters for the unnumbered folders
+ * real releases carry — the sample library's "Unaired Pilot" holds a file named
+ * `S01E00`, and trusting the filename would bury it inside Season 1 instead of
+ * showing it as the separate thing the release author clearly intended.
+ *
+ * Episodes sitting loose in the show root become a single unlabelled season, so
+ * a flat show folder still works.
+ */
+async function collectSeasons(showPath: string): Promise<Season[]> {
+  let entries;
+  try {
+    entries = await readdir(showPath, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+
+  const seasons: Season[] = [];
+
+  const loose = entries.filter((e) => e.isFile() && isVideoFile(e.name));
+  if (loose.length > 0) {
+    const files = await walk(showPath, MAX_DEPTH, false);
+    seasons.push({
+      number: null,
+      label: 'Episodes',
+      episodes: await toEpisodes(
+        showPath,
+        files.filter((f) => loose.some((l) => l.name === f.name)),
+        files
+      )
+    });
+  }
+
+  for (const entry of entries.filter((e) => e.isDirectory())) {
+    const seasonPath = join(showPath, entry.name);
+    const parsed = parseSeasonFolder(entry.name);
+    const files = await walk(seasonPath, 1, false);
+    const videos = files.filter((f) => isVideoFile(f.name));
+    if (videos.length === 0) continue;
+
+    seasons.push({
+      number: parsed.number,
+      label: parsed.label,
+      episodes: await toEpisodes(seasonPath, videos, files)
+    });
+  }
+
+  // Numbered seasons first and in order; unnumbered folders trail alphabetically
+  // rather than being dropped or jumbled in among them.
+  return seasons.sort((a, b) => {
+    if (a.number === null && b.number === null) return a.label.localeCompare(b.label);
+    if (a.number === null) return 1;
+    if (b.number === null) return -1;
+    return a.number - b.number;
+  });
+}
+
+async function toEpisodes(
+  folderPath: string,
+  videos: FoundFile[],
+  siblings: FoundFile[]
+): Promise<Episode[]> {
+  const episodes = videos.map((file) => {
+    const parsed = parseEpisodeName(file.name);
+    return {
+      id: itemId(file.path),
+      number: parsed.episode,
+      title: parsed.title,
+      // Runtime is not in the filename; the provider fills this in.
+      runtimeMin: null,
+      video: toVideoFile(file),
+      // Subtitles that sit beside this episode, matched on the filename stem.
+      subtitles: collectSubtitles(
+        siblings.filter((s) => isSubtitleFile(s.name) && shareStem(s.name, file.name))
+      ),
+      folderPath
+    } satisfies Episode;
+  });
+
+  // Unnumbered episodes sort last rather than colliding at position zero.
+  return episodes.sort((a, b) => {
+    if (a.number === null && b.number === null) return a.video.path.localeCompare(b.video.path);
+    if (a.number === null) return 1;
+    if (b.number === null) return -1;
+    return a.number - b.number;
+  });
+}
+
+/**
+ * True when a subtitle belongs to a given video, judged by the filename stem.
+ * A season folder holds many episodes, so the whole-folder sweep a film gets
+ * would hand every episode every language of every other episode.
+ */
+function shareStem(subtitleName: string, videoName: string): boolean {
+  const stem = (n: string): string => n.replace(/\.[a-z0-9]{2,4}$/i, '').toLowerCase();
+  const video = stem(videoName);
+  const sub = stem(subtitleName);
+  return sub === video || sub.startsWith(`${video}.`) || sub.startsWith(`${video}_`);
+}
+
+/**
  * Scans one library root. Each immediate subdirectory is treated as one title;
  * loose video files sitting directly in the root are accepted too.
  */
@@ -151,6 +257,42 @@ export async function scanRoot(root: string, kind: MediaKind = 'movie'): Promise
     const full = join(root, entry.name);
 
     if (entry.isDirectory()) {
+      if (kind === 'series') {
+        const seasons = await collectSeasons(full);
+        const first = seasons.flatMap((s) => s.episodes)[0];
+
+        if (!first) {
+          issues.push({
+            folderPath: full,
+            reason: 'no-video',
+            detail: `No episodes found in "${entry.name}"`
+          });
+          continue;
+        }
+
+        items.push(
+          buildItem({
+            kind,
+            folderPath: full,
+            folderName: entry.name,
+            // The first episode stands in for the show wherever a single file
+            // is needed — size, mtime sorting, and playback before the episode
+            // picker exists.
+            feature: {
+              path: first.video.path,
+              name: first.video.path.split(/[\\/]/).pop() ?? entry.name,
+              size: first.video.size,
+              mtimeMs: Date.parse(now),
+              deprioritized: false
+            },
+            subtitles: first.subtitles,
+            seasons,
+            now
+          })
+        );
+        continue;
+      }
+
       const files = await walk(full, 1, DEPRIORITIZED_DIRS.has(entry.name.toLowerCase()));
       const feature = pickFeature(files);
 
@@ -225,13 +367,35 @@ function buildItem(args: {
   folderName: string;
   feature: FoundFile;
   subtitles: SubtitleFile[];
+  /** Series only; a film has none. */
+  seasons?: Season[];
   now: string;
   idSeed?: string;
 }): LibraryItem {
-  const { kind, folderPath, folderName, feature, subtitles, now, idSeed } = args;
+  const { kind, folderPath, folderName, feature, subtitles, seasons, now, idSeed } = args;
 
   // Folder names carry the fullest information. Fall back to the video
   // filename when the folder name parses without a year but the file has one.
+  // A show folder carries a season range where a film carries release tags,
+  // so it needs the series rules or the title keeps the "S01-S04" on the end.
+  if (kind === 'series') {
+    const show = parseSeriesFolder(folderName);
+    return {
+      id: itemId(idSeed ?? folderPath),
+      kind,
+      folderPath,
+      folderName,
+      video: toVideoFile(feature),
+      subtitles,
+      seasons: seasons ?? null,
+      parsed: { ...parseReleaseName(folderName), title: show.title, year: show.year },
+      addedAt: now,
+      fileModifiedAt: new Date(feature.mtimeMs).toISOString(),
+      metadata: null,
+      match: null
+    };
+  }
+
   let parsed = parseReleaseName(folderName);
   if (parsed.year === null) {
     const fromFile = parseReleaseName(basename(feature.name));
@@ -247,6 +411,7 @@ function buildItem(args: {
     folderName,
     video: toVideoFile(feature),
     subtitles,
+    seasons: seasons ?? null,
     parsed,
     addedAt: now,
     fileModifiedAt: new Date(feature.mtimeMs).toISOString(),
@@ -268,4 +433,33 @@ export async function scanRoots(roots: string[], kind: MediaKind = 'movie'): Pro
 
   items.sort((a, b) => a.parsed.title.localeCompare(b.parsed.title));
   return { items, issues, durationMs: Date.now() - started };
+}
+
+/**
+ * Scans films and shows together into one catalog.
+ *
+ * They share a catalog rather than living in separate files because everything
+ * downstream — the merge, the metadata guard, watch history — is written
+ * against one list, and `kind` is enough to tell them apart. Splitting the
+ * storage would mean two of each of those.
+ */
+export async function scanLibrary(
+  movieRoots: string[],
+  seriesRoots: string[]
+): Promise<ScanResult> {
+  const started = Date.now();
+  const [movies, series] = await Promise.all([
+    scanRoots(movieRoots, 'movie'),
+    scanRoots(seriesRoots, 'series')
+  ]);
+
+  const items = [...movies.items, ...series.items].sort((a, b) =>
+    a.parsed.title.localeCompare(b.parsed.title)
+  );
+
+  return {
+    items,
+    issues: [...movies.issues, ...series.issues],
+    durationMs: Date.now() - started
+  };
 }

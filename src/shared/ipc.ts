@@ -20,6 +20,7 @@ export const IPC = {
   configSetTranslucent: 'config:set-translucent',
   configSetVideoBrightness: 'config:set-video-brightness',
   configSetMovieRoots: 'config:set-movie-roots',
+  configSetSeriesRoots: 'config:set-series-roots',
   configPickFolder: 'config:pick-folder',
 
   libraryGet: 'library:get',
@@ -60,6 +61,8 @@ export interface RendererApi {
   setVideoBrightness(value: number): Promise<AppConfig>;
   /** Replaces the list of folders scanned for films. */
   setMovieRoots(roots: string[]): Promise<AppConfig>;
+  /** Folders scanned for shows; each show is one subfolder. */
+  setSeriesRoots(roots: string[]): Promise<AppConfig>;
   /**
    * Opens the native folder chooser. Resolves to null if the user cancels —
    * which is not an error and must not clear the existing roots.

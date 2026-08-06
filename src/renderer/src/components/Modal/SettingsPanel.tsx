@@ -9,6 +9,64 @@ import { IconButton } from '@renderer/components/ui/IconButton';
 import { Toggle } from '@renderer/components/ui/Toggle';
 import styles from './Modal.module.css';
 
+interface FolderSectionProps {
+  label: string;
+  /** Shown instead of the list when nothing is configured yet. */
+  empty: string;
+  paths: string[];
+  busy: boolean;
+  onAdd: () => void;
+  onRemove: (path: string) => void;
+}
+
+/** One editable list of library roots. Films and shows each get one. */
+function FolderSection({
+  label,
+  empty,
+  paths,
+  busy,
+  onAdd,
+  onRemove
+}: FolderSectionProps): React.JSX.Element {
+  return (
+    <>
+      <label className={styles.label}>{label}</label>
+
+      {paths.length === 0 ? (
+        <p className={styles.note}>{empty}</p>
+      ) : (
+        <ul className={styles.rootList}>
+          {paths.map((path) => (
+            <li key={path} className={styles.rootRow}>
+              <span className={styles.rootPath} title={path}>
+                {path}
+              </span>
+              <IconButton
+                icon="close"
+                label={`Remove ${path}`}
+                size="sm"
+                disabled={busy}
+                onClick={() => onRemove(path)}
+              />
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <div className={styles.actions}>
+        <button
+          type="button"
+          className={`${styles.button} ${paths.length === 0 ? styles.primary : ''}`}
+          disabled={busy}
+          onClick={onAdd}
+        >
+          Add folder…
+        </button>
+      </div>
+    </>
+  );
+}
+
 /** Library maintenance: the TMDB key, rescanning, and metadata refresh. */
 export function SettingsPanel(): React.JSX.Element {
   const { toggleSettings, translucent, setTranslucent, bumpPresence } = useUi();
@@ -23,6 +81,7 @@ export function SettingsPanel(): React.JSX.Element {
   const [update, setUpdate] = useState<UpdateStatus | null>(null);
   const [checking, setChecking] = useState(false);
   const [roots, setRoots] = useState<string[]>([]);
+  const [seriesRoots, setSeriesRoots] = useState<string[]>([]);
 
   useEffect(() => {
     void window.api.getConfig().then((config) => setHasKey(config.tmdbApiKey !== null));
@@ -30,6 +89,7 @@ export function SettingsPanel(): React.JSX.Element {
     void window.api.getConfig().then((config) => {
       setDiscordOn(config.discordPresence);
       setRoots(config.movieRoots);
+      setSeriesRoots(config.seriesRoots);
     });
   }, []);
 
@@ -37,20 +97,26 @@ export function SettingsPanel(): React.JSX.Element {
    * Adding a folder rescans straight away — the alternative is a library that
    * stays empty until the user finds the Rescan button, which reads as broken.
    */
-  const addRoot = async (): Promise<void> => {
+  const addRoot = async (kind: 'movie' | 'series'): Promise<void> => {
+    const current = kind === 'movie' ? roots : seriesRoots;
     const picked = await window.api.pickFolder();
-    if (picked === null || roots.includes(picked)) return;
-
-    const next = [...roots, picked];
-    setRoots(next);
-    await window.api.setMovieRoots(next);
-    await rescan();
+    if (picked === null || current.includes(picked)) return;
+    await applyRoots(kind, [...current, picked]);
   };
 
-  const removeRoot = async (path: string): Promise<void> => {
-    const next = roots.filter((r) => r !== path);
-    setRoots(next);
-    await window.api.setMovieRoots(next);
+  const removeRoot = async (kind: 'movie' | 'series', path: string): Promise<void> => {
+    const current = kind === 'movie' ? roots : seriesRoots;
+    await applyRoots(kind, current.filter((r) => r !== path));
+  };
+
+  const applyRoots = async (kind: 'movie' | 'series', next: string[]): Promise<void> => {
+    if (kind === 'movie') {
+      setRoots(next);
+      await window.api.setMovieRoots(next);
+    } else {
+      setSeriesRoots(next);
+      await window.api.setSeriesRoots(next);
+    }
     await rescan();
   };
 
@@ -138,42 +204,25 @@ export function SettingsPanel(): React.JSX.Element {
         </div>
 
         <div className={styles.body}>
-          <label className={styles.label}>Movie folders</label>
+          <FolderSection
+            label="Movie folders"
+            empty="No folders yet. Add the folder holding your films — each film in its own subfolder — and it will be scanned straight away."
+            paths={roots}
+            busy={busy}
+            onAdd={() => void addRoot('movie')}
+            onRemove={(path) => void removeRoot('movie', path)}
+          />
 
-          {roots.length === 0 ? (
-            <p className={styles.note}>
-              No folders yet. Add the folder holding your films — each film in its own
-              subfolder — and it will be scanned straight away.
-            </p>
-          ) : (
-            <ul className={styles.rootList}>
-              {roots.map((root) => (
-                <li key={root} className={styles.rootRow}>
-                  <span className={styles.rootPath} title={root}>
-                    {root}
-                  </span>
-                  <IconButton
-                    icon="close"
-                    label={`Remove ${root}`}
-                    size="sm"
-                    disabled={busy}
-                    onClick={() => void removeRoot(root)}
-                  />
-                </li>
-              ))}
-            </ul>
-          )}
+          <div className={styles.divider} />
 
-          <div className={styles.actions}>
-            <button
-              type="button"
-              className={`${styles.button} ${roots.length === 0 ? styles.primary : ''}`}
-              disabled={busy}
-              onClick={() => void addRoot()}
-            >
-              Add folder…
-            </button>
-          </div>
+          <FolderSection
+            label="Series folders"
+            empty="No folders yet. Add the folder holding your shows — one subfolder per show, with a folder per season inside it."
+            paths={seriesRoots}
+            busy={busy}
+            onAdd={() => void addRoot('series')}
+            onRemove={(path) => void removeRoot('series', path)}
+          />
 
           <div className={styles.divider} />
 

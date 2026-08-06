@@ -1,24 +1,20 @@
-import { readdir } from 'node:fs/promises';
-import { join } from 'node:path';
+import { scanRoot } from '../src/main/services/scanner.js';
 
-import { parseEpisodeName, parseSeasonFolder, parseSeriesFolder } from '../src/main/services/episode-parser.js';
+/** Prints the season/episode tree the scanner builds, no network. */
+const root = process.argv[2] ?? 'D:/Series';
+const result = await scanRoot(root, 'series');
 
-const ROOT = process.argv[2] ?? 'D:/Series';
-
-const shows = await readdir(ROOT, { withFileTypes: true });
-for (const show of shows.filter((d) => d.isDirectory())) {
-  const meta = parseSeriesFolder(show.name);
-  console.log(`\n${show.name}\n  -> title=${JSON.stringify(meta.title)} year=${meta.year}`);
-
-  const seasons = await readdir(join(ROOT, show.name), { withFileTypes: true });
-  for (const dir of seasons.filter((d) => d.isDirectory())) {
-    const season = parseSeasonFolder(dir.name);
-    const files = (await readdir(join(ROOT, show.name, dir.name))).filter((f) => /\.(mkv|mp4|avi)$/i.test(f));
-    console.log(`  [${dir.name}] -> n=${season.number} label=${JSON.stringify(season.label)} (${files.length} files)`);
-    for (const f of files) {
-      const ep = parseEpisodeName(f);
-      const s = ep.season ?? season.number;
-      console.log(`      S${String(s ?? '?').padStart(2, '0')}E${String(ep.episode ?? '?').padStart(2, '0')}  ${JSON.stringify(ep.title)}`);
+for (const show of result.items) {
+  console.log(`\n${show.parsed.title}${show.parsed.year ? ` (${show.parsed.year})` : ''}`);
+  console.log(`  id=${show.id}  folder=${show.folderName}`);
+  for (const season of show.seasons ?? []) {
+    console.log(`  ${season.label}  [n=${season.number}]  ${season.episodes.length} episodes`);
+    for (const ep of season.episodes) {
+      const n = ep.number === null ? '??' : String(ep.number).padStart(2, '0');
+      const gb = (ep.video.size / 1e9).toFixed(2);
+      console.log(`      E${n}  ${ep.title ?? '(untitled)'}  — ${gb} GB, ${ep.subtitles.length} subs`);
     }
   }
 }
+for (const issue of result.issues) console.log(`ISSUE ${issue.reason}: ${issue.detail}`);
+console.log(`\n${result.items.length} show(s) in ${result.durationMs}ms`);

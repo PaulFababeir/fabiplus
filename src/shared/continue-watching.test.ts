@@ -12,6 +12,7 @@ function item(id: string, title = id): LibraryItem {
     folderName: title,
     video: { path: `D:/Movies/${title}/f.mp4`, size: 1, ext: 'mp4' },
     subtitles: [],
+    seasons: null,
     parsed: {
       title,
       searchTitle: title,

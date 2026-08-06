@@ -119,14 +119,47 @@ export interface MatchInfo {
 // Library
 // ---------------------------------------------------------------------------
 
+/** One episode file. */
+export interface Episode {
+  /** Stable across rescans: hash of the file path. */
+  id: string;
+  /** From the filename; null when no marker could be read. */
+  number: number | null;
+  /** Recovered from the filename, or supplied later by the provider. */
+  title: string | null;
+  /** Provider runtime in minutes. Not in the filename, so null until enriched. */
+  runtimeMin: number | null;
+  video: VideoFile;
+  subtitles: SubtitleFile[];
+  /** The season folder this file sits in, for a targeted subtitle rescan. */
+  folderPath: string;
+}
+
+/**
+ * A season folder. `number` is null for folders that are not numbered seasons
+ * — the sample library has an "Unaired Pilot" holding a real episode, and
+ * dropping those would hide watchable content.
+ */
+export interface Season {
+  number: number | null;
+  label: string;
+  episodes: Episode[];
+}
+
 export interface LibraryItem {
   /** Stable across rescans: hash of the folder path. */
   id: string;
   kind: MediaKind;
   folderPath: string;
   folderName: string;
+  /**
+   * For a film, the feature. For a series, the first episode — a stand-in so
+   * size, sorting and playback keep working; `seasons` is the real content.
+   */
   video: VideoFile;
   subtitles: SubtitleFile[];
+  /** Populated for `kind: 'series'`, null for a film. */
+  seasons: Season[] | null;
   parsed: ParsedName;
   /** ISO. When this item first entered the catalog. */
   addedAt: string;
