@@ -34,8 +34,14 @@ interface UiStore {
    * banner leaves it null and lists everything outstanding.
    */
   rematchTargetId: string | null;
-  /** Film currently in the player; null means the library view. */
+  /** Film or show currently in the player; null means the library view. */
   playingId: string | null;
+  /**
+   * Episode being played, when the item is a series. Held apart from
+   * `playingId` so the show stays selected in the sidebar while one of its
+   * episodes plays.
+   */
+  playingEpisodeId: string | null;
   /** Mirrors config.translucentBackground, driving the CSS veil. */
   translucent: boolean;
   playback: PlaybackStatus;
@@ -57,7 +63,7 @@ interface UiStore {
   setTranslucent: (enabled: boolean) => void;
   setPlayback: (status: PlaybackStatus) => void;
   bumpPresence: () => void;
-  play: (id: string) => void;
+  play: (id: string, episodeId?: string) => void;
   stopPlaying: () => void;
 }
 
@@ -73,6 +79,7 @@ export const useUi = create<UiStore>((set) => ({
   rematchOpen: false,
   rematchTargetId: null,
   playingId: null,
+  playingEpisodeId: null,
   translucent: true,
   playback: IDLE_PLAYBACK,
   presenceEpoch: 0,
@@ -94,6 +101,14 @@ export const useUi = create<UiStore>((set) => ({
   bumpPresence: () => set((s) => ({ presenceEpoch: s.presenceEpoch + 1 })),
 
   // Playing also selects, so returning to the library lands on that film.
-  play: (id) => set({ playingId: id, selectedId: id, sidebarOpen: false, playback: IDLE_PLAYBACK }),
-  stopPlaying: () => set({ playingId: null, playback: IDLE_PLAYBACK })
+  play: (id, episodeId) =>
+    set({
+      playingId: id,
+      playingEpisodeId: episodeId ?? null,
+      selectedId: id,
+      // An episode is chosen from the sidebar, so leave it open to pick another.
+      sidebarOpen: episodeId !== undefined,
+      playback: IDLE_PLAYBACK
+    }),
+  stopPlaying: () => set({ playingId: null, playingEpisodeId: null, playback: IDLE_PLAYBACK })
 }));

@@ -9,9 +9,10 @@ import { PosterLightbox } from './PosterLightbox';
 import { useUi } from '@renderer/state/useUi';
 import { Icon } from '@renderer/components/ui/Icon';
 import { IconButton } from '@renderer/components/ui/IconButton';
+import { WatchSection } from './WatchSection';
 import styles from './Sidebar.module.css';
 
-type Tab = 'cast' | 'crew' | 'details' | 'genres';
+type Tab = 'watch' | 'cast' | 'crew' | 'details' | 'genres';
 
 const TABS: Array<{ id: Tab; label: string }> = [
   { id: 'cast', label: 'CAST' },
@@ -19,6 +20,11 @@ const TABS: Array<{ id: Tab; label: string }> = [
   { id: 'details', label: 'DETAILS' },
   { id: 'genres', label: 'GENRES' }
 ];
+
+/** A show leads with its episodes; a film has none, so the tab is absent. */
+function tabsFor(item: LibraryItem): Array<{ id: Tab; label: string }> {
+  return item.kind === 'series' ? [{ id: 'watch', label: 'WATCH' }, ...TABS] : TABS;
+}
 
 const CAST_PREVIEW = 12;
 
@@ -41,6 +47,10 @@ export function BackdropLayer({ item }: { item: LibraryItem | null }): React.JSX
 export function Sidebar({ item, profileState }: SidebarProps): React.JSX.Element | null {
   const { sidebarOpen, select, setRematchOpen } = useUi();
   const [tab, setTab] = useState<Tab>('cast');
+  const tabs = item ? tabsFor(item) : TABS;
+
+  // Selecting a different title must not leave a Watch tab open on a film.
+  const activeTab = tabs.some((t) => t.id === tab) ? tab : (tabs[0]?.id ?? 'cast');
   const [showAllCast, setShowAllCast] = useState(false);
   const [picking, setPicking] = useState(false);
   const [posterHidden, setPosterHidden] = useState(false);
@@ -144,12 +154,12 @@ export function Sidebar({ item, profileState }: SidebarProps): React.JSX.Element
       {meta && (
         <>
           <div className={styles.tabs}>
-            {TABS.map((entry) => (
+            {tabs.map((entry) => (
               <button
                 key={entry.id}
                 type="button"
                 className={styles.tab}
-                data-active={tab === entry.id}
+                data-active={activeTab === entry.id}
                 onClick={() => setTab(entry.id)}
               >
                 {entry.label}
@@ -158,7 +168,9 @@ export function Sidebar({ item, profileState }: SidebarProps): React.JSX.Element
           </div>
 
           <div className={styles.tabBody}>
-            {tab === 'cast' && (
+            {activeTab === 'watch' && <WatchSection item={item} profileState={profileState} />}
+
+            {activeTab === 'cast' && (
               <>
                 <div className={styles.chips}>
                   {(showAllCast ? meta.cast : meta.cast.slice(0, CAST_PREVIEW)).map((person) => (
@@ -179,7 +191,7 @@ export function Sidebar({ item, profileState }: SidebarProps): React.JSX.Element
               </>
             )}
 
-            {tab === 'crew' && (
+            {activeTab === 'crew' && (
               <div className={styles.chips}>
                 {meta.crew.map((person, i) => (
                   <span key={`${person.name}-${person.job}-${i}`} className={styles.chip}>
@@ -189,7 +201,7 @@ export function Sidebar({ item, profileState }: SidebarProps): React.JSX.Element
               </div>
             )}
 
-            {tab === 'details' && (
+            {activeTab === 'details' && (
               <div>
                 <Detail label="Original title" value={meta.originalTitle} />
                 <Detail label="Released" value={meta.releaseDate} />
@@ -211,7 +223,7 @@ export function Sidebar({ item, profileState }: SidebarProps): React.JSX.Element
               </div>
             )}
 
-            {tab === 'genres' && (
+            {activeTab === 'genres' && (
               <div className={styles.chips}>
                 {meta.genres.map((genre) => (
                   <span key={genre} className={styles.chip}>

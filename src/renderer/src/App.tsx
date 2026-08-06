@@ -30,6 +30,7 @@ export default function App(): React.JSX.Element {
     settingsOpen,
     rematchOpen,
     playingId,
+    playingEpisodeId,
     translucent,
     playback,
     presenceEpoch,
@@ -67,12 +68,27 @@ export default function App(): React.JSX.Element {
     () => items.find((item) => item.id === playingId) ?? null,
     [items, playingId]
   );
-  // Resume where this profile left off, unless the film was finished.
+  /**
+   * The episode chosen in the sidebar, when one is playing. Progress is stored
+   * against the episode id rather than the show, so each episode resumes where
+   * it was left rather than sharing one position across the series.
+   */
+  const episode = useMemo(() => {
+    if (!playing || playingEpisodeId === null) return null;
+    return (
+      (playing.seasons ?? []).flatMap((s) => s.episodes).find((e) => e.id === playingEpisodeId) ??
+      null
+    );
+  }, [playing, playingEpisodeId]);
+
+  const progressId = episode?.id ?? playing?.id ?? null;
+
+  // Resume where this profile left off, unless it was finished.
   const resumeAt = useMemo(() => {
-    if (!playing) return 0;
-    const entry = profileState?.watch[playing.id];
+    if (progressId === null) return 0;
+    const entry = profileState?.watch[progressId];
     return entry && !entry.finished ? entry.positionSec : 0;
-  }, [playing, profileState]);
+  }, [progressId, profileState]);
 
   const pendingReview = useMemo(
     () => needsReviewItems(items, AUTO_ACCEPT).length,
@@ -152,7 +168,14 @@ export default function App(): React.JSX.Element {
       </div>
 
       <AnimatePresence>
-        {playing && <Player key={playing.id} item={playing} startAt={resumeAt} />}
+        {playing && (
+          <Player
+            key={episode?.id ?? playing.id}
+            item={playing}
+            episode={episode}
+            startAt={resumeAt}
+          />
+        )}
       </AnimatePresence>
 
       {settingsOpen && <SettingsPanel />}

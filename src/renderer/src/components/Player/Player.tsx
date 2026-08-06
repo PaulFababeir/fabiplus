@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'motion/react';
 
 import { toMovieUrl } from '@shared/media-url';
-import type { LibraryItem } from '@shared/types';
+import type { Episode, LibraryItem } from '@shared/types';
 import { displayTitle, displayYear } from '@renderer/lib/selectors';
 import { useProfile } from '@renderer/state/useProfile';
 import { useUi } from '@renderer/state/useUi';
@@ -33,6 +33,13 @@ const BRIGHTNESS = [1, 1.1, 1.2, 1.3] as const;
  */
 const HDR_GAMMA = 0.72;
 
+/** The label of the season holding an episode, for the player's subtitle line. */
+function episodeSeason(item: LibraryItem, episode: Episode | null): string | null {
+  if (episode === null) return null;
+  const season = (item.seasons ?? []).find((s) => s.episodes.some((e) => e.id === episode.id));
+  return season?.label ?? null;
+}
+
 function formatTime(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
   const total = Math.floor(seconds);
@@ -46,11 +53,24 @@ function formatTime(seconds: number): string {
 
 interface PlayerProps {
   item: LibraryItem;
+  /**
+   * The episode to play, for a series. Null plays the item's own file, which is
+   * a film's feature.
+   */
+  episode: Episode | null;
   /** Where playback should resume from, in seconds. */
   startAt: number;
 }
 
-export function Player({ item, startAt }: PlayerProps): React.JSX.Element {
+export function Player({ item, episode, startAt }: PlayerProps): React.JSX.Element {
+  /**
+   * Everything below plays one file and stores progress against one id. For a
+   * show that is the episode, not the series — otherwise all of Sherlock would
+   * share a single resume position.
+   */
+  const video = episode?.video ?? item.video;
+  const progressId = episode?.id ?? item.id;
+  const folderPath = episode?.folderPath ?? item.folderPath;
   const stopPlaying = useUi((s) => s.stopPlaying);
   const setPlayback = useUi((s) => s.setPlayback);
   const setProgress = useProfile((s) => s.setProgress);
@@ -97,19 +117,19 @@ export function Player({ item, startAt }: PlayerProps): React.JSX.Element {
   const [hoverX, setHoverX] = useState(0);
   const [scrubbing, setScrubbing] = useState(false);
 
-  const src = useMemo(() => toMovieUrl(item.video.path), [item.video.path]);
+  const src = useMemo(() => toMovieUrl(video.path), [video.path]);
 
   // A file tagged PQ or HLG will be tone-mapped by Chromium; knowing that up
   // front lets the correction be on before the first frame is judged.
   useEffect(() => {
     let cancelled = false;
-    void window.api.probeVideoColour(item.video.path).then((colour) => {
+    void window.api.probeVideoColour(video.path).then((colour) => {
       if (!cancelled) setHdrTagged(colour.hdr);
     });
     return () => {
       cancelled = true;
     };
-  }, [item.video.path]);
+  }, [video.path]);
   const { canvasRef, requestFrame } = useScrubPreview(src);
 
   // --- Subtitles ----------------------------------------------------------
@@ -119,10 +139,13 @@ export function Player({ item, startAt }: PlayerProps): React.JSX.Element {
    * Starts from the catalog but can be replaced by a rescan, so a subtitle
    * added while the app is open can be picked up without a full library scan.
    */
-  const [subtitleFiles, setSubtitleFiles] = useState(item.subtitles);
+  const [subtitleFiles, setSubtitleFiles] = useState(episode?.subtitles ?? item.subtitles);
   const [rescanning, setRescanning] = useState(false);
 
-  useEffect(() => setSubtitleFiles(item.subtitles), [item.subtitles]);
+  useEffect(
+    () => setSubtitleFiles(episode?.subtitles ?? item.subtitles),
+    [episode, item.subtitles]
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -155,13 +178,13 @@ export function Player({ item, startAt }: PlayerProps): React.JSX.Element {
   const refreshSubtitles = useCallback(async (): Promise<void> => {
     setRescanning(true);
     try {
-      const found = await window.api.rescanSubtitles(item.folderPath);
+      const found = await window.api.rescanSubtitles(folderPath);
       setActiveTrack(-1);
       setSubtitleFiles(found);
     } finally {
       setRescanning(false);
     }
-  }, [item.folderPath]);
+  }, [folderPath]);
 
   // Text tracks must be toggled through the API; `<track default>` is not
   // reliable once tracks are added dynamically.
@@ -190,9 +213,9 @@ export function Player({ item, startAt }: PlayerProps): React.JSX.Element {
   const persist = useCallback(
     (position: number, total: number) => {
       if (total <= 0) return;
-      void setProgress(item.id, position, total);
+      void setProgress(progressId, position, total);
     },
-    [item.id, setProgress]
+    [progressId, setProgress]
   );
 
   // Save on the way out so a mid-film exit is never lost.
@@ -413,11 +436,18 @@ export function Player({ item, startAt }: PlayerProps): React.JSX.Element {
   const progressPct = duration > 0 ? (current / duration) * 100 : 0;
   const bufferedPct = duration > 0 ? (buffered / duration) * 100 : 0;
 
+  /** Under the title: the show and episode for a series, year and genre for a film. */
   const seriesLine =
     item.kind === 'series'
-      ? // Series metadata is not modelled yet; the folder name is the best
-        // available label until seasons and episodes are scanned.
-        item.folderName
+      ? [
+          displayTitle(item),
+          episodeSeason(item, episode),
+          episode?.number === null || episode === null
+            ? null
+            : `Episode ${String(episode.number).padStart(2, '0')}`
+        ]
+          .filter(Boolean)
+          .join('  ·  ')
       : [displayYear(item), item.metadata?.genres.slice(0, 2).join(', ')].filter(Boolean).join('  ·  ');
 
   return (
@@ -485,9 +515,13 @@ export function Player({ item, startAt }: PlayerProps): React.JSX.Element {
           if (video) persist(video.duration, video.duration);
         }}
         onError={() => {
-          const ext = item.video.ext.toUpperCase();
+          // Naming the actual reason beats "unsupported": Matroska is refused
+          // by the container alone, whatever is inside it.
+          const ext = video.ext.toLowerCase();
           setError(
-            `This file could not be played. ${ext} with this codec is not supported by the built-in player.`
+            ext === 'mkv'
+              ? 'This file cannot be played. Chromium does not support the Matroska (.mkv) container, so the built-in player cannot open it regardless of the video codec inside.'
+              : `This file could not be played. ${ext.toUpperCase()} with this codec is not supported by the built-in player.`
           );
           setWaiting(false);
         }}
@@ -531,7 +565,7 @@ export function Player({ item, startAt }: PlayerProps): React.JSX.Element {
             <Icon name="chevron-left" size={22} />
           </button>
           <div className={styles.titles}>
-            <h1 className={styles.title}>{displayTitle(item)}</h1>
+            <h1 className={styles.title}>{episode?.title ?? displayTitle(item)}</h1>
             {seriesLine && <div className={styles.subtitleLine}>{seriesLine}</div>}
           </div>
         </div>
