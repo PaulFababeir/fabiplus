@@ -96,6 +96,19 @@ function pickFeature(files: FoundFile[]): FoundFile | null {
   return pool.reduce((best, f) => (f.size > best.size ? f : best));
 }
 
+/**
+ * Re-reads one folder for subtitle files.
+ *
+ * Subtitles are captured at scan time, so a `.srt` dropped in next to a film
+ * while the app is open stays invisible until the whole library is rescanned —
+ * which is a heavy answer to "I just downloaded subs for this one film". This
+ * walks a single folder, at the same depth and with the same Subs/ handling as
+ * a full scan, so the result is identical to what a rescan would have found.
+ */
+export async function rescanSubtitles(folderPath: string): Promise<SubtitleFile[]> {
+  return collectSubtitles(await walk(folderPath, 0, false));
+}
+
 function collectSubtitles(files: FoundFile[]): SubtitleFile[] {
   return files
     .filter((f) => isSubtitleFile(f.name))

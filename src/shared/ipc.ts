@@ -7,6 +7,7 @@ import type {
   Profile,
   ProfileState,
   ReviewCandidate,
+  SubtitleFile,
   UpdateStatus,
   VideoColourInfo
 } from './types.js';
@@ -29,6 +30,7 @@ export const IPC = {
   libraryRematch: 'library:rematch',
   librarySearchProvider: 'library:search-provider',
   subtitleLoad: 'player:subtitle-load',
+  subtitleRescan: 'player:subtitle-rescan',
   videoColour: 'player:video-colour',
   updateCheck: 'update:check',
   updateDownload: 'update:download',
@@ -85,6 +87,12 @@ export interface RendererApi {
    * so conversion happens in main where the file can be read directly.
    */
   loadSubtitle(path: string): Promise<string | null>;
+
+  /**
+   * Re-reads a film's folder for subtitle files, for when one is added while
+   * the app is open. Cheaper and less alarming than a full library rescan.
+   */
+  rescanSubtitles(folderPath: string): Promise<SubtitleFile[]>;
 
   /** Reads a file's declared colour tags so the player can spot HDR content. */
   probeVideoColour(path: string): Promise<VideoColourInfo>;

@@ -9,6 +9,7 @@ import type {
   Profile,
   ProfileState,
   ReviewCandidate,
+  SubtitleFile,
   UpdateStatus,
   VideoColourInfo
 } from '../shared/types.js';
@@ -40,6 +41,8 @@ const api: RendererApi = {
     ipcRenderer.invoke(IPC.videoColour, path) as Promise<VideoColourInfo>,
 
   getAppVersion: () => ipcRenderer.invoke(IPC.appVersion) as Promise<string>,
+  rescanSubtitles: (folderPath) =>
+    ipcRenderer.invoke(IPC.subtitleRescan, folderPath) as Promise<SubtitleFile[]>,
   setMovieRoots: (roots) =>
     ipcRenderer.invoke(IPC.configSetMovieRoots, roots) as Promise<AppConfig>,
   pickFolder: () => ipcRenderer.invoke(IPC.configPickFolder) as Promise<string | null>,

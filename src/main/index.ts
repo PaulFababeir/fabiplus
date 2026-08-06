@@ -13,6 +13,7 @@ import type {
   Profile,
   ProfileState,
   ReviewCandidate,
+  SubtitleFile,
   UpdateStatus,
   VideoColourInfo
 } from '@shared/types';
@@ -44,7 +45,7 @@ import {
   setPosterChoice,
   setWatchProgress
 } from './services/profiles.js';
-import { scanRoots } from './services/scanner.js';
+import { rescanSubtitles, scanRoots } from './services/scanner.js';
 
 const isDev = !app.isPackaged;
 
@@ -353,6 +354,16 @@ function registerIpc(): void {
     } catch {
       return null;
     }
+  });
+
+  ipcMain.handle(IPC.subtitleRescan, async (_event, folderPath: unknown): Promise<SubtitleFile[]> => {
+    if (typeof folderPath !== 'string') return [];
+
+    // A folder path from the renderer is no more trustworthy than a file path.
+    const safe = await resolveAllowedPath(folderPath);
+    if (!safe) return [];
+
+    return rescanSubtitles(safe);
   });
 
   ipcMain.handle(IPC.videoColour, async (_event, path: unknown): Promise<VideoColourInfo> => {

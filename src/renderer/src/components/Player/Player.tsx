@@ -115,6 +115,14 @@ export function Player({ item, startAt }: PlayerProps): React.JSX.Element {
   // --- Subtitles ----------------------------------------------------------
   const [tracks, setTracks] = useState<Array<{ label: string; url: string }>>([]);
   const [activeTrack, setActiveTrack] = useState(-1);
+  /**
+   * Starts from the catalog but can be replaced by a rescan, so a subtitle
+   * added while the app is open can be picked up without a full library scan.
+   */
+  const [subtitleFiles, setSubtitleFiles] = useState(item.subtitles);
+  const [rescanning, setRescanning] = useState(false);
+
+  useEffect(() => setSubtitleFiles(item.subtitles), [item.subtitles]);
 
   useEffect(() => {
     let cancelled = false;
@@ -122,7 +130,7 @@ export function Player({ item, startAt }: PlayerProps): React.JSX.Element {
 
     void (async () => {
       const loaded: Array<{ label: string; url: string }> = [];
-      for (const sub of item.subtitles) {
+      for (const sub of subtitleFiles) {
         const vtt = await window.api.loadSubtitle(sub.path);
         if (vtt === null) continue;
         // Blob URLs keep the CSP simple — no extra scheme to allow.
@@ -137,7 +145,23 @@ export function Player({ item, startAt }: PlayerProps): React.JSX.Element {
       cancelled = true;
       for (const url of urls) URL.revokeObjectURL(url);
     };
-  }, [item.subtitles]);
+  }, [subtitleFiles]);
+
+  /**
+   * Re-reads the film's folder. The selection is dropped rather than remapped:
+   * indices refer to positions in the old list, and silently pointing at a
+   * different language is worse than asking the user to pick again.
+   */
+  const refreshSubtitles = useCallback(async (): Promise<void> => {
+    setRescanning(true);
+    try {
+      const found = await window.api.rescanSubtitles(item.folderPath);
+      setActiveTrack(-1);
+      setSubtitleFiles(found);
+    } finally {
+      setRescanning(false);
+    }
+  }, [item.folderPath]);
 
   // Text tracks must be toggled through the API; `<track default>` is not
   // reliable once tracks are added dynamically.
@@ -670,6 +694,21 @@ export function Player({ item, startAt }: PlayerProps): React.JSX.Element {
                         </button>
                       ))
                     )}
+
+                    {/*
+                      Subtitles are captured when the library is scanned, so one
+                      downloaded mid-film is invisible until this is pressed.
+                    */}
+                    <button
+                      type="button"
+                      className={styles.menuItem}
+                      disabled={rescanning}
+                      onClick={() => void refreshSubtitles()}
+                    >
+                      <span className={styles.menuItemLabel}>
+                        {rescanning ? 'Looking…' : 'Rescan for subtitles'}
+                      </span>
+                    </button>
 
                     {hdrTagged && (
                       <>
