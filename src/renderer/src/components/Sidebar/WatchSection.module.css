@@ -36,9 +36,12 @@
 }
 
 /*
- * Sized to the longest label plus its count, not to the sidebar. `max-content`
- * with a floor of the button width keeps a two-item menu from being narrower
- * than the control that opened it.
+ * Sized to its longest row, not to the button.
+ *
+ * `max-content` measures the widest label plus its count; the floor keeps a
+ * short list from being narrower than the control that opened it. There is
+ * deliberately no `max-width` — capping it at the button's width was what
+ * squeezed "Unaired Pilot" against its count.
  */
 .pickerMenu {
   position: absolute;
@@ -47,7 +50,6 @@
   z-index: 20;
   width: max-content;
   min-width: 100%;
-  max-width: 100%;
   padding: 5px;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
@@ -59,9 +61,10 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 14px;
+  /* Breathing room between the label and its count at the widest row. */
+  gap: 20px;
   width: 100%;
-  padding: 7px 10px;
+  padding: 7px 12px;
   border: none;
   border-radius: var(--radius-sm);
   background: transparent;
