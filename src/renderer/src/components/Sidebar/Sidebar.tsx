@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { toMovieUrl } from '@shared/media-url';
 import type { LibraryItem, ProfileState } from '@shared/types';
@@ -49,7 +49,16 @@ export function Sidebar({ item, profileState }: SidebarProps): React.JSX.Element
   const [tab, setTab] = useState<Tab>('cast');
   const tabs = item ? tabsFor(item) : TABS;
 
-  // Selecting a different title must not leave a Watch tab open on a film.
+  /*
+   * Open on the first tab of whatever was just selected. A show leads with its
+   * episodes, so landing on CAST buries the thing the sidebar is for; keeping
+   * the previous tab also risks showing WATCH for a film that has none.
+   */
+  useEffect(() => {
+    setTab(tabs[0]?.id ?? 'cast');
+    // Only on a change of title — switching tabs by hand must stick.
+  }, [item?.id]);
+
   const activeTab = tabs.some((t) => t.id === tab) ? tab : (tabs[0]?.id ?? 'cast');
   const [showAllCast, setShowAllCast] = useState(false);
   const [picking, setPicking] = useState(false);
