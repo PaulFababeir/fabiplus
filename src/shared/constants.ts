@@ -17,6 +17,13 @@ export const MAX_PROFILES = 5;
  */
 export const POSTERS_PER_MOVIE = 20;
 
+/**
+ * How many backdrops to cache per film, matching the posters so the pickers
+ * behave alike. At w780 this is roughly 1.6MB per film — the cost is disk, not
+ * metadata: twenty extra image records add about 3KB to a catalog entry.
+ */
+export const BACKDROPS_PER_MOVIE = 20;
+
 /** At or above this score a provider match is accepted without asking. */
 export const AUTO_ACCEPT = 0.75;
 

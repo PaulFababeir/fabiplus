@@ -261,9 +261,14 @@ describe('TmdbProvider errors', () => {
 });
 
 describe('TmdbProvider.imageUrl', () => {
+  /**
+   * Backdrops are w780, one step below the widest TMDB offers. Twenty per film
+   * at full width cost roughly 240MB across an 80-film library; this halves it
+   * and still exceeds the size the sidebar ever draws them at.
+   */
   it('uses different sizes for posters and backdrops', () => {
     const p = new TmdbProvider('k');
     assert.equal(p.imageUrl('/x.jpg', 'poster'), 'https://image.tmdb.org/t/p/w500/x.jpg');
-    assert.equal(p.imageUrl('/x.jpg', 'backdrop'), 'https://image.tmdb.org/t/p/w1280/x.jpg');
+    assert.equal(p.imageUrl('/x.jpg', 'backdrop'), 'https://image.tmdb.org/t/p/w780/x.jpg');
   });
 });

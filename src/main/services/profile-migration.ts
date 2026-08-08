@@ -17,7 +17,7 @@ import type { ProfileState } from '@shared/types';
  *                          does not understand
  */
 
-export const PROFILE_SCHEMA_VERSION = 1;
+export const PROFILE_SCHEMA_VERSION = 2;
 
 export class ProfileSchemaError extends Error {
   constructor(readonly found: number, readonly supported: number) {
@@ -31,14 +31,27 @@ export class ProfileSchemaError extends Error {
 }
 
 /**
- * One step per schema bump, keyed by the version it upgrades *from*.
- * Empty today; the point is that adding version 2 means adding `1: …` here
- * rather than editing the loader and hoping nothing resets.
+ * One step per schema bump, keyed by the version it upgrades *from*. Adding a
+ * version means adding an entry here rather than editing the loader and hoping
+ * nothing resets.
  */
-const STEPS: Record<number, (state: Record<string, unknown>) => Record<string, unknown>> = {};
+const STEPS: Record<number, (state: Record<string, unknown>) => Record<string, unknown>> = {
+  /*
+   * 1 → 2: backdrops became selectable per profile, alongside posters. Every
+   * existing profile simply has no choices yet — the default is index 0, which
+   * is the backdrop those profiles were already seeing.
+   */
+  1: (state) => ({ ...state, backdropChoice: state['backdropChoice'] ?? {}, schemaVersion: 2 })
+};
 
 export function emptyProfileState(profileId: string): ProfileState {
-  return { schemaVersion: PROFILE_SCHEMA_VERSION, profileId, watch: {}, posterChoice: {} };
+  return {
+    schemaVersion: PROFILE_SCHEMA_VERSION,
+    profileId,
+    watch: {},
+    posterChoice: {},
+    backdropChoice: {}
+  };
 }
 
 /**
@@ -75,6 +88,9 @@ export function migrateProfileState(raw: unknown, profileId: string): ProfileSta
     watch: isRecord(state['watch']) ? (state['watch'] as ProfileState['watch']) : {},
     posterChoice: isRecord(state['posterChoice'])
       ? (state['posterChoice'] as ProfileState['posterChoice'])
+      : {},
+    backdropChoice: isRecord(state['backdropChoice'])
+      ? (state['backdropChoice'] as ProfileState['backdropChoice'])
       : {}
   };
 }

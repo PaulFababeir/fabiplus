@@ -14,7 +14,13 @@ const IMAGE_BASE = 'https://image.tmdb.org/t/p';
 
 const POSTER_SIZE = 'w500';
 const THUMB_SIZE = 'w154';
-const BACKDROP_SIZE = 'w1280';
+/*
+ * One step down from w1280. With twenty backdrops cached per film instead of
+ * one, the full width would have cost roughly 240MB across an 80-film library;
+ * w780 halves that and is still sharp behind a sidebar that never shows the
+ * image at full width.
+ */
+const BACKDROP_SIZE = 'w780';
 
 /** Crew jobs worth showing in the sidebar; the full list runs to hundreds. */
 const KEY_CREW_JOBS = new Set([

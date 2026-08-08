@@ -101,7 +101,13 @@ export interface Metadata {
   crew: CrewMember[];
   /** Up to POSTERS_PER_MOVIE, ranked English-first then by provider vote. */
   posters: CachedImage[];
+  /**
+   * Kept so a catalog written before backdrops were selectable still renders;
+   * `backdrops[0]` is the same image. Read it through `backdropFor`, never on its own.
+   */
   backdrop: CachedImage | null;
+  /** Up to BACKDROPS_PER_MOVIE, ranked textless-first. */
+  backdrops: CachedImage[];
   fetchedAt: string;
 }
 
@@ -310,6 +316,8 @@ export interface ProfileState {
   watch: Record<string, WatchEntry>;
   /** Keyed by LibraryItem.id → index into Metadata.posters. */
   posterChoice: Record<string, number>;
+  /** Keyed by LibraryItem.id → index into Metadata.backdrops. */
+  backdropChoice: Record<string, number>;
 }
 
 // ---------------------------------------------------------------------------

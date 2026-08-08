@@ -7,7 +7,7 @@ import type {
   ReviewItem,
   Season
 } from '@shared/types';
-import { POSTERS_PER_MOVIE } from '@shared/constants';
+import { BACKDROPS_PER_MOVIE, POSTERS_PER_MOVIE } from '@shared/constants';
 import { cacheImage } from './image-cache.js';
 import { decideMatch } from './metadata/matcher.js';
 import {
@@ -56,27 +56,30 @@ async function withRetry<T>(operation: () => Promise<T>): Promise<T> {
 async function cacheArtwork(
   details: ProviderDetails,
   provider: MetadataProvider
-): Promise<{ posters: CachedImage[]; backdrop: CachedImage | null }> {
+): Promise<{ posters: CachedImage[]; backdrops: CachedImage[] }> {
   const posterCandidates = details.posters.slice(0, POSTERS_PER_MOVIE);
   const settled = await Promise.all(
     posterCandidates.map((img) => cacheImage(img, 'poster', provider.imageUrl(img.path, 'poster')))
   );
   const posters = settled.filter((p): p is CachedImage => p !== null);
 
-  let backdrop: CachedImage | null = null;
-  for (const candidate of details.backdrops.slice(0, 3)) {
-    backdrop = await cacheImage(candidate, 'backdrop', provider.imageUrl(candidate.path, 'backdrop'));
-    if (backdrop) break;
+  // Twenty, like the posters, so the picker has the same range of choice.
+  // Failures are skipped rather than aborting: one bad URL should not cost the
+  // film every other backdrop.
+  const backdrops: CachedImage[] = [];
+  for (const candidate of details.backdrops.slice(0, BACKDROPS_PER_MOVIE)) {
+    const cached = await cacheImage(candidate, 'backdrop', provider.imageUrl(candidate.path, 'backdrop'));
+    if (cached) backdrops.push(cached);
   }
 
-  return { posters, backdrop };
+  return { posters, backdrops };
 }
 
 function toMetadata(
   details: ProviderDetails,
   providerId: string,
   posters: CachedImage[],
-  backdrop: CachedImage | null
+  backdrops: CachedImage[]
 ): Metadata {
   return {
     providerId,
@@ -93,7 +96,10 @@ function toMetadata(
     cast: details.cast,
     crew: details.crew,
     posters,
-    backdrop,
+    // The legacy single field stays populated so a build that predates the
+    // picker still finds an image where it expects one.
+    backdrop: backdrops[0] ?? null,
+    backdrops,
     fetchedAt: new Date().toISOString()
   };
 }
@@ -108,12 +114,12 @@ export async function applyManualMatch(
   remoteId: number
 ): Promise<LibraryItem> {
   const details = await withRetry(() => provider.fetchDetails(remoteId, item.kind));
-  const { posters, backdrop } = await cacheArtwork(details, provider);
+  const { posters, backdrops } = await cacheArtwork(details, provider);
 
   return {
     ...item,
     seasons: await enrichSeasons(item, provider, remoteId),
-    metadata: toMetadata(details, provider.id, posters, backdrop),
+    metadata: toMetadata(details, provider.id, posters, backdrops),
     match: { strategy: 'manual', confidence: 1, correctedByUser: true }
   };
 }
@@ -249,12 +255,12 @@ export async function enrichLibrary(
       const details = await withRetry(() =>
         provider.fetchDetails(decision.best!.candidate.id, item.kind)
       );
-      const { posters, backdrop } = await cacheArtwork(details, provider);
+      const { posters, backdrops } = await cacheArtwork(details, provider);
 
       byId.set(item.id, {
         ...item,
         seasons: await enrichSeasons(item, provider, decision.best!.candidate.id),
-        metadata: toMetadata(details, provider.id, posters, backdrop),
+        metadata: toMetadata(details, provider.id, posters, backdrops),
         match: {
           strategy: decision.best.strategy,
           confidence: decision.best.score,
