@@ -34,6 +34,7 @@ import {
   loadLibraryForDisplay,
   mergeScan,
   saveLibrary,
+  withSubtitles,
   wouldDestroyMetadata
 } from './services/library.js';
 import { rankCandidates } from './services/metadata/matcher.js';
@@ -380,7 +381,18 @@ function registerIpc(): void {
     const safe = await resolveAllowedPath(folderPath);
     if (!safe) return [];
 
-    return rescanSubtitles(safe);
+    const found = await rescanSubtitles(safe);
+
+    // Persisted so the tracks are still there next time the film is opened.
+    try {
+      const { catalog, changed } = withSubtitles(await loadLibrary(), safe, found);
+      if (changed) await saveLibrary(catalog);
+    } catch (err) {
+      // The player still gets its list; only the persistence was lost.
+      console.warn('[library] could not persist rescanned subtitles:', err);
+    }
+
+    return found;
   });
 
   ipcMain.handle(IPC.subtitleEmbedded, async (_event, path: unknown): Promise<SubtitleFile[]> => {

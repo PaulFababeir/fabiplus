@@ -4,6 +4,7 @@ import { motion } from 'motion/react';
 import { toMovieUrl } from '@shared/media-url';
 import type { Episode, LibraryItem } from '@shared/types';
 import { displayTitle, displayYear } from '@renderer/lib/selectors';
+import { useLibrary } from '@renderer/state/useLibrary';
 import { useProfile } from '@renderer/state/useProfile';
 import { useUi } from '@renderer/state/useUi';
 import { Icon } from '@renderer/components/ui/Icon';
@@ -75,6 +76,7 @@ export function Player({ item, episode, startAt }: PlayerProps): React.JSX.Eleme
   const stopPlaying = useUi((s) => s.stopPlaying);
   const setPlayback = useUi((s) => s.setPlayback);
   const setProgress = useProfile((s) => s.setProgress);
+  const reloadLibrary = useLibrary((s) => s.load);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -233,10 +235,13 @@ export function Player({ item, episode, startAt }: PlayerProps): React.JSX.Eleme
       const found = await window.api.rescanSubtitles(folderPath);
       setActiveTrack(-1);
       setSubtitleFiles(found);
+      // Main wrote the result to the catalog; pull it in so the in-memory copy
+      // matches and the tracks are still there next time this film is opened.
+      await reloadLibrary();
     } finally {
       setRescanning(false);
     }
-  }, [folderPath]);
+  }, [folderPath, reloadLibrary]);
 
   // Text tracks must be toggled through the API; `<track default>` is not
   // reliable once tracks are added dynamically.
@@ -515,7 +520,16 @@ export function Player({ item, episode, startAt }: PlayerProps): React.JSX.Eleme
       data-idle={chromeHidden}
       data-chrome={!chromeHidden}
       onMouseMove={wake}
-      onDoubleClick={toggleFullscreen}
+      /*
+       * Only the video surface toggles fullscreen. The handler sits on the root
+       * so a double-click anywhere on the picture works, but that also caught
+       * double-clicks on the controls — jabbing skip or pause twice threw the
+       * window in and out of fullscreen.
+       */
+      onDoubleClick={(e) => {
+        if ((e.target as HTMLElement).closest(`.${styles.chrome}`)) return;
+        toggleFullscreen();
+      }}
     >
       <video
         ref={videoRef}

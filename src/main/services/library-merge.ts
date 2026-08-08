@@ -1,4 +1,4 @@
-import type { LibraryCatalog, LibraryItem, ScanResult } from '@shared/types';
+import type { LibraryCatalog, LibraryItem, ScanResult, SubtitleFile } from '@shared/types';
 
 /**
  * The pure half of catalog handling: folding a scan into the stored catalog,
@@ -67,4 +67,53 @@ export function wouldDestroyMetadata(
   const had = existing.items.filter((i) => i.metadata !== null).length;
   const keeps = merged.items.filter((i) => i.metadata !== null).length;
   return had > 0 && keeps === 0;
+}
+
+/**
+ * Records a fresh subtitle list against whatever lives at `folderPath`.
+ *
+ * The rescan used to exist only in the player's state, so the tracks vanished
+ * the moment you left the film and had to be found again on every visit. The
+ * folder is the key because that is all the player knows: for a film it is the
+ * item's own folder, for an episode the season folder it sits in.
+ *
+ * Returns the same catalog object when nothing matched, so a caller can skip
+ * the write.
+ */
+export function withSubtitles(
+  catalog: LibraryCatalog,
+  folderPath: string,
+  subtitles: SubtitleFile[]
+): { catalog: LibraryCatalog; changed: boolean } {
+  const key = folderPath.toLowerCase();
+  let changed = false;
+
+  const items = catalog.items.map((item) => {
+    if (item.folderPath.toLowerCase() === key) {
+      changed = true;
+      return { ...item, subtitles };
+    }
+
+    if (item.seasons === null) return item;
+
+    let touched = false;
+    const seasons = item.seasons.map((season) => ({
+      ...season,
+      episodes: season.episodes.map((episode) => {
+        if (episode.folderPath.toLowerCase() !== key) return episode;
+        touched = true;
+        // Every episode in the folder shares the sweep, so keep only the files
+        // whose name matches this one rather than handing it the whole season.
+        const stem = episode.video.path.replace(/\.[a-z0-9]{2,4}$/i, '').toLowerCase();
+        const mine = subtitles.filter((f) => f.path.toLowerCase().startsWith(stem));
+        return { ...episode, subtitles: mine.length > 0 ? mine : episode.subtitles };
+      })
+    }));
+
+    if (!touched) return item;
+    changed = true;
+    return { ...item, seasons };
+  });
+
+  return { catalog: changed ? { ...catalog, items } : catalog, changed };
 }

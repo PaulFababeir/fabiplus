@@ -27,7 +27,8 @@ export type IconName =
   | 'eye-off'
   | 'maximize';
 
-const PATHS: Record<IconName, string> = {
+/** A value may be several paths when the mark cannot be drawn with one. */
+const PATHS: Record<IconName, string | string[]> = {
   search: 'M11 4a7 7 0 1 0 4.2 12.6l4.1 4.1 1.4-1.4-4.1-4.1A7 7 0 0 0 11 4Zm0 2a5 5 0 1 1 0 10 5 5 0 0 1 0-10Z',
   'chevron-down': 'm6 9 6 6 6-6',
   'chevron-left': 'm15 6-6 6 6 6',
@@ -47,9 +48,13 @@ const PATHS: Record<IconName, string> = {
   swap: 'M4 7h13l-3-3M20 17H7l3 3',
   user: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-4 0-7 2-7 4.5V21h14v-2.5C19 16 16 14 12 14Z',
   pause: 'M8 5h3v14H8zM13 5h3v14h-3z',
-  // Skip glyphs carry the "10" as part of the circular-arrow mark.
-  'skip-back': 'M11.5 5V2L7 6l4.5 4V7a6 6 0 1 1-6 6',
-  'skip-forward': 'M12.5 5V2L17 6l-4.5 4V7a6 6 0 1 0 6 6',
+  /*
+   * Lucide's rotate-ccw / rotate-cw. The hand-drawn arcs they replace were
+   * lopsided — the arrowhead sat off the circle and the two did not mirror —
+   * which is exactly the kind of thing that reads as sloppy at 22px.
+   */
+  'skip-back': ['M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8', 'M3 3v5h5'],
+  'skip-forward': ['M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8', 'M21 3v5h-5'],
   volume: 'M4 9v6h4l5 4V5L8 9H4Zm12.5-.5a5 5 0 0 1 0 7M19 6a9 9 0 0 1 0 12',
   mute: 'M4 9v6h4l5 4V5L8 9H4Zm12 1 5 5m0-5-5 5',
   expand: 'M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5',
@@ -85,7 +90,9 @@ export function Icon({ name, size = 16, className }: IconProps): React.JSX.Eleme
       aria-hidden="true"
       focusable="false"
     >
-      <path d={PATHS[name]} />
+      {(Array.isArray(PATHS[name]) ? PATHS[name] : [PATHS[name]]).map((d) => (
+        <path key={d} d={d} />
+      ))}
     </svg>
   );
 }

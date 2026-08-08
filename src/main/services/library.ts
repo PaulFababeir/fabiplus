@@ -5,7 +5,7 @@ import type { LibraryCatalog } from '@shared/types';
 import { readJsonOrFail, writeJsonAtomic } from './atomic-json.js';
 import { libraryPath, userDataDir } from './config.js';
 // Re-exported so callers keep importing catalog handling from one place.
-export { mergeScan, wouldDestroyMetadata } from './library-merge.js';
+export { mergeScan, withSubtitles, wouldDestroyMetadata } from './library-merge.js';
 
 const SCHEMA_VERSION = 1;
 
