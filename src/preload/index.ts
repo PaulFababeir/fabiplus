@@ -80,6 +80,9 @@ const api: RendererApi = {
   deleteProfile: (id) => ipcRenderer.invoke(IPC.profileDelete, id) as Promise<Profile[]>,
   renameProfile: (id, name) =>
     ipcRenderer.invoke(IPC.profileRename, id, name) as Promise<Profile[]>,
+  pickProfileAvatar: (id) => ipcRenderer.invoke(IPC.profileAvatarPick, id) as Promise<Profile[]>,
+  clearProfileAvatar: (id) =>
+    ipcRenderer.invoke(IPC.profileAvatarClear, id) as Promise<Profile[]>,
   getProfileState: (id) => ipcRenderer.invoke(IPC.profileStateGet, id) as Promise<ProfileState>,
 
   setWatchProgress: (profileId, movieId, positionSec, durationSec) =>
@@ -92,8 +95,12 @@ const api: RendererApi = {
     ) as Promise<ProfileState>,
   clearWatchProgress: (profileId, movieId) =>
     ipcRenderer.invoke(IPC.watchClear, profileId, movieId) as Promise<ProfileState>,
+  setWatchFinished: (profileId, movieId, finished) =>
+    ipcRenderer.invoke(IPC.watchSetFinished, profileId, movieId, finished) as Promise<ProfileState>,
   setPosterChoice: (profileId, movieId, index) =>
-    ipcRenderer.invoke(IPC.posterChoiceSet, profileId, movieId, index) as Promise<ProfileState>
+    ipcRenderer.invoke(IPC.posterChoiceSet, profileId, movieId, index) as Promise<ProfileState>,
+  setBackdropChoice: (profileId, movieId, index) =>
+    ipcRenderer.invoke(IPC.backdropChoiceSet, profileId, movieId, index) as Promise<ProfileState>
 };
 
 contextBridge.exposeInMainWorld('api', api);

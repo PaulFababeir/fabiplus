@@ -3,7 +3,14 @@ import { useEffect, useState } from 'react';
 import { toMovieUrl } from '@shared/media-url';
 import type { LibraryItem, ProfileState } from '@shared/types';
 import { AUTO_ACCEPT, TMDB_ATTRIBUTION } from '@shared/constants';
-import { displayTitle, displayYear, posterFor, runtimeLabel } from '@renderer/lib/selectors';
+import {
+  backdropFor,
+  displayTitle,
+  displayYear,
+  posterFor,
+  runtimeLabel
+} from '@renderer/lib/selectors';
+import { BackdropPicker } from '@renderer/components/Modal/BackdropPicker';
 import { PosterPicker } from '@renderer/components/Modal/PosterPicker';
 import { PosterLightbox } from './PosterLightbox';
 import { useUi } from '@renderer/state/useUi';
@@ -34,8 +41,14 @@ interface SidebarProps {
 }
 
 /** Full-bleed backdrop layer, rendered behind the grid rather than over it. */
-export function BackdropLayer({ item }: { item: LibraryItem | null }): React.JSX.Element {
-  const backdrop = item?.metadata?.backdrop?.localPath ?? null;
+export function BackdropLayer({
+  item,
+  profileState
+}: {
+  item: LibraryItem | null;
+  profileState: ProfileState | null;
+}): React.JSX.Element {
+  const backdrop = item ? backdropFor(item, profileState) : null;
   return (
     <div className={styles.backdropLayer} data-visible={backdrop !== null} aria-hidden="true">
       {backdrop && <img className={styles.backdropImage} src={toMovieUrl(backdrop)} alt="" />}
@@ -62,6 +75,7 @@ export function Sidebar({ item, profileState }: SidebarProps): React.JSX.Element
   const activeTab = tabs.some((t) => t.id === tab) ? tab : (tabs[0]?.id ?? 'cast');
   const [showAllCast, setShowAllCast] = useState(false);
   const [picking, setPicking] = useState(false);
+  const [pickingBackdrop, setPickingBackdrop] = useState(false);
   const [posterHidden, setPosterHidden] = useState(false);
   const [enlarged, setEnlarged] = useState(false);
 
@@ -72,6 +86,8 @@ export function Sidebar({ item, profileState }: SidebarProps): React.JSX.Element
   const poster = posterFor(item, profileState);
   const posters = item.metadata?.posters ?? [];
   const chosenIndex = profileState?.posterChoice[item.id] ?? 0;
+  const backdrops = item.metadata?.backdrops ?? [];
+  const chosenBackdrop = profileState?.backdropChoice[item.id] ?? 0;
 
   const meta = item.metadata;
   const director = meta?.crew.find((c) => c.job === 'Director')?.name ?? null;
@@ -118,6 +134,16 @@ export function Sidebar({ item, profileState }: SidebarProps): React.JSX.Element
                 >
                   <Icon name="maximize" size={15} />
                 </button>
+                {backdrops.length > 1 && (
+                  <button
+                    type="button"
+                    className={styles.posterTool}
+                    aria-label="Choose the backdrop"
+                    onClick={() => setPickingBackdrop(true)}
+                  >
+                    <Icon name="image" size={15} />
+                  </button>
+                )}
                 <button
                   type="button"
                   className={styles.posterTool}
@@ -247,6 +273,14 @@ export function Sidebar({ item, profileState }: SidebarProps): React.JSX.Element
 
       {picking && (
         <PosterPicker item={item} chosenIndex={chosenIndex} onClose={() => setPicking(false)} />
+      )}
+
+      {pickingBackdrop && (
+        <BackdropPicker
+          item={item}
+          chosenIndex={chosenBackdrop}
+          onClose={() => setPickingBackdrop(false)}
+        />
       )}
 
       {enlarged && poster && (

@@ -18,6 +18,24 @@ export function posterFor(item: LibraryItem, state: ProfileState | null): string
   return (posters[chosen] ?? posters[0])?.localPath ?? null;
 }
 
+/**
+ * The backdrop this profile picked, falling back to the provider's best.
+ *
+ * The legacy `metadata.backdrop` scalar is the last resort, not the first: it
+ * is only reachable for a catalog enriched before backdrops became selectable,
+ * where `backdrops` is empty. Once the list exists, `backdrops[0]` is that same
+ * image, so reading the scalar first would pin every profile to it and silently
+ * ignore the pick.
+ */
+export function backdropFor(item: LibraryItem, state: ProfileState | null): string | null {
+  const backdrops = item.metadata?.backdrops ?? [];
+  if (backdrops.length === 0) return item.metadata?.backdrop?.localPath ?? null;
+
+  // A choice outlives a refetch that returned fewer images.
+  const chosen = state?.backdropChoice[item.id] ?? 0;
+  return (backdrops[chosen] ?? backdrops[0])?.localPath ?? null;
+}
+
 /** Genres actually present in the library, most common first. */
 export function genresOf(items: LibraryItem[]): string[] {
   const counts = new Map<string, number>();

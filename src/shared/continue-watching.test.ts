@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import type { LibraryItem, WatchEntry } from './types.js';
+import type { Episode, LibraryItem, WatchEntry } from './types.js';
 import { continueWatching, isResumable, progressOf } from './continue-watching.js';
 
 function item(id: string, title = id): LibraryItem {
@@ -129,5 +129,77 @@ describe('continueWatching', () => {
   it('reports progress alongside each entry', () => {
     const result = continueWatching({ a: watch('a', 0.25, '2026-01-01T00:00:00.000Z') }, items);
     assert.equal(result[0]?.progress, 0.25);
+  });
+
+  it('leaves episode null for a film', () => {
+    const result = continueWatching({ a: watch('a', 0.4, '2026-01-01T00:00:00.000Z') }, items);
+    assert.equal(result[0]?.episode, null);
+  });
+});
+
+/**
+ * Progress for a show is stored against the episode, never the show — so an id
+ * that appears nowhere in `items` is the normal case, not a stale entry. Before
+ * this, every part-watched episode was silently dropped from the deck.
+ */
+describe('continueWatching with shows', () => {
+  function episode(id: string, number: number, title: string): Episode {
+    return {
+      id,
+      number,
+      title,
+      runtimeMin: 88,
+      still: null,
+      video: { path: `D:/Series/Sherlock/S01/${id}.mkv`, size: 1, ext: 'mkv' },
+      subtitles: [],
+      folderPath: 'D:/Series/Sherlock/S01'
+    };
+  }
+
+  const show: LibraryItem = {
+    ...item('sherlock', 'Sherlock'),
+    kind: 'series',
+    seasons: [
+      {
+        number: 1,
+        label: 'Season 1',
+        episodes: [episode('ep1', 1, 'A Study in Pink'), episode('ep2', 2, 'The Blind Banker')]
+      }
+    ]
+  };
+
+  it('resolves an episode to its show and carries the episode', () => {
+    const result = continueWatching({ ep2: watch('ep2', 0.5, '2026-01-01T00:00:00.000Z') }, [show]);
+    assert.equal(result.length, 1);
+    assert.equal(result[0]?.item.id, 'sherlock');
+    assert.equal(result[0]?.episode?.id, 'ep2');
+    assert.equal(result[0]?.episode?.title, 'The Blind Banker');
+  });
+
+  it('keeps two episodes of one show as two separate entries', () => {
+    const result = continueWatching(
+      {
+        ep1: watch('ep1', 0.3, '2026-01-01T00:00:00.000Z'),
+        ep2: watch('ep2', 0.6, '2026-02-01T00:00:00.000Z')
+      },
+      [show]
+    );
+    assert.deepEqual(
+      result.map((r) => r.episode?.id),
+      ['ep2', 'ep1']
+    );
+  });
+
+  /**
+   * The grid's play button passes the show's own id for anything it is given,
+   * so entries predating the episode list are keyed that way and must survive.
+   */
+  it('still resolves a show played by its own id', () => {
+    const result = continueWatching(
+      { sherlock: watch('sherlock', 0.4, '2026-01-01T00:00:00.000Z') },
+      [show]
+    );
+    assert.equal(result[0]?.item.id, 'sherlock');
+    assert.equal(result[0]?.episode, null);
   });
 });

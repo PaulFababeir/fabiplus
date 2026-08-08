@@ -19,7 +19,7 @@ import type {
   UpdateStatus,
   VideoColourInfo
 } from '@shared/types';
-import { imageCacheDir, loadConfig, saveConfig } from './services/config.js';
+import { avatarCacheDir, imageCacheDir, loadConfig, saveConfig } from './services/config.js';
 import { isInside } from './services/path-containment.js';
 import { prepareVideo, remuxCacheDir, stopConversions } from './services/transcode.js';
 import { extractEmbeddedSubtitles, subsCacheDir } from './services/embedded-subs.js';
@@ -40,6 +40,7 @@ import {
 import { rankCandidates } from './services/metadata/matcher.js';
 import { TmdbProvider } from './services/metadata/tmdb.js';
 import {
+  clearProfileAvatar,
   clearWatchProgress,
   createProfile,
   deleteProfile,
@@ -47,7 +48,10 @@ import {
   loadProfiles,
   loadProfileState,
   renameProfile,
+  setProfileAvatar,
+  setBackdropChoice,
   setPosterChoice,
+  setWatchFinished,
   setWatchProgress
 } from './services/profiles.js';
 import { rescanSubtitles, scanLibrary } from './services/scanner.js';
@@ -96,9 +100,14 @@ protocol.registerSchemesAsPrivileged([
 /** Directories the renderer is allowed to read through movie://. */
 async function allowedRoots(): Promise<string[]> {
   const config = await loadConfig();
-  return [...config.movieRoots, ...config.seriesRoots, imageCacheDir(), remuxCacheDir(), subsCacheDir()].map(
-    (p) => resolvePath(p)
-  );
+  return [
+    ...config.movieRoots,
+    ...config.seriesRoots,
+    imageCacheDir(),
+    avatarCacheDir(),
+    remuxCacheDir(),
+    subsCacheDir()
+  ].map((p) => resolvePath(p));
 }
 
 /**
@@ -496,6 +505,30 @@ function registerIpc(): void {
     }
   );
 
+  ipcMain.handle(IPC.profileAvatarPick, async (_event, id: unknown): Promise<Profile[]> => {
+    if (typeof id !== 'string') return loadProfiles();
+
+    const window = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
+    const options: Electron.OpenDialogOptions = {
+      properties: ['openFile'],
+      filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'avif'] }]
+    };
+    const result = window
+      ? await dialog.showOpenDialog(window, options)
+      : await dialog.showOpenDialog(options);
+
+    // Cancelling is a normal outcome; the profile keeps whatever it had.
+    const chosen = result.canceled ? null : result.filePaths[0];
+    if (!chosen) return loadProfiles();
+
+    return setProfileAvatar(id, chosen);
+  });
+
+  ipcMain.handle(IPC.profileAvatarClear, async (_event, id: unknown): Promise<Profile[]> => {
+    if (typeof id !== 'string') return loadProfiles();
+    return clearProfileAvatar(id);
+  });
+
   ipcMain.handle(IPC.profileStateGet, async (_event, id: unknown): Promise<ProfileState> => {
     return loadProfileState(String(id));
   });
@@ -521,9 +554,21 @@ function registerIpc(): void {
   );
 
   ipcMain.handle(
+    IPC.watchSetFinished,
+    async (_event, profileId: unknown, movieId: unknown, finished: unknown): Promise<ProfileState> =>
+      setWatchFinished(String(profileId), String(movieId), finished === true)
+  );
+
+  ipcMain.handle(
     IPC.posterChoiceSet,
     async (_event, profileId: unknown, movieId: unknown, index: unknown): Promise<ProfileState> =>
       setPosterChoice(String(profileId), String(movieId), Number(index))
+  );
+
+  ipcMain.handle(
+    IPC.backdropChoiceSet,
+    async (_event, profileId: unknown, movieId: unknown, index: unknown): Promise<ProfileState> =>
+      setBackdropChoice(String(profileId), String(movieId), Number(index))
   );
 }
 

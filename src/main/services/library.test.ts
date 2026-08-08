@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import type { LibraryCatalog, LibraryItem } from '@shared/types';
-import { withSubtitles, wouldDestroyMetadata } from './library-merge.js';
+import type { CachedImage, LibraryCatalog, LibraryItem, ScanResult } from '@shared/types';
+import { mergeScan, withSubtitles, wouldDestroyMetadata } from './library-merge.js';
 
 /** Only `metadata` matters to the guard; the rest is scaffolding. */
 function catalog(metadataFlags: boolean[]): LibraryCatalog {
@@ -52,6 +52,79 @@ describe('wouldDestroyMetadata', () => {
 
   it('still guards while a root remains', () => {
     assert.equal(wouldDestroyMetadata(catalog([true, true]), catalog([]), ROOTS), true);
+  });
+});
+
+/**
+ * A rescan used to take `seasons` straight off the scan, which silently threw
+ * away every episode runtime, recovered title and still — none of which a scan
+ * can know — and left no way back short of a full refetch.
+ */
+describe('mergeScan and episode enrichment', () => {
+  const still: CachedImage = {
+    remotePath: '/still.jpg',
+    localPath: 'D:/cache/stills/abc.jpg',
+    width: 0,
+    height: 0
+  };
+
+  const showAs = (episodes: unknown[]): LibraryItem =>
+    ({
+      id: 'show',
+      kind: 'series',
+      folderPath: 'D:/Series/Sherlock',
+      addedAt: '2026-01-01T00:00:00.000Z',
+      metadata: { title: 'Sherlock' },
+      match: { strategy: 'fuzzy', confidence: 0.9, correctedByUser: false },
+      seasons: [{ number: 1, label: 'Season 1', episodes }]
+    }) as unknown as LibraryItem;
+
+  /** What enrichment left behind. */
+  const stored = showAs([
+    { id: 'e1', number: 1, title: 'A Study in Pink', runtimeMin: 88, still }
+  ]);
+
+  /** What a fresh scan of the same folder produces. */
+  const scanned = showAs([{ id: 'e1', number: 1, title: null, runtimeMin: null, still: null }]);
+
+  const scanOf = (items: LibraryItem[]): ScanResult =>
+    ({ items, issues: [], durationMs: 0 }) as ScanResult;
+
+  const catalogOf = (items: LibraryItem[]): LibraryCatalog =>
+    ({ schemaVersion: 1, scannedAt: '', roots: ROOTS, items }) as LibraryCatalog;
+
+  it('carries provider data across a rescan', () => {
+    const merged = mergeScan(catalogOf([stored]), scanOf([scanned]), ROOTS);
+    const episode = merged.items[0]?.seasons?.[0]?.episodes[0];
+
+    assert.equal(episode?.title, 'A Study in Pink');
+    assert.equal(episode?.runtimeMin, 88);
+    assert.deepEqual(episode?.still, still);
+  });
+
+  /** The filename describes the file the user actually has, so it wins. */
+  it('prefers a title the scan recovered from the filename', () => {
+    const withTitle = showAs([
+      { id: 'e1', number: 1, title: 'From The Filename', runtimeMin: null, still: null }
+    ]);
+    const merged = mergeScan(catalogOf([stored]), scanOf([withTitle]), ROOTS);
+    assert.equal(merged.items[0]?.seasons?.[0]?.episodes[0]?.title, 'From The Filename');
+  });
+
+  /** Ids are path hashes, so a renamed file is a different episode. */
+  it('does not hand a renamed file the old episode data', () => {
+    const renamed = showAs([{ id: 'e9', number: 1, title: null, runtimeMin: null, still: null }]);
+    const merged = mergeScan(catalogOf([stored]), scanOf([renamed]), ROOTS);
+    const episode = merged.items[0]?.seasons?.[0]?.episodes[0];
+
+    assert.equal(episode?.runtimeMin, null);
+    assert.equal(episode?.still, null);
+  });
+
+  it('leaves a film alone', () => {
+    const film = { id: 'f', seasons: null, addedAt: 'x' } as unknown as LibraryItem;
+    const merged = mergeScan(catalogOf([film]), scanOf([film]), ROOTS);
+    assert.equal(merged.items[0]?.seasons, null);
   });
 });
 

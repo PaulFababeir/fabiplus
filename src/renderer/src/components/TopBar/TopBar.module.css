@@ -182,12 +182,18 @@
   background: var(--surface-hover);
 }
 
+/* Shared by the accent chip and a chosen picture, so the two are the same
+   shape and swapping one for the other never moves the row. */
 .avatar {
+  flex: 0 0 auto;
   display: grid;
   place-items: center;
   width: 32px;
   height: 32px;
+  overflow: hidden;
   border-radius: 9px;
+  object-fit: cover;
+  background: var(--surface);
   color: var(--accent-contrast);
   font-size: 14px;
   font-weight: 700;
@@ -207,6 +213,7 @@
 }
 
 .menuRow {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -220,6 +227,7 @@
   font-size: 13px;
   text-align: left;
   cursor: pointer;
+  isolation: isolate;
 }
 
 .menuRow:hover {
@@ -232,18 +240,43 @@
 
 .menuName {
   flex: 1;
+  min-width: 0;
   overflow: hidden;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
   text-overflow: ellipsis;
   white-space: nowrap;
+  cursor: pointer;
 }
 
-/* Delete hugs the right edge of the row, per the spec. */
-.delete {
+/*
+ * The chosen picture again, washed out across the row. Sits behind the content
+ * via z-index rather than lower opacity on the row itself, which would take the
+ * name down with it. Masked to the right so the text never crosses the busy
+ * part of a photograph.
+ */
+.rowTint {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background-position: center;
+  background-size: cover;
+  opacity: 0.16;
+  mask-image: linear-gradient(to left, #000 0%, rgb(0 0 0 / 55%) 45%, transparent 88%);
+  -webkit-mask-image: linear-gradient(to left, #000 0%, rgb(0 0 0 / 55%) 45%, transparent 88%);
+}
+
+/* Edit and delete hug the right edge of the row, per the spec. */
+.rowAction {
   display: grid;
+  flex: 0 0 auto;
   place-items: center;
   width: 24px;
   height: 24px;
-  margin-left: auto;
   border: none;
   border-radius: var(--radius-sm);
   background: transparent;
@@ -252,14 +285,87 @@
   opacity: 0;
 }
 
-.menuRow:hover .delete,
-.delete:focus-visible {
+/* Pushed right by `.menuName`'s `flex: 1` rather than a margin — the name
+   button is the first of its type in the row, so a `:first-of-type` margin on
+   these would never match. */
+.menuRow:hover .rowAction,
+.rowAction:focus-visible {
   opacity: 1;
+}
+
+.rowAction:hover {
+  background: var(--surface-hover);
+  color: var(--text);
 }
 
 .delete:hover {
   background: rgb(220 70 70 / 18%);
   color: #ff8080;
+}
+
+/* --- Inline profile editor ------------------------------------------------ */
+
+.editRow {
+  padding: 8px;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.editHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.editActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.editAction {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 9px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--control);
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+.editAction:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.editSave {
+  border-color: transparent;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-weight: 600;
+}
+
+.editSave:hover {
+  background: var(--accent);
+  color: var(--accent-contrast);
+  filter: brightness(1.08);
+}
+
+/*
+ * Refusals surface here — deleting the last profile, an oversized picture.
+ * Without somewhere to say so, the store caught these and the menu simply did
+ * nothing, which reads as a broken button.
+ */
+.menuError {
+  margin: 4px 8px 0;
+  color: #ff8080;
+  font-size: 11.5px;
+  line-height: 1.45;
 }
 
 .confirm {

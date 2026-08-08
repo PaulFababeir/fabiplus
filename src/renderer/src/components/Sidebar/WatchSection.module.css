@@ -119,6 +119,25 @@
   color: var(--text-dim);
 }
 
+.row[data-watched='true'] .still {
+  opacity: 0.45;
+}
+
+/*
+ * Sized by aspect ratio rather than height so the rows stay even whether or not
+ * a still was cached — an episode the provider has no artwork for renders
+ * nothing here, and a row that changed height would make the list ragged.
+ */
+.still {
+  flex: 0 0 auto;
+  width: 62px;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 4px;
+  background: var(--surface);
+  transition: opacity 140ms var(--ease-out);
+}
+
 .number {
   flex: 0 0 auto;
   width: 18px;

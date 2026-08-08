@@ -21,6 +21,13 @@ const THUMB_SIZE = 'w154';
  * image at full width.
  */
 const BACKDROP_SIZE = 'w780';
+/*
+ * Episode stills render in a sidebar row a little over 100px wide, so w300 is
+ * already generous — and a show carries one per episode, where a film carries
+ * twenty images total. Sherlock alone would be 15 stills; the next size up
+ * would triple that for pixels the row never shows.
+ */
+const STILL_SIZE = 'w300';
 
 /** Crew jobs worth showing in the sidebar; the full list runs to hundreds. */
 const KEY_CREW_JOBS = new Set([
@@ -244,6 +251,7 @@ export class TmdbProvider implements MetadataProvider {
         overview?: string;
         runtime?: number | null;
         air_date?: string | null;
+        still_path?: string | null;
       }>;
     }>(`/tv/${remoteId}/season/${seasonNumber}`);
 
@@ -252,7 +260,8 @@ export class TmdbProvider implements MetadataProvider {
       name: e.name ?? '',
       overview: e.overview ?? '',
       runtimeMin: typeof e.runtime === 'number' ? e.runtime : null,
-      airDate: e.air_date ?? null
+      airDate: e.air_date ?? null,
+      stillPath: e.still_path ?? null
     }));
   }
 
@@ -309,9 +318,15 @@ export class TmdbProvider implements MetadataProvider {
     };
   }
 
-  imageUrl(path: string, kind: 'poster' | 'backdrop' | 'thumb'): string {
+  imageUrl(path: string, kind: 'poster' | 'backdrop' | 'thumb' | 'still'): string {
     const size =
-      kind === 'poster' ? POSTER_SIZE : kind === 'backdrop' ? BACKDROP_SIZE : THUMB_SIZE;
+      kind === 'poster'
+        ? POSTER_SIZE
+        : kind === 'backdrop'
+          ? BACKDROP_SIZE
+          : kind === 'still'
+            ? STILL_SIZE
+            : THUMB_SIZE;
     return `${IMAGE_BASE}/${size}${path}`;
   }
 }

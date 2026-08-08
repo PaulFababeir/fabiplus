@@ -109,7 +109,7 @@ export default function App(): React.JSX.Element {
 
   return (
     <div className={styles.app}>
-      <BackdropLayer item={sidebarOpen ? selected : null} />
+      <BackdropLayer item={sidebarOpen ? selected : null} profileState={profileState} />
 
       <div className={`${styles.titlebarStrip} titlebar-drag`} />
       <TopBar />

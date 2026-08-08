@@ -126,7 +126,26 @@ export async function applyManualMatch(
 
 
 /**
- * Fills in episode titles and runtimes from the provider.
+ * Downloads one episode thumbnail.
+ *
+ * The season endpoint reports no dimensions for a still, so the zeros are what
+ * the provider actually gave us rather than a placeholder — nothing reads them,
+ * because the row sizes the image by aspect ratio.
+ */
+async function cacheStill(
+  stillPath: string | null,
+  provider: MetadataProvider
+): Promise<CachedImage | null> {
+  if (stillPath === null) return null;
+  return cacheImage(
+    { path: stillPath, width: 0, height: 0, voteAverage: 0, language: null },
+    'still',
+    provider.imageUrl(stillPath, 'still')
+  );
+}
+
+/**
+ * Fills in episode titles, runtimes and thumbnails from the provider.
  *
  * Runtime is the reason this exists: it appears nowhere in a filename, so the
  * episode list has no subtext without it. Titles are taken too when the parser
@@ -156,18 +175,22 @@ async function enrichSeasons(
       .catch(() => [] as ProviderEpisode[]);
     const byNumber = new Map(remote.map((e) => [e.episodeNumber, e]));
 
-    seasons.push({
-      ...season,
-      episodes: season.episodes.map((episode) => {
+    const episodes = await Promise.all(
+      season.episodes.map(async (episode) => {
         const match = episode.number === null ? undefined : byNumber.get(episode.number);
         if (!match) return episode;
         return {
           ...episode,
           title: episode.title ?? (match.name === '' ? null : match.name),
-          runtimeMin: match.runtimeMin
+          runtimeMin: match.runtimeMin,
+          // A failed download leaves whatever was already cached rather than
+          // blanking the row — one bad URL is not worth losing the thumbnail.
+          still: (await cacheStill(match.stillPath, provider)) ?? episode.still
         };
       })
-    });
+    );
+
+    seasons.push({ ...season, episodes });
   }
 
   return seasons;

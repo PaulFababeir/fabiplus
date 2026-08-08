@@ -33,8 +33,20 @@ export function cacheFileName(remotePath: string): string {
   return `${digest}.${ext}`;
 }
 
-export function cachePathFor(remotePath: string, kind: 'poster' | 'backdrop'): string {
-  return join(imageCacheDir(), kind === 'poster' ? 'posters' : 'backdrops', cacheFileName(remotePath));
+export type ImageKind = 'poster' | 'backdrop' | 'still';
+
+/**
+ * Where each kind is cached. Filenames are SHA-1 digests of the provider path,
+ * so a hostile `remotePath` cannot escape the directory.
+ */
+const SUBDIR: Record<ImageKind, string> = {
+  poster: 'posters',
+  backdrop: 'backdrops',
+  still: 'stills'
+};
+
+export function cachePathFor(remotePath: string, kind: ImageKind): string {
+  return join(imageCacheDir(), SUBDIR[kind], cacheFileName(remotePath));
 }
 
 /**
@@ -44,7 +56,7 @@ export function cachePathFor(remotePath: string, kind: 'poster' | 'backdrop'): s
  */
 export async function cacheImage(
   image: RemoteImage,
-  kind: 'poster' | 'backdrop',
+  kind: ImageKind,
   url: string,
   fetchImpl?: FetchLike
 ): Promise<CachedImage | null> {

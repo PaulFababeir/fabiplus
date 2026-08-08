@@ -194,8 +194,10 @@ async function toEpisodes(
       id: itemId(file.path),
       number: parsed.episode,
       title: parsed.title,
-      // Runtime is not in the filename; the provider fills this in.
+      // Neither runtime nor artwork is in the filename; enrichment fills both
+      // in, and `mergeScan` carries them across later rescans.
       runtimeMin: null,
+      still: null,
       video: toVideoFile(file),
       // Subtitles that sit beside this episode, matched on the filename stem.
       subtitles: collectSubtitles(

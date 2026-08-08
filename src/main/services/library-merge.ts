@@ -1,4 +1,4 @@
-import type { LibraryCatalog, LibraryItem, ScanResult, SubtitleFile } from '@shared/types';
+import type { LibraryCatalog, LibraryItem, ScanResult, Season, SubtitleFile } from '@shared/types';
 
 /**
  * The pure half of catalog handling: folding a scan into the stored catalog,
@@ -11,6 +11,43 @@ import type { LibraryCatalog, LibraryItem, ScanResult, SubtitleFile } from '@sha
  */
 
 export const LIBRARY_SCHEMA_VERSION = 1;
+
+/**
+ * Carries provider-supplied episode data across a rescan.
+ *
+ * The same split as the item level, one layer down: the scan owns the files —
+ * which episodes exist, their paths, their subtitles — and the stored catalog
+ * owns everything the provider filled in. Without this, `seasons` came straight
+ * off the scan and every episode runtime, recovered title and still was
+ * silently discarded the next time the library was scanned, with no way to get
+ * them back short of a full refetch.
+ *
+ * Episodes are matched by id, which is a hash of the file path, so a moved or
+ * renamed file correctly loses its enrichment rather than inheriting a
+ * stranger's.
+ */
+function mergeSeasons(scanned: Season[] | null, prior: Season[] | null): Season[] | null {
+  if (scanned === null || prior === null) return scanned;
+
+  const before = new Map(prior.flatMap((season) => season.episodes).map((e) => [e.id, e]));
+
+  return scanned.map((season) => ({
+    ...season,
+    episodes: season.episodes.map((episode) => {
+      const known = before.get(episode.id);
+      if (!known) return episode;
+
+      return {
+        ...episode,
+        // A title read from the filename still wins, matching the rule
+        // enrichment itself applies; the stored one is the provider's.
+        title: episode.title ?? known.title,
+        runtimeMin: episode.runtimeMin ?? known.runtimeMin,
+        still: known.still
+      };
+    })
+  }));
+}
 
 /**
  * Folds a fresh disk scan into the stored catalog.
@@ -36,6 +73,7 @@ export function mergeScan(
       // Preserve the original discovery date rather than resetting it on
       // every rescan — "recently added" depends on it.
       addedAt: prior.addedAt,
+      seasons: mergeSeasons(scanned.seasons, prior.seasons),
       metadata: prior.metadata,
       match: prior.match
     };

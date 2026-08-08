@@ -70,6 +70,48 @@
   display: block;
 }
 
+/*
+ * Wider cells than the posters, and fewer of them. Twenty backdrops of one film
+ * differ mostly in framing and where the plate is clean enough for text; at
+ * poster width those differences are invisible and the grid is useless.
+ */
+.backdropGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(236px, 1fr));
+  gap: 14px;
+}
+
+.backdropOption {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  padding: 0;
+  overflow: hidden;
+  border: 2px solid transparent;
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  cursor: pointer;
+  transition:
+    transform 180ms var(--ease-out),
+    border-color 140ms var(--ease-out);
+}
+
+.backdropOption:hover,
+.backdropOption:focus-visible {
+  transform: translateY(-3px);
+  border-color: rgb(255 255 255 / 45%);
+}
+
+.backdropOption[data-active='true'] {
+  border-color: var(--accent);
+}
+
+.backdropOption img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
 .posterBadge {
   position: absolute;
   right: 6px;

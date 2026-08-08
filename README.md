@@ -1,9 +1,9 @@
 # Fabi+
 
-An offline desktop movie library and player for a local collection. Point it at
-a folder of films and it scans them, pulls artwork and metadata from TMDB, and
-plays them back — with per-profile watch progress, resume, subtitles, and
-optional Discord Rich Presence.
+An offline desktop library and player for a local collection of films and shows.
+Point it at a folder and it scans it, pulls artwork and metadata from TMDB, and
+plays it back — with per-profile watch progress, resume, subtitles, and optional
+Discord Rich Presence.
 
 No account, no cloud, no telemetry. The only network call is TMDB metadata
 enrichment, and everything it returns is cached to disk, so the app works with
@@ -60,6 +60,11 @@ default.
    Release-tagged folder names are parsed for the title and year, so most
    collections work as-is. Films are scanned as soon as a folder is added.
 
+   Shows have their own list in the same panel — one subfolder per show, with a
+   folder per season inside it. Episode numbers are read from the filenames, and
+   a folder that is not a numbered season (an "Unaired Pilot", say) is kept and
+   shown as it is rather than dropped.
+
 2. **Settings → TMDB API key.** Metadata and artwork need a free key from
    [themoviedb.org](https://www.themoviedb.org/settings/api) — either a v3 API
    key or a v4 read token. Without one the library still scans and plays; it
@@ -78,9 +83,10 @@ default.
 | `library.json` | Catalog and scraped metadata | Yes — rescan and refetch |
 | `library.backup.json` | Snapshot taken after each enrichment | — |
 | `profiles.json` | Profile list (max 5) | **No** |
-| `profiles/<id>.json` | Watch progress, poster picks | **No** |
+| `profiles/<id>.json` | Watch progress, poster and backdrop picks | **No** |
 | `config.json` | Folders, TMDB key, preferences | Yes |
-| `cache/images/` | Posters and backdrops | Yes |
+| `cache/images/` | Posters, backdrops, episode stills | Yes |
+| `cache/avatars/` | Profile pictures you chose | **No** |
 
 The split is deliberate: a corrupt catalog or a full rescan can never touch your
 watch history. Every write goes to a temp file and is renamed into place.
@@ -123,12 +129,11 @@ on GitHub to make it downloadable and visible to the in-app updater.
 
 ## Known gaps
 
-- **`.mkv` and 10-bit HEVC do not play.** Chromium cannot decode them; the
-  player shows a clear error naming the format. Bundling mpv is the real fix.
-- **Series is unwired.** The Movies/Series toggle is UI only — the scanner has
-  no season/episode model yet.
+- **AC-3, E-AC-3, DTS and TrueHD audio must be converted before it plays.** It
+  happens automatically on first play with the video stream copied untouched —
+  about ten seconds for a 700 MB file, then cached. Bundling mpv would remove
+  the step. The Matroska container and HEVC video both play natively.
 - **The grid is not virtualized.** Fine at a few hundred films, not at thousands.
-- **Profile rename** exists in the store and IPC but has no UI.
 
 ## Credits
 

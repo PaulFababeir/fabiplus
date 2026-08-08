@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'motion/react';
 
 import { toMovieUrl } from '@shared/media-url';
+import { nextEpisode } from '@shared/next-episode';
 import type { Episode, LibraryItem } from '@shared/types';
 import { displayTitle, displayYear } from '@renderer/lib/selectors';
 import { useLibrary } from '@renderer/state/useLibrary';
@@ -73,7 +74,13 @@ export function Player({ item, episode, startAt }: PlayerProps): React.JSX.Eleme
   const video = episode?.video ?? item.video;
   const progressId = episode?.id ?? item.id;
   const folderPath = episode?.folderPath ?? item.folderPath;
+  /** What `ended` rolls into. Null for a film, or at the end of a show. */
+  const upNext = useMemo(
+    () => (episode === null ? null : nextEpisode(item, episode.id)),
+    [item, episode]
+  );
   const stopPlaying = useUi((s) => s.stopPlaying);
+  const play = useUi((s) => s.play);
   const setPlayback = useUi((s) => s.setPlayback);
   const setProgress = useProfile((s) => s.setProgress);
   const reloadLibrary = useLibrary((s) => s.load);
@@ -579,15 +586,30 @@ export function Player({ item, episode, startAt }: PlayerProps): React.JSX.Eleme
         onEnded={() => {
           const video = videoRef.current;
           if (video) persist(video.duration, video.duration);
+
+          /*
+           * Roll into the next episode. The shell keys the player on the
+           * episode id, so this remounts with a fresh source and a resume
+           * position read back from the profile — nothing here has to reset.
+           *
+           * Only on a genuine `ended`: reaching the credits is the one
+           * unambiguous signal that the viewer wants what comes next.
+           */
+          if (upNext) {
+            setOsd(`Next: ${upNext.title ?? `Episode ${upNext.number ?? ''}`.trim()}`);
+            play(item.id, upNext.id);
+          }
         }}
         onError={() => {
-          // Naming the actual reason beats "unsupported": Matroska is refused
-          // by the container alone, whatever is inside it.
-          const ext = video.ext.toLowerCase();
+          /*
+           * Do not blame the container here. Matroska and HEVC were both
+           * assumed unplayable and both were measured playing natively on this
+           * Electron — see `audio-support.ts`. Audio Chromium cannot decode is
+           * converted before this element is given a source, so what is left is
+           * the video stream itself.
+           */
           setError(
-            ext === 'mkv'
-              ? 'This file cannot be played. Chromium does not support the Matroska (.mkv) container, so the built-in player cannot open it regardless of the video codec inside.'
-              : `This file could not be played. ${ext.toUpperCase()} with this codec is not supported by the built-in player.`
+            `This file could not be played. Its video stream is in a format the built-in player cannot decode (${video.ext.toUpperCase()}).`
           );
           setWaiting(false);
         }}
@@ -635,8 +657,8 @@ export function Player({ item, episode, startAt }: PlayerProps): React.JSX.Eleme
         <div className={styles.error}>
           {error}
           <div className={styles.errorHint}>
-            Bundling mpv would cover the formats Chromium cannot decode: .mkv and
-            10-bit HEVC.</div>
+            Bundling mpv would cover the codecs Chromium cannot decode.
+          </div>
         </div>
       )}
 

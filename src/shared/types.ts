@@ -143,6 +143,8 @@ export interface Episode {
   title: string | null;
   /** Provider runtime in minutes. Not in the filename, so null until enriched. */
   runtimeMin: number | null;
+  /** Episode thumbnail from the provider, cached locally. Null until enriched. */
+  still: CachedImage | null;
   video: VideoFile;
   subtitles: SubtitleFile[];
   /** The season folder this file sits in, for a targeted subtitle rescan. */
@@ -295,8 +297,14 @@ export interface EnrichmentSummary {
 export interface Profile {
   id: string;
   name: string;
-  /** Hex accent used for the avatar chip. */
+  /** Hex accent used for the avatar chip, and behind a chosen image. */
   accent: string;
+  /**
+   * Absolute path to a chosen avatar inside the app's own cache, or null for
+   * the accent chip. Copied in rather than referenced where the user picked it,
+   * so moving or deleting the original cannot break the profile.
+   */
+  avatarPath: string | null;
   createdAt: string;
 }
 
@@ -326,7 +334,7 @@ export interface ProfileState {
 
 export interface AppConfig {
   schemaVersion: number;
-  /** Series has no scanner support yet, so only movieRoots are read. */
+  /** Folders scanned for films. Shows live under `seriesRoots`; both are read. */
   movieRoots: string[];
   seriesRoots: string[];
   /** TMDB key. Lives in userData, never in the repo. */

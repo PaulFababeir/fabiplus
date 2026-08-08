@@ -25,7 +25,9 @@ export type IconName =
   | 'more'
   | 'check'
   | 'eye-off'
-  | 'maximize';
+  | 'maximize'
+  | 'image'
+  | 'pencil';
 
 /** A value may be several paths when the mark cannot be drawn with one. */
 const PATHS: Record<IconName, string | string[]> = {
@@ -62,7 +64,15 @@ const PATHS: Record<IconName, string | string[]> = {
   more: 'M12 6.5a.9.9 0 1 0 0-1.8.9.9 0 0 0 0 1.8Zm0 6.4a.9.9 0 1 0 0-1.8.9.9 0 0 0 0 1.8Zm0 6.4a.9.9 0 1 0 0-1.8.9.9 0 0 0 0 1.8Z',
   check: 'm5 13 4 4L19 7',
   'eye-off': 'M3 3l18 18M10.6 10.7a2 2 0 0 0 2.8 2.8M9.4 5.2A9.6 9.6 0 0 1 12 5c5 0 9 4.5 9 7a12 12 0 0 1-2.4 3.3M6.2 6.7C4 8.2 3 10.4 3 12c0 2.5 4 7 9 7 1.3 0 2.5-.3 3.6-.8',
-  maximize: 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5'
+  maximize: 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5',
+  /* Frame, sun, horizon — the landscape reads as "backdrop" where a poster
+     glyph would not, and both sit in the same tool cluster. */
+  image: [
+    'M4 4h16v16H4z',
+    'M9.2 10.4a1.2 1.2 0 1 0 0-2.4 1.2 1.2 0 0 0 0 2.4',
+    'm4 16.5 4.2-4.2 3.3 3.3L15 12l5 5'
+  ],
+  pencil: ['M12 20h8', 'M16.2 3.8a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z']
 };
 
 /** Icons drawn as filled shapes rather than strokes. */

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 
+import { toMovieUrl } from '@shared/media-url';
 import type { LibraryItem, ProfileState, Season } from '@shared/types';
 import { Icon } from '@renderer/components/ui/Icon';
 import { IconButton } from '@renderer/components/ui/IconButton';
@@ -96,7 +97,22 @@ export function WatchSection({ item, profileState }: WatchSectionProps): React.J
                 onClick={() => play(item.id, episode.id)}
               />
 
+              {/*
+                The number stays even with a still beside it: an episode
+                thumbnail is often a plain frame of two people talking, which
+                identifies nothing on its own.
+              */}
               <span className={styles.number}>{number ?? '—'}</span>
+
+              {episode.still && (
+                <img
+                  className={styles.still}
+                  src={toMovieUrl(episode.still.localPath)}
+                  alt=""
+                  loading="lazy"
+                  draggable={false}
+                />
+              )}
 
               <span className={styles.text}>
                 <span className={styles.title}>

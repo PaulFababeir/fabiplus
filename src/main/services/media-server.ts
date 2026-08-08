@@ -25,6 +25,10 @@ const MIME: Record<string, string> = {
   '.jpeg': 'image/jpeg',
   '.png': 'image/png',
   '.webp': 'image/webp',
+  // Profile avatars accept whatever the picture chooser offers, so these two
+  // reach the server even though no cached artwork is ever in either format.
+  '.gif': 'image/gif',
+  '.avif': 'image/avif',
   '.vtt': 'text/vtt',
   '.srt': 'text/plain'
 };

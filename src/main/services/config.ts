@@ -19,6 +19,15 @@ export function imageCacheDir(): string {
   return join(userDataDir(), 'cache', 'images');
 }
 
+/**
+ * Profile avatars, kept apart from the artwork cache because that one is
+ * disposable and this is not: clearing it would silently blank every avatar,
+ * and unlike a poster there is nothing to refetch it from.
+ */
+export function avatarCacheDir(): string {
+  return join(userDataDir(), 'cache', 'avatars');
+}
+
 export function libraryPath(): string {
   return join(userDataDir(), 'library.json');
 }

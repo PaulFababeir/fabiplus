@@ -44,6 +44,8 @@ export interface ProviderEpisode {
   overview: string;
   runtimeMin: number | null;
   airDate: string | null;
+  /** Provider-side path to the episode thumbnail, or null when it has none. */
+  stillPath: string | null;
 }
 
 export interface MetadataProvider {
@@ -65,7 +67,7 @@ export interface MetadataProvider {
    * re-match dialog, which streams straight from the provider rather than
    * caching candidates the user may never pick.
    */
-  imageUrl(path: string, kind: 'poster' | 'backdrop' | 'thumb'): string;
+  imageUrl(path: string, kind: 'poster' | 'backdrop' | 'thumb' | 'still'): string;
 }
 
 export class ProviderError extends Error {

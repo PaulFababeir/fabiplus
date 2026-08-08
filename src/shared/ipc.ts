@@ -48,11 +48,15 @@ export const IPC = {
   profileCreate: 'profiles:create',
   profileDelete: 'profiles:delete',
   profileRename: 'profiles:rename',
+  profileAvatarPick: 'profiles:avatar-pick',
+  profileAvatarClear: 'profiles:avatar-clear',
   profileStateGet: 'profiles:state-get',
 
   watchSet: 'watch:set',
   watchClear: 'watch:clear',
-  posterChoiceSet: 'watch:poster-choice'
+  watchSetFinished: 'watch:set-finished',
+  posterChoiceSet: 'watch:poster-choice',
+  backdropChoiceSet: 'watch:backdrop-choice'
 } as const;
 
 /** The surface exposed on `window.api` by the preload script. */
@@ -145,6 +149,13 @@ export interface RendererApi {
   createProfile(name: string): Promise<Profile[]>;
   deleteProfile(id: string): Promise<Profile[]>;
   renameProfile(id: string, name: string): Promise<Profile[]>;
+  /**
+   * Opens the image chooser and copies the result into the app's own cache.
+   * The picking and the copying are one call so the renderer never handles a
+   * path from outside the allowed roots. Cancelling changes nothing.
+   */
+  pickProfileAvatar(id: string): Promise<Profile[]>;
+  clearProfileAvatar(id: string): Promise<Profile[]>;
   getProfileState(id: string): Promise<ProfileState>;
 
   setWatchProgress(
@@ -154,7 +165,15 @@ export interface RendererApi {
     durationSec: number
   ): Promise<ProfileState>;
   clearWatchProgress(profileId: string, movieId: string): Promise<ProfileState>;
+  /**
+   * Marks a film watched, or puts it back in the deck. Distinct from clearing:
+   * a cleared entry is forgotten and reappears the moment the film is played
+   * again, where a finished one stays out until it is explicitly unmarked.
+   */
+  setWatchFinished(profileId: string, movieId: string, finished: boolean): Promise<ProfileState>;
   setPosterChoice(profileId: string, movieId: string, index: number): Promise<ProfileState>;
+  /** Index into `Metadata.backdrops`, per profile — see `setPosterChoice`. */
+  setBackdropChoice(profileId: string, movieId: string, index: number): Promise<ProfileState>;
 }
 
 declare global {

@@ -271,4 +271,55 @@ describe('TmdbProvider.imageUrl', () => {
     assert.equal(p.imageUrl('/x.jpg', 'poster'), 'https://image.tmdb.org/t/p/w500/x.jpg');
     assert.equal(p.imageUrl('/x.jpg', 'backdrop'), 'https://image.tmdb.org/t/p/w780/x.jpg');
   });
+
+  /** A show carries one still per episode, where a film carries twenty images
+      in total, and the sidebar row draws them barely 60px wide. */
+  it('asks for a small size for episode stills', () => {
+    assert.equal(
+      new TmdbProvider('k').imageUrl('/s.jpg', 'still'),
+      'https://image.tmdb.org/t/p/w300/s.jpg'
+    );
+  });
+});
+
+describe('TmdbProvider.fetchSeason', () => {
+  it('maps episode number, name, runtime and still', async () => {
+    const { fetch: f, calls } = stub([
+      {
+        episodes: [
+          {
+            episode_number: 1,
+            name: 'A Study in Pink',
+            overview: 'A detective.',
+            runtime: 88,
+            air_date: '2010-07-25',
+            still_path: '/still1.jpg'
+          }
+        ]
+      }
+    ]);
+
+    const [episode] = await new TmdbProvider('k', f).fetchSeason(19885, 1);
+
+    assert.ok(calls[0]!.url.includes('/tv/19885/season/1'));
+    assert.equal(episode?.episodeNumber, 1);
+    assert.equal(episode?.name, 'A Study in Pink');
+    assert.equal(episode?.runtimeMin, 88);
+    assert.equal(episode?.stillPath, '/still1.jpg');
+  });
+
+  /** TMDB omits `still_path` for episodes it has no artwork for, and a show
+      that has never aired has a whole season of them. */
+  it('tolerates an episode with no still and no runtime', async () => {
+    const { fetch: f } = stub([{ episodes: [{ episode_number: 2, name: 'The Blind Banker' }] }]);
+    const [episode] = await new TmdbProvider('k', f).fetchSeason(19885, 1);
+
+    assert.equal(episode?.stillPath, null);
+    assert.equal(episode?.runtimeMin, null);
+  });
+
+  it('survives a season with no episode list at all', async () => {
+    const { fetch: f } = stub([{}]);
+    assert.deepEqual(await new TmdbProvider('k', f).fetchSeason(19885, 99), []);
+  });
 });

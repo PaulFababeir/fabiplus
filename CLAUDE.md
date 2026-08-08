@@ -11,7 +11,7 @@ returns is cached to disk so the app runs with the network off.
 npm run dev          # electron-vite dev, HMR on the renderer
 npm start            # run the production build
 npm run build        # tsc --build && electron-vite build
-npm test             # 185 tests, node:test via tsx
+npm test             # 235 tests, node:test via tsx
 npm run typecheck    # tsc --build — see below, --noEmit checks nothing here
 npm run scan:report  # print the parse table for every folder, no network
 npm run dist         # NSIS installer into release/ (~102 MB)
@@ -26,7 +26,7 @@ under `src/main/` or `src/preload/` restarts the app; renderer edits hot-reload.
 
 ```
 src/main/          Electron main. Scanner, TMDB provider, matcher, stores.
-                   All 185 tests live here or in shared.
+                   All 235 tests live here or in shared.
 src/preload/       The entire renderer API surface (contextBridge).
 src/renderer/      React UI. No Node access.
 src/shared/        Types, constants, and pure logic both processes need.
@@ -110,11 +110,16 @@ release may not touch any schema; a patch release might bump one.
 | `profiles.json` | Profile list (max 5) | **No** |
 | `profiles/<id>.json` | Watch progress, poster picks | **No** |
 | `config.json` | Roots, TMDB key, prefs | Yes |
-| `cache/images/` | Posters and backdrops | Yes |
+| `cache/images/` | Posters, backdrops, episode stills | Yes |
+| `cache/avatars/` | Profile pictures, copied in | **No** |
 
 The split is deliberate: a corrupt catalog or a full rescan must never be able
 to touch watch history. Every write goes through `writeJsonAtomic` (temp file +
 rename). Never write profile data in place.
+
+`cache/avatars/` sits outside `cache/images/` for the same reason: the artwork
+cache is disposable and can be cleared to reclaim disk, and an avatar is a copy
+of a file the user chose that nothing can refetch.
 
 ## Decisions worth not relitigating
 
@@ -205,6 +210,23 @@ every user's watch history the first time the schema was bumped after a release.
 `profile-migration.ts` now migrates forward through a `STEPS` registry and
 *throws* on data newer than the build understands. Adding version 2 means adding
 one entry to `STEPS` — do not edit the loader.
+
+**Watch progress is keyed by `Episode.id` for a show, not the show's id.** So
+`continueWatching` resolves each entry against a map of *both* item ids and
+episode ids, and `ContinueEntry` carries the episode alongside the show. A
+straightforward `new Map(items.map(i => [i.id, i]))` looks equivalent and
+silently drops every part-watched episode from the deck — which is exactly how
+it behaved before. The card has to name the episode too, or a show with forty of
+them says nothing about which one it is offering.
+
+**The last profile cannot be deleted, and the store is what enforces it.**
+`deleteProfile` throws `LastProfileError`; the hidden button in `ProfileMenu` is
+a convenience, not the guard. An empty `profiles.json` is not merely odd —
+`ensureProfile` mints a replacement on the next launch and every
+`profiles/<id>.json` beside it becomes an orphan nothing references. The rule
+lives in `profile-rules.ts` (`wouldEmptyProfiles`) rather than `profiles.ts` for
+the usual reason: the latter reaches `config.ts`, which imports `electron`, so
+no test can load it. Same split as `library-merge.ts`.
 
 **React StrictMode double-invokes effects.** `ensureProfile` is serialised
 behind a shared promise because two concurrent calls both saw an empty list,
@@ -397,25 +419,72 @@ becoming file-system access.
 - Tests use real data from the library — the misspelled folders (`American
   Psyco`, `The Day After Tomarrow`, `Soranin`) are permanent fixtures.
 
+## Next up
+
+Everything the previous list carried has shipped — the backdrop picker, mark as
+watched, profile rename and image avatars, episodes in Continue Watching,
+next-episode autoplay and episode stills. What is genuinely left is in `State`
+below. Three things are worth knowing before adding to any of it.
+
+**The scan owns files; the stored catalog owns everything else — at both
+levels.** `mergeScan` preserves an item's `metadata` and `match` across a
+rescan, and `mergeSeasons` does the same one layer down for episode titles,
+runtimes and stills. Before that existed, `seasons` came straight off the scan
+and every enriched episode field was silently discarded the next time anyone
+scanned, with no way back short of a full refetch. **Anything added to `Episode`
+that the provider supplies has to be listed in `mergeSeasons` or it will not
+survive a rescan.** Episodes match by id, which is a hash of the file path, so a
+renamed file correctly loses its enrichment rather than inheriting a stranger's.
+
+**A new cache directory has to be added to `allowedRoots`.** `movie://` refuses
+anything outside it, so `cache/avatars/` had to be listed there before an avatar
+would render at all — and `media-server.ts` had to learn `.gif` and `.avif`,
+because a file it cannot type is served as `application/octet-stream` and
+Chromium declines to draw it. The avatar cache is deliberately *not* under
+`cache/images/`: that one is disposable and gets cleared, and an avatar has
+nothing to refetch it from.
+
+**Read artwork through the selectors, never off `Metadata` directly.**
+`posterFor` and `backdropFor` apply the profile's pick and absorb a stale one —
+a choice outlives a refetch that returns fewer images. `backdropFor` checks the
+`backdrops` list *first* and only falls back to the legacy `metadata.backdrop`
+scalar when it is empty; doing it the other way round pins every profile to
+`backdrops[0]` and silently ignores the pick, because the scalar is that same
+image.
+
 ## State
 
-**Working:** scan, TMDB enrichment with fuzzy matching and manual re-match,
-profiles, poster picker, Continue Watching, the player (seek, subtitles with
-`V` cycling, hover scrub preview, ±10s, speed, brightness), acrylic translucency.
+**Working:** scan of both films and shows, TMDB enrichment with fuzzy matching
+and manual re-match, profiles (create, switch, rename, image avatar, delete),
+poster and backdrop pickers, Continue Watching for films and episodes alike with
+a right-click "mark as watched", the series episode list with stills and
+per-episode resume, next-episode autoplay, the player (seek, external and
+embedded subtitles with `V` cycling, hover scrub preview, ±10s, speed,
+brightness, on-demand audio conversion), acrylic translucency.
 
 **Known gaps:**
 
-- **`.mkv` and 10-bit HEVC do not play.** Chromium can't decode them; the player
-  shows a clear error naming the format. Bundling mpv is the real fix and also
-  solves HDR tone mapping properly.
-- **Series is unwired.** The Movies/Series toggle is UI only — no series files
-  exist and the scanner has no season/episode model.
-- **`lib/selectors.ts` has no tests** despite load-bearing null handling. Note
-  the test runner only reaches `src/main`, `src/shared` and `scripts` — a
-  renderer test would need `tsconfig.node.json` to include it, since
-  `tsconfig.web.json` now excludes `*.test.ts`.
+- **AC-3, E-AC-3, DTS and TrueHD audio must be converted before it plays.** It
+  happens on first play with the video stream copied untouched — roughly ten
+  seconds for a 700 MB file, cached and capped at 4 GB. Bundling mpv would
+  remove the step and solve HDR tone mapping properly. The container and the
+  video codec are *not* the problem; Matroska and HEVC were both measured
+  playing natively, and `audio-support.ts` is where that is recorded.
+- **The grid plays a show by the show's own id.** `MovieGrid`'s play button
+  passes `item.id` for anything it is handed, and for a series that resolves to
+  `LibraryItem.video` — a stand-in for the first episode — with progress stored
+  against the show rather than the episode. The episode list never sees it, so
+  the same file can be half-watched in two places at once. `continueWatching`
+  still resolves those ids so existing entries are not orphaned; the fix is for
+  a show's card to open the sidebar instead of playing.
+- **`lib/selectors.ts` has no tests** despite load-bearing null handling, and
+  `backdropFor` has now joined `posterFor` there. The test runner only reaches
+  `src/main`, `src/shared` and `scripts` — a renderer test would need
+  `tsconfig.node.json` to include it, since `tsconfig.web.json` now excludes
+  `*.test.ts`.
 - **The grid is not virtualized.** Fine at 79; not at thousands.
-- **Profile rename** exists in the store and IPC but has no UI.
+- **Avatars are copied at full size.** Anything under 8 MB is accepted and
+  nothing resizes it, so a phone photo is decoded in full to draw a 32px chip.
 
 **Unresolved:** `library.json` was once found reverted to an older version with
 its original mtime, while `library.backup.json` held the correct data. Never

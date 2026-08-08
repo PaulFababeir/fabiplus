@@ -13,13 +13,26 @@ interface ProfileStore {
   create: (name: string) => Promise<void>;
   remove: (id: string) => Promise<void>;
   rename: (id: string, name: string) => Promise<void>;
+  pickAvatar: (id: string) => Promise<void>;
+  clearAvatar: (id: string) => Promise<void>;
+  dismissError: () => void;
 
   setProgress: (movieId: string, positionSec: number, durationSec: number) => Promise<void>;
   clearProgress: (movieId: string) => Promise<void>;
+  setFinished: (movieId: string, finished: boolean) => Promise<void>;
   choosePoster: (movieId: string, index: number) => Promise<void>;
+  chooseBackdrop: (movieId: string, index: number) => Promise<void>;
 }
 
-const message = (err: unknown): string => (err instanceof Error ? err.message : String(err));
+/**
+ * Electron wraps whatever a handler throws as "Error invoking remote method
+ * 'profiles:delete': LastProfileError: …". Only the tail was written for a
+ * person to read, and these messages are shown in the profile menu.
+ */
+const message = (err: unknown): string => {
+  const raw = err instanceof Error ? err.message : String(err);
+  return raw.replace(/^Error invoking remote method '[^']*':\s*\w*Error:\s*/, '');
+};
 
 export const useProfile = create<ProfileStore>((set, get) => ({
   profiles: [],
@@ -91,6 +104,24 @@ export const useProfile = create<ProfileStore>((set, get) => ({
     }
   },
 
+  pickAvatar: async (id) => {
+    try {
+      set({ profiles: await window.api.pickProfileAvatar(id), error: null });
+    } catch (err) {
+      set({ error: message(err) });
+    }
+  },
+
+  clearAvatar: async (id) => {
+    try {
+      set({ profiles: await window.api.clearProfileAvatar(id), error: null });
+    } catch (err) {
+      set({ error: message(err) });
+    }
+  },
+
+  dismissError: () => set({ error: null }),
+
   setProgress: async (movieId, positionSec, durationSec) => {
     const activeId = get().activeId;
     if (!activeId) return;
@@ -111,11 +142,31 @@ export const useProfile = create<ProfileStore>((set, get) => ({
     }
   },
 
+  setFinished: async (movieId, finished) => {
+    const activeId = get().activeId;
+    if (!activeId) return;
+    try {
+      set({ state: await window.api.setWatchFinished(activeId, movieId, finished) });
+    } catch (err) {
+      set({ error: message(err) });
+    }
+  },
+
   choosePoster: async (movieId, index) => {
     const activeId = get().activeId;
     if (!activeId) return;
     try {
       set({ state: await window.api.setPosterChoice(activeId, movieId, index) });
+    } catch (err) {
+      set({ error: message(err) });
+    }
+  },
+
+  chooseBackdrop: async (movieId, index) => {
+    const activeId = get().activeId;
+    if (!activeId) return;
+    try {
+      set({ state: await window.api.setBackdropChoice(activeId, movieId, index) });
     } catch (err) {
       set({ error: message(err) });
     }
