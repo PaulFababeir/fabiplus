@@ -1,4 +1,4 @@
-import { TMDB_IMAGE_BASE } from './constants.js';
+import { APP_ICON_URL, TMDB_IMAGE_BASE } from './constants.js';
 import type { DiscordActivity, LibraryItem } from './types.js';
 
 /**
@@ -25,10 +25,16 @@ export const ACTIVITY_PLAYING = 0;
 export const ACTIVITY_WATCHING = 3;
 
 /**
- * Asset key to upload under Rich Presence → Art Assets, used when a film has no
- * TMDB artwork and for the idle state.
+ * Artwork for anything with no poster of its own: the idle state, which is what
+ * the app shows before a film has ever been selected, and a film the provider
+ * had no images for.
+ *
+ * This was the asset key `poster`, which nobody ever uploaded to the Discord
+ * application — an unresolvable key is what put the "?" placeholder on the idle
+ * card. The app icon is served over https instead, exactly like the TMDB poster
+ * URLs the playing states already send.
  */
-export const FALLBACK_ART = 'poster';
+export const FALLBACK_ART = APP_ICON_URL;
 
 /**
  * Newer Discord clients accept an https URL in `large_image`; older ones only

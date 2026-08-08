@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 import {
   ACTIVITY_PLAYING,
   ACTIVITY_WATCHING,
+  FALLBACK_ART,
   buildPresence,
   discordArtwork,
   type PresenceFilm
@@ -23,7 +24,7 @@ const solanin: PresenceFilm = {
   year: 2010,
   genre: null,
   episodeLine: null,
-  image: 'poster'
+  image: FALLBACK_ART
 };
 
 const base = {
@@ -93,7 +94,7 @@ describe('buildPresence', () => {
     assert.equal(activity.type, ACTIVITY_PLAYING);
     assert.equal(activity.details, 'Browsing the library');
     assert.equal(activity.state, 'Solanin');
-    assert.equal(activity.largeImage, 'poster');
+    assert.equal(activity.largeImage, FALLBACK_ART);
   });
 
   it('falls back to the library size when nothing is chosen', () => {
@@ -101,6 +102,30 @@ describe('buildPresence', () => {
     assert.equal(activity.name, null);
     assert.equal(activity.details, 'Browsing the library');
     assert.equal(activity.state, '79 films');
+  });
+
+  /**
+   * The idle card is the first thing Discord shows, before any film has been
+   * selected. It used to send the asset key `poster`, which was never uploaded
+   * to the application, so Discord drew its own broken-image placeholder.
+   */
+  it('shows the app icon when nothing is selected', () => {
+    assert.equal(buildPresence(base).largeImage, FALLBACK_ART);
+  });
+
+  /**
+   * The guard that matters: a bare key only resolves if someone uploaded it in
+   * the developer portal, and nobody had. Only a URL is self-sufficient.
+   */
+  it('never sends artwork Discord cannot resolve on its own', () => {
+    const states: Parameters<typeof buildPresence>[0][] = [
+      base,
+      { ...base, selected: solanin },
+      { ...base, film, playing: true, remainingSec: 60 }
+    ];
+    for (const state of states) {
+      assert.match(buildPresence(state).largeImage ?? '', /^https:\/\//);
+    }
   });
 
   it('does not say "1 films"', () => {
@@ -172,12 +197,12 @@ describe('discordArtwork', () => {
     assert.equal(discordArtwork(threePosters, 9), 'https://image.tmdb.org/t/p/w500/first.jpg');
   });
 
-  it('falls back to the uploaded asset key without metadata', () => {
-    assert.equal(discordArtwork(itemWith(null)), 'poster');
+  it('falls back to the app icon without metadata', () => {
+    assert.equal(discordArtwork(itemWith(null)), FALLBACK_ART);
   });
 
   it('falls back when the provider has no poster', () => {
     const item = itemWith({ providerId: 'tmdb', posters: [] } as unknown as LibraryItem['metadata']);
-    assert.equal(discordArtwork(item), 'poster');
+    assert.equal(discordArtwork(item), FALLBACK_ART);
   });
 });

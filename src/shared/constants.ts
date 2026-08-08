@@ -50,6 +50,25 @@ export const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p';
 export const DISCORD_APP_ID = '1533694975093768232';
 
 /**
+ * Public URL for the app icon, used as the Rich Presence artwork whenever there
+ * is no film artwork to show.
+ *
+ * A URL rather than an asset key uploaded under Rich Presence → Art Assets.
+ * The presence used to send the bare key `poster`, which was never uploaded to
+ * the application — so Discord could not resolve it and drew its own
+ * broken-image placeholder on the idle card. Discord fetches artwork from its
+ * own servers, so a path on this disk is useless here and the image has to be
+ * reachable from the public internet; the repo is public, and this is the same
+ * mechanism that already carries every TMDB poster.
+ *
+ * Pinned to `main`, so `assets/icon.png` must be pushed before Discord can
+ * resolve it. Until then it 404s to the same placeholder as before — no worse
+ * than the state this replaced.
+ */
+export const APP_ICON_URL =
+  'https://raw.githubusercontent.com/PaulFababeir/movie-app/main/assets/icon.png';
+
+/**
  * Required by the TMDB free-tier terms, rendered in the sidebar footer.
  */
 export const TMDB_ATTRIBUTION =

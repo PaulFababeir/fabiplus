@@ -281,10 +281,24 @@ pipe. If Discord is not running, connection fails and presence stays off.
 `timestamps.end` is what produces the countdown. Frame length is measured in
 **bytes**, not characters — a title like `ソラニン` desyncs the stream otherwise.
 
-Artwork sends the TMDB poster URL, which newer clients resolve directly; older
-ones need an asset key uploaded to the application (`poster` is the fallback).
+Artwork sends the TMDB poster URL, which newer clients resolve directly.
 Confirmed working: Discord rewrites the URL to `mp:external/…` and serves it, so
 per-film posters need no uploaded assets.
+
+**Nothing sends a bare asset key, and nothing should.** `FALLBACK_ART` used to be
+the literal `'poster'` — a key that only resolves if someone uploaded an asset by
+that name under Rich Presence → Art Assets, and nobody ever had. Discord could
+not resolve it and drew its own broken-image placeholder, which is what the idle
+card showed from the very first launch until a film was picked. It is now
+`APP_ICON_URL`, the app icon served from the public repo over https, so the
+artwork is self-sufficient in every state. A URL is the only kind of value that
+does not depend on the developer portal, and `presence.test.ts` holds the line
+with a test that every state's `largeImage` starts with `https://`.
+
+That URL is pinned to `main`, so `assets/icon.png` has to be pushed before it
+resolves — it is extracted from the 256×256 entry of `assets/icon.ico`, which is
+already PNG-encoded, and the `.ico` itself is no use here because GitHub serves
+it as `image/vnd.microsoft.icon`.
 
 It follows the profile's poster pick, so the presence shows the same artwork the
 library does. Note this sends `remotePath`, **not** the cached `localPath` the UI
