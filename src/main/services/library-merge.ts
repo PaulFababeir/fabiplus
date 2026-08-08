@@ -43,7 +43,9 @@ function mergeSeasons(scanned: Season[] | null, prior: Season[] | null): Season[
         // enrichment itself applies; the stored one is the provider's.
         title: episode.title ?? known.title,
         runtimeMin: episode.runtimeMin ?? known.runtimeMin,
-        still: known.still
+        // `?? null` because a catalog written before stills existed has no such
+        // key at all, and `undefined` is not what the type promises.
+        still: known.still ?? null
       };
     })
   }));
