@@ -1,9 +1,9 @@
 # movie-app
 
 Offline desktop movie library and player for a local collection at `D:/Movies`
-(79 films, ~172 GB). Electron + React + TypeScript. No cloud, no account, no
-telemetry — the only network call is TMDB metadata enrichment, and everything it
-returns is cached to disk so the app runs with the network off.
+(86 films and 1 show, ~172 GB). Electron + React + TypeScript. No cloud, no
+account, no telemetry — the only network call is TMDB metadata enrichment, and
+everything it returns is cached to disk so the app runs with the network off.
 
 ## Commands
 
@@ -14,7 +14,7 @@ npm run build        # tsc --build && electron-vite build
 npm test             # 258 tests, node:test via tsx
 npm run typecheck    # tsc --build — see below, --noEmit checks nothing here
 npm run scan:report  # print the parse table for every folder, no network
-npm run dist         # NSIS installer into release/ (~102 MB)
+npm run dist         # NSIS installer into release/ (~118 MB)
 npm run release      # same, published to GitHub Releases
 ```
 
@@ -128,7 +128,7 @@ of a file the user chose that nothing can refetch.
 - **Electron over Tauri.** WebView2 cannot decode the library's `.mkv` and
   10-bit HEVC files; a bundled player is needed either way, and Electron makes
   that far easier.
-- **JSON, not SQLite.** 79 items. Swap `library.json` alone if it ever passes a
+- **JSON, not SQLite.** 87 items. Swap `library.json` alone if it ever passes a
   few thousand.
 - **CSS Modules, no framework.** The UI is built to a specific Figma; utility
   classes fight that, and things like intersected `mask-image` or
@@ -156,10 +156,11 @@ It also returns *everyone* who ever appeared, which is why series cast is capped
 at `MAX_SERIES_CAST` (10) rather than the films' 30.
 
 **Backdrops are cached at two sizes, and only one of them is the big one.** A
-film caches twenty backdrops but ever *shows* one, so `CachedImage.localPath`
-holds a w500 preview sized for the picker grid and `fullPath` holds the original
-— fetched at enrichment for `backdrops[0]` and on demand, through
-`library:backdrop-full`, the first time a profile picks any of the others.
+film caches twenty backdrops but only ever *shows* one, so
+`CachedImage.localPath` holds a w500 preview sized for the picker grid and
+`fullPath` holds the original — fetched at enrichment for `backdrops[0]` and on
+demand, through `library:backdrop-full`, the first time a profile picks any of
+the others.
 Caching twenty originals to display one cost about seven times the disk for
 pixels nothing drew: ~12MB a film against ~2MB.
 
@@ -550,7 +551,7 @@ brightness, on-demand audio conversion), acrylic translucency.
   `src/main`, `src/shared` and `scripts` — a renderer test would need
   `tsconfig.node.json` to include it, since `tsconfig.web.json` now excludes
   `*.test.ts`.
-- **The grid is not virtualized.** Fine at 79; not at thousands.
+- **The grid is not virtualized.** Fine at 87; not at thousands.
 - **An animated avatar is stored uncompressed.** `avatarEncoding` returns
   `copy` for a GIF because a decoder hands back only its first frame, so a
   30 MB animation is kept whole where a still would be shrunk to a few tens of
