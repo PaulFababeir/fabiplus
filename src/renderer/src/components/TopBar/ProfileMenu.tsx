@@ -103,6 +103,20 @@ export function ProfileMenu(): React.JSX.Element {
         aria-haspopup="menu"
         aria-expanded={open}
       >
+        {/*
+          The same washed-out fill the menu rows carry. This is the only part of
+          the profile visible without opening anything, so it is where the
+          picture earns its keep — the 32px chip beside it is too small to read
+          as a photograph.
+        */}
+        {active?.avatarPath && (
+          <span
+            className={styles.rowTint}
+            style={{ backgroundImage: `url(${toMovieUrl(active.avatarPath)})` }}
+            aria-hidden="true"
+          />
+        )}
+
         {active ? (
           <Avatar profile={active} size={32} />
         ) : (

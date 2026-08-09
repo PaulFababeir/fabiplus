@@ -164,11 +164,13 @@
 }
 
 .profile {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
   height: var(--profile-height);
   padding: 0 14px 0 6px;
+  overflow: hidden;
   border: none;
   border-radius: var(--radius-control);
   background: var(--control);
@@ -176,6 +178,12 @@
   font: inherit;
   font-size: 14px;
   cursor: pointer;
+  /*
+   * Establishes the stacking context the tint's `z-index: -1` is measured
+   * against. Without it the tint escapes to the page's context and disappears
+   * behind the top bar instead of sitting over this button's own background.
+   */
+  isolation: isolate;
 }
 
 .profile:hover {
@@ -268,6 +276,12 @@
   opacity: 0.16;
   mask-image: linear-gradient(to left, #000 0%, rgb(0 0 0 / 55%) 45%, transparent 88%);
   -webkit-mask-image: linear-gradient(to left, #000 0%, rgb(0 0 0 / 55%) 45%, transparent 88%);
+}
+
+/* `--control` is a lighter surface than a menu row's near-transparent one, so
+   the identical wash reads fainter on the button and needs a little more. */
+.profile .rowTint {
+  opacity: 0.24;
 }
 
 /* Edit and delete hug the right edge of the row, per the spec. */
