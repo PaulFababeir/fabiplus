@@ -1,11 +1,20 @@
+import { nativeImage } from 'electron';
 import { randomUUID } from 'node:crypto';
-import { copyFile, mkdir, rm, stat } from 'node:fs/promises';
+import { copyFile, mkdir, rm, stat, writeFile } from 'node:fs/promises';
 import { extname, join } from 'node:path';
 
 import { MAX_PROFILES } from '@shared/constants';
 import type { Profile, ProfileState, WatchEntry } from '@shared/types';
 import { readJsonOrFail, writeJsonAtomic } from './atomic-json.js';
 import { avatarCacheDir, userDataDir } from './config.js';
+import {
+  AVATAR_EXTENSIONS,
+  AVATAR_JPEG_QUALITY,
+  AVATAR_MAX_BYTES,
+  AVATAR_MAX_EDGE,
+  avatarEncoding,
+  storedExtension
+} from './avatar-rules.js';
 import { emptyProfileState, migrateProfileState } from './profile-migration.js';
 import { wouldEmptyProfiles } from './profile-rules.js';
 
@@ -49,15 +58,48 @@ export class AvatarTooLargeError extends Error {
 }
 
 /**
- * Nothing resizes the file on the way in, so the whole image is decoded to draw
- * a 32px chip — the cap is about memory, not disk. Raised to 30MB because 8MB
- * turned away ordinary phone photos, which is the common case for an avatar.
- * The dialog already filters to images; this is the guard against a huge one.
+ * Downscales and re-encodes a chosen picture, or returns null to copy it as-is.
+ *
+ * A phone photo is 4000px and several megabytes, and every one of those pixels
+ * was being decoded to paint a 32px chip and a washed-out row tint. Shrinking
+ * once here means the renderer never sees the full-size image again.
+ *
+ * Returns null rather than throwing whenever the original should stand: an
+ * animated GIF, a format the decoder does not understand — `createFromPath`
+ * hands back an empty image for those rather than failing — or a re-encode that
+ * came out no smaller than what went in. A worse avatar is not worth a smaller
+ * one, and an unreadable one is not worth losing the pick over.
  */
-const AVATAR_MAX_BYTES = 30 * 1024 * 1024;
+function compressedAvatar(sourcePath: string, extension: string, originalBytes: number): {
+  data: Buffer;
+  extension: string;
+} | null {
+  const encoding = avatarEncoding(extension);
+  if (encoding === 'copy') return null;
 
-/** Extensions the renderer can actually display through `movie://`. */
-const AVATAR_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif', '.avif']);
+  const image = nativeImage.createFromPath(sourcePath);
+  if (image.isEmpty()) return null;
+
+  const { width, height } = image.getSize();
+  if (width === 0 || height === 0) return null;
+
+  // Only one dimension is given, so the other follows and the aspect ratio is
+  // preserved — the chip crops with `object-fit`, it does not stretch.
+  const longest = Math.max(width, height);
+  const resized =
+    longest > AVATAR_MAX_EDGE
+      ? image.resize(
+          width >= height
+            ? { width: AVATAR_MAX_EDGE, quality: 'best' }
+            : { height: AVATAR_MAX_EDGE, quality: 'best' }
+        )
+      : image;
+
+  const data = encoding === 'png' ? resized.toPNG() : resized.toJPEG(AVATAR_JPEG_QUALITY);
+  if (data.byteLength === 0 || data.byteLength >= originalBytes) return null;
+
+  return { data, extension: storedExtension(extension, encoding) };
+}
 
 export function profilesPath(): string {
   return join(userDataDir(), 'profiles.json');
@@ -154,8 +196,15 @@ export async function setProfileAvatar(id: string, sourcePath: string): Promise<
   if (!target) return profiles;
 
   await mkdir(avatarCacheDir(), { recursive: true });
-  const destination = join(avatarCacheDir(), `${id}-${Date.now()}${extension}`);
-  await copyFile(sourcePath, destination);
+
+  const compressed = compressedAvatar(sourcePath, extension, info.size);
+  const destination = join(
+    avatarCacheDir(),
+    `${id}-${Date.now()}${compressed?.extension ?? extension}`
+  );
+
+  if (compressed) await writeFile(destination, compressed.data);
+  else await copyFile(sourcePath, destination);
 
   // Only once the new one is safely in place.
   if (target.avatarPath) await rm(target.avatarPath, { force: true });
