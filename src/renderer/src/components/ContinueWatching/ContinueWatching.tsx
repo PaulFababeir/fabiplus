@@ -5,6 +5,7 @@ import { continueWatching, type ContinueEntry } from '@shared/continue-watching'
 import { toMovieUrl } from '@shared/media-url';
 import type { LibraryItem, ProfileState } from '@shared/types';
 import { useOnClickOutside, useOnEscape } from '@renderer/lib/useDismiss';
+import { useFullBackdrop } from '@renderer/lib/useFullBackdrop';
 import { useProfile } from '@renderer/state/useProfile';
 import {
   backdropFor,
@@ -105,6 +106,14 @@ export function ContinueWatching({
 
   const deck = continueWatching(profileState?.watch ?? {}, items);
   const total = deck.length;
+
+  /*
+   * The stage is the largest backdrop in the app, so it wants the full size
+   * more than anything else does. Resolved before the empty-deck return below,
+   * because a hook cannot sit behind one.
+   */
+  const staged = total > 0 ? (deck[index % total]?.item ?? null) : null;
+  useFullBackdrop(staged, profileState);
 
   // Keep the cursor valid when the deck shrinks — a film finished, or its
   // folder disappeared between rescans.
