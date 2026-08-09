@@ -55,8 +55,31 @@ export async function loadLibraryForDisplay(): Promise<LibraryCatalog> {
   }
 }
 
+/**
+ * Writes the catalog, then reads it back and checks it stuck.
+ *
+ * The read-back is not paranoia about `writeJsonAtomic`. A catalog has been
+ * observed reverting to its previous contents *after* a successful enrichment
+ * — `library.backup.json` held 87 enriched films while `library.json` still
+ * held the 79 it had beforehand — with nothing in this app able to explain it.
+ * Whatever is doing that, the failure was silent: the run reported success and
+ * the work was gone.
+ *
+ * This cannot prevent a revert that happens later, but it turns "the catalog
+ * quietly went backwards" into an error the caller can surface, which is the
+ * difference between a mystery and a bug report.
+ */
 export async function saveLibrary(catalog: LibraryCatalog): Promise<void> {
   await writeJsonAtomic(libraryPath(), catalog);
+
+  const readBack = await readJsonOrFail<LibraryCatalog | null>(libraryPath(), null);
+  if (readBack === null || readBack.items.length !== catalog.items.length) {
+    throw new Error(
+      `library.json did not keep what was written: expected ${catalog.items.length} items, ` +
+        `found ${readBack === null ? 'no file' : String(readBack.items.length)}. ` +
+        'Something outside the app is rewriting it.'
+    );
+  }
 }
 
 /**
