@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-import type { MediaKind, SortKey } from '@shared/types';
+import type { KindFilter, SortKey } from '@shared/types';
 
 /**
  * Playback, mirrored out of the player so the Discord presence can be derived
@@ -17,7 +17,7 @@ export interface PlaybackStatus {
 const IDLE_PLAYBACK: PlaybackStatus = { playing: false, positionSec: 0, durationSec: 0 };
 
 interface UiStore {
-  kind: MediaKind;
+  kind: KindFilter;
   search: string;
   genre: string | null;
   sort: SortKey;
@@ -52,7 +52,7 @@ interface UiStore {
    */
   presenceEpoch: number;
 
-  setKind: (kind: MediaKind) => void;
+  setKind: (kind: KindFilter) => void;
   setSearch: (search: string) => void;
   setGenre: (genre: string | null) => void;
   setSort: (sort: SortKey) => void;

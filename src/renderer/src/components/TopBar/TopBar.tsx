@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-import type { MediaKind } from '@shared/types';
+import type { KindFilter } from '@shared/types';
 import { useUi } from '@renderer/state/useUi';
 import { useOnClickOutside, useOnEscape } from '@renderer/lib/useDismiss';
 import { Icon } from '@renderer/components/ui/Icon';
@@ -8,8 +8,8 @@ import { IconButton } from '@renderer/components/ui/IconButton';
 import { ProfileMenu } from './ProfileMenu';
 import styles from './TopBar.module.css';
 
-/** The two library views. Order here is the order in the menu. */
-const KINDS: Record<MediaKind, string> = { movie: 'Movies', series: 'Series' };
+/** The library views. Order here is the order in the menu. */
+const KINDS: Record<KindFilter, string> = { all: 'All', movie: 'Movies', series: 'Series' };
 
 /** Debounce so a 79-item filter doesn't run on every keystroke. */
 const SEARCH_DEBOUNCE_MS = 150;
@@ -44,7 +44,7 @@ export function TopBar(): React.JSX.Element {
 
         {kindOpen && (
           <div className={styles.kindMenu} role="listbox">
-            {(Object.keys(KINDS) as MediaKind[]).map((option) => (
+            {(Object.keys(KINDS) as KindFilter[]).map((option) => (
               <button
                 key={option}
                 type="button"

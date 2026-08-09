@@ -10,7 +10,7 @@ import { Player } from '@renderer/components/Player/Player';
 import { BackdropLayer, Sidebar } from '@renderer/components/Sidebar/Sidebar';
 import { TopBar } from '@renderer/components/TopBar/TopBar';
 import { AUTO_ACCEPT } from '@shared/constants';
-import { filterAndSort, genresOf, needsReviewItems } from '@renderer/lib/selectors';
+import { filterAndSort, genresOf, matchesKind, needsReviewItems } from '@renderer/lib/selectors';
 import { useDiscordPresence } from '@renderer/lib/useDiscordPresence';
 import { useLibrary } from '@renderer/state/useLibrary';
 import { useProfile } from '@renderer/state/useProfile';
@@ -54,7 +54,7 @@ export default function App(): React.JSX.Element {
 
   const items = useMemo(() => catalog?.items ?? [], [catalog]);
   // Pills describe the view you are in, not the whole catalog.
-  const ofKind = useMemo(() => items.filter((i) => i.kind === kind), [items, kind]);
+  const ofKind = useMemo(() => items.filter((i) => matchesKind(i, kind)), [items, kind]);
   const genres = useMemo(() => genresOf(ofKind), [ofKind]);
   const visible = useMemo(
     () => filterAndSort({ items, kind, search, genre, sort }),
@@ -141,12 +141,12 @@ export default function App(): React.JSX.Element {
                this the grid is simply blank, which reads as a broken app. */
             <div className={styles.empty}>
               <h2 className={styles.emptyTitle}>
-                {kind === 'movie' ? 'No films yet' : 'No shows yet'}
+                {kind === 'series' ? 'No shows yet' : 'No films yet'}
               </h2>
               <p className={styles.emptyBody}>
-                {kind === 'movie'
-                  ? 'Choose the folder your films live in — each one in its own subfolder — and they will be scanned and matched automatically.'
-                  : 'Choose the folder your shows live in — one subfolder per show, with a folder per season inside it.'}
+                {kind === 'series'
+                  ? 'Choose the folder your shows live in — one subfolder per show, with a folder per season inside it.'
+                  : 'Choose the folder your films live in — each one in its own subfolder — and they will be scanned and matched automatically.'}
               </p>
               <button
                 type="button"
