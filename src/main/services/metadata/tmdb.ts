@@ -46,6 +46,16 @@ const KEY_CREW_JOBS = new Set([
 
 const MAX_CAST = 30;
 
+/**
+ * Shows get a shorter list than films.
+ *
+ * `aggregate_credits` counts everyone who ever appeared, so a long-running
+ * series returns hundreds — every one-scene guest across every episode. Past
+ * the principals that is noise in a sidebar, and the chips wrap into a wall.
+ * TMDB orders by billing, so the first ten are the people worth naming.
+ */
+const MAX_SERIES_CAST = 10;
+
 type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
 
 /**
@@ -93,6 +103,21 @@ interface TmdbDetails {
   credits?: {
     cast?: Array<{ name?: string; character?: string; order?: number; profile_path?: string | null }>;
     crew?: Array<{ name?: string; job?: string; department?: string }>;
+  };
+  /**
+   * TV only. `credits` on a series record is whoever TMDB bills at the series
+   * level, which for Sherlock is two people; this rolls up the cast of every
+   * episode. The character sits under `roles` because one person can play
+   * several parts across a run.
+   */
+  aggregate_credits?: {
+    cast?: Array<{
+      name?: string;
+      roles?: Array<{ character?: string; episode_count?: number }>;
+      order?: number;
+      total_episode_count?: number;
+      profile_path?: string | null;
+    }>;
   };
   images?: { posters?: TmdbImage[]; backdrops?: TmdbImage[] };
 }
@@ -274,18 +299,44 @@ export class TmdbProvider implements MetadataProvider {
     // `rankImages` keeps English first without discarding the alternatives.
     const d = await this.#get<TmdbDetails>(
       `${kind === 'series' ? '/tv' : '/movie'}/${remoteId}`,
-      { append_to_response: 'credits,images' }
+      {
+        // A series needs `aggregate_credits` too — see the field's note. Films
+        // have no such endpoint, and asking for it there is a wasted join.
+        append_to_response:
+          kind === 'series' ? 'credits,aggregate_credits,images' : 'credits,images'
+      }
     );
 
-    const cast: CastMember[] = (d.credits?.cast ?? [])
-      .slice(0, MAX_CAST)
-      .map((c, i) => ({
-        name: c.name ?? '',
-        character: c.character ?? '',
-        order: c.order ?? i,
-        profilePath: c.profile_path ?? null
-      }))
-      .filter((c) => c.name !== '');
+    /*
+     * Prefer the aggregated cast for a show, and fall back to `credits` when
+     * the provider has none — an unaired series has no episodes to aggregate,
+     * and the series-level billing is then all there is.
+     */
+    const aggregated: CastMember[] = (d.aggregate_credits?.cast ?? []).map((c, i) => ({
+      name: c.name ?? '',
+      // The role with the most episodes, not the first listed: a lead who was
+      // also a bit part in one episode should be named for the lead.
+      character:
+        [...(c.roles ?? [])].sort(
+          (a, b) => (b.episode_count ?? 0) - (a.episode_count ?? 0)
+        )[0]?.character ?? '',
+      order: c.order ?? i,
+      profilePath: c.profile_path ?? null
+    }));
+
+    const billed: CastMember[] = (d.credits?.cast ?? []).map((c, i) => ({
+      name: c.name ?? '',
+      character: c.character ?? '',
+      order: c.order ?? i,
+      profilePath: c.profile_path ?? null
+    }));
+
+    const cast: CastMember[] = (aggregated.length > 0 ? aggregated : billed)
+      // Filtered before the slice, so a blank name costs a place in the list
+      // rather than one of the ten.
+      .filter((c) => c.name !== '')
+      .sort((a, b) => a.order - b.order)
+      .slice(0, kind === 'series' ? MAX_SERIES_CAST : MAX_CAST);
 
     const crew: CrewMember[] = (d.credits?.crew ?? [])
       .filter((c) => c.job && KEY_CREW_JOBS.has(c.job))

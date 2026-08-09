@@ -282,6 +282,99 @@ describe('TmdbProvider.imageUrl', () => {
   });
 });
 
+/**
+ * A show's `credits.cast` is series-level billing only — the real Sherlock
+ * record returns two people for a cast of dozens. `aggregate_credits` rolls up
+ * every episode, which is where the rest live.
+ */
+describe('TmdbProvider series cast', () => {
+  const sherlock = {
+    id: 19885,
+    name: 'Sherlock',
+    first_air_date: '2010-07-25',
+    credits: {
+      cast: [
+        { name: 'Benedict Cumberbatch', character: 'Sherlock', order: 0 },
+        { name: 'Martin Freeman', character: 'John', order: 1 }
+      ]
+    },
+    aggregate_credits: {
+      cast: Array.from({ length: 25 }, (_, i) => ({
+        name: `Actor ${i}`,
+        roles: [{ character: `Role ${i}`, episode_count: 10 }],
+        order: i
+      }))
+    }
+  };
+
+  it('asks for aggregate_credits only for a show', async () => {
+    const { fetch: f, calls } = stub([sherlock, sherlock]);
+    const provider = new TmdbProvider('k', f);
+
+    await provider.fetchDetails(19885, 'series');
+    assert.ok(calls[0]!.url.includes('aggregate_credits'));
+
+    await provider.fetchDetails(157336, 'movie');
+    assert.ok(!calls[1]!.url.includes('aggregate_credits'));
+  });
+
+  it('prefers the aggregated cast over series billing', async () => {
+    const { fetch: f } = stub([sherlock]);
+    const d = await new TmdbProvider('k', f).fetchDetails(19885, 'series');
+    assert.equal(d.cast[0]?.name, 'Actor 0');
+    assert.equal(d.cast[0]?.character, 'Role 0');
+  });
+
+  /** Past the principals it is every one-scene guest of every episode. */
+  it('caps a show at ten', async () => {
+    const { fetch: f } = stub([sherlock]);
+    const d = await new TmdbProvider('k', f).fetchDetails(19885, 'series');
+    assert.equal(d.cast.length, 10);
+  });
+
+  /** An unaired series has no episodes to aggregate. */
+  it('falls back to series billing when there is nothing aggregated', async () => {
+    const { fetch: f } = stub([{ ...sherlock, aggregate_credits: { cast: [] } }]);
+    const d = await new TmdbProvider('k', f).fetchDetails(19885, 'series');
+    assert.deepEqual(
+      d.cast.map((c) => c.name),
+      ['Benedict Cumberbatch', 'Martin Freeman']
+    );
+  });
+
+  /** A lead who was also a bit part once should be named for the lead. */
+  it('names the role with the most episodes', async () => {
+    const { fetch: f } = stub([
+      {
+        ...sherlock,
+        aggregate_credits: {
+          cast: [
+            {
+              name: 'Una Stubbs',
+              order: 0,
+              roles: [
+                { character: 'Party Guest', episode_count: 1 },
+                { character: 'Mrs Hudson', episode_count: 13 }
+              ]
+            }
+          ]
+        }
+      }
+    ]);
+    const d = await new TmdbProvider('k', f).fetchDetails(19885, 'series');
+    assert.equal(d.cast[0]?.character, 'Mrs Hudson');
+  });
+
+  /** Films are untouched: no aggregate endpoint, and the old 30 ceiling. */
+  it('leaves a film on its own credits', async () => {
+    const cast = Array.from({ length: 40 }, (_, i) => ({ name: `A${i}`, character: 'x', order: i }));
+    const { fetch: f } = stub([{ id: 1, title: 'Big', credits: { cast } }]);
+    const d = await new TmdbProvider('k', f).fetchDetails(1, 'movie');
+    assert.equal(d.cast.length, 30);
+    assert.equal(d.cast[0]?.name, 'A0');
+  });
+});
+
 describe('TmdbProvider.fetchSeason', () => {
   it('maps episode number, name, runtime and still', async () => {
     const { fetch: f, calls } = stub([
