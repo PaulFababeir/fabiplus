@@ -167,9 +167,16 @@ Three things follow. `backdropFor` returns `fullPath ?? localPath`, so a
 freshly picked backdrop is briefly soft rather than missing, and a catalog
 written before the split still resolves. `withBackdropFull` must move the legacy
 `metadata.backdrop` scalar too when index 0 is upgraded, because that scalar
-*is* `backdrops[0]`. And the upgrade is fire-and-forget from the picker — it
-must never block the dialog or flag the library busy, since the chosen backdrop
-is already on screen.
+*is* `backdrops[0]`. And the upgrade is fire-and-forget — it must never block
+the dialog or flag the library busy, since the chosen backdrop is already on
+screen.
+
+**Displaying a backdrop is what triggers the upgrade, not picking one.**
+`useFullBackdrop` runs in `BackdropLayer` and the Continue Watching stage.
+Firing it from the picker alone was not enough and shipped visibly broken: a
+choice made in an earlier session never passes through the picker again, so
+every profile with saved picks — nine of them here — kept showing 28KB previews
+where a 629KB original existed one fetch away.
 
 **The artwork cache is keyed by URL, not by the provider path.** TMDB puts the
 size in the URL, so the path alone does not identify what was fetched. Keying on
@@ -549,8 +556,27 @@ brightness, on-demand audio conversion), acrylic translucency.
   30 MB animation is kept whole where a still would be shrunk to a few tens of
   KB. Same for any format `nativeImage` cannot decode.
 
-**Unresolved:** `library.json` was once found reverted to an older version with
-its original mtime, while `library.backup.json` held the correct data. Never
-reproduced. OneDrive is running on this machine and is the only plausible
-external actor, but that was never proven. If enriched metadata vanishes,
-restore from the backup file and suspect the environment before the code.
+**Unresolved — and now reproduced.** `library.json` reverts to its pre-run
+contents after a successful enrichment, while `library.backup.json` keeps the
+correct data. Seen again on 2026-08-09: the backup held 87 enriched films at
+1,860,167 bytes while `library.json` was back to the 79 it had beforehand.
+
+Two earlier assumptions were wrong and should not be repeated:
+
+- **OneDrive is not the actor.** It runs on this machine, but `%APPDATA%\Roaming`
+  is not redirected into it — only Camera Roll is.
+- **The mtime evidence proves less than it looks.** `backupLibrary` uses
+  `copyFile`, and Windows `CopyFileW` carries the source timestamps across, so a
+  recovery done that way leaves `library.json` stamped older than its contents.
+  "Reverted with its original mtime" is what a restore-from-backup looks like.
+
+What is solid: `backupLibrary` copies `library.json`, so a backup holding data
+the catalog does not means the catalog held it at that moment and lost it after.
+A watcher polling every 10s across a whole refetch never caught `library.json`
+holding the enriched content, so either the revert is faster than that or the
+backup came from something the catalog never was. Both are still open.
+
+`saveLibrary` now reads back what it wrote and throws on a mismatch, so the next
+occurrence surfaces as an error instead of a silently discarded run. If enriched
+metadata vanishes, restore from `library.backup.json` — it has been correct every
+time — and suspect the environment before the code.
