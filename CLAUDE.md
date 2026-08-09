@@ -11,7 +11,7 @@ returns is cached to disk so the app runs with the network off.
 npm run dev          # electron-vite dev, HMR on the renderer
 npm start            # run the production build
 npm run build        # tsc --build && electron-vite build
-npm test             # 235 tests, node:test via tsx
+npm test             # 243 tests, node:test via tsx
 npm run typecheck    # tsc --build — see below, --noEmit checks nothing here
 npm run scan:report  # print the parse table for every folder, no network
 npm run dist         # NSIS installer into release/ (~102 MB)
@@ -26,7 +26,7 @@ under `src/main/` or `src/preload/` restarts the app; renderer edits hot-reload.
 
 ```
 src/main/          Electron main. Scanner, TMDB provider, matcher, stores.
-                   All 235 tests live here or in shared.
+                   All 243 tests live here or in shared.
 src/preload/       The entire renderer API surface (contextBridge).
 src/renderer/      React UI. No Node access.
 src/shared/        Types, constants, and pure logic both processes need.
@@ -145,6 +145,15 @@ markers (`1080p`, `x265`, `BluRay`, `YTS.*`, a year) may terminate a title.
 Words that appear in real titles (`uncut`, `to`, `web`, `cam`) are weak and only
 count once the title has ended. Without this, `Uncut Gems` parses to an empty
 string and `A Walk to Remember` truncates to `A Walk`.
+
+**A show's cast is not in `credits`.** `/tv/{id}?append_to_response=credits`
+returns series-level billing only — for Sherlock that is two people, and the
+sidebar showed exactly those two. The rest live in `aggregate_credits`, which
+rolls up every episode and puts the character under `roles[]` because one actor
+can play several parts across a run; the role with the most episodes is the one
+worth naming. That endpoint is TV-only, so films still ask for `credits` alone.
+It also returns *everyone* who ever appeared, which is why series cast is capped
+at `MAX_SERIES_CAST` (10) rather than the films' 30.
 
 **TMDB artwork.** Do not send `include_image_language`. Restricting to `en,null`
 starves non-English films — Solanin had exactly one usable poster because the
@@ -330,8 +339,8 @@ the year and genre sit in `state`:
 |---|---|---|---|---|
 | Playing | `Watching <title>` | — | `<app> · 2013 · Horror` | countdown |
 | Paused | `Watching <title>` | `Paused` | `<app> · 2013 · Horror` | none |
-| Film selected | app name | `Browsing the library` | that film's title | none |
-| Idle | app name | `Browsing the library` | `79 films` | none |
+| Film selected | app name | `Farming My Letterboxd` | that film's title | none |
+| Idle | app name | `Farming My Letterboxd` | `79 films` | none |
 
 While playing, the prominent line is deliberately empty — the countdown takes it.
 
@@ -497,8 +506,9 @@ brightness, on-demand audio conversion), acrylic translucency.
   `tsconfig.node.json` to include it, since `tsconfig.web.json` now excludes
   `*.test.ts`.
 - **The grid is not virtualized.** Fine at 79; not at thousands.
-- **Avatars are copied at full size.** Anything under 8 MB is accepted and
+- **Avatars are copied at full size.** Anything under 30 MB is accepted and
   nothing resizes it, so a phone photo is decoded in full to draw a 32px chip.
+  The cap is about renderer memory, not disk; resizing on copy would remove it.
 
 **Unresolved:** `library.json` was once found reverted to an older version with
 its original mtime, while `library.backup.json` held the correct data. Never
