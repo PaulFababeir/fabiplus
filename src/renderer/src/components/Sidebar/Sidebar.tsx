@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { toMovieUrl } from '@shared/media-url';
-import type { LibraryItem, ProfileState } from '@shared/types';
+import type { CastMember, LibraryItem, ProfileState } from '@shared/types';
 import { AUTO_ACCEPT, TMDB_ATTRIBUTION } from '@shared/constants';
 import {
   backdropFor,
@@ -10,6 +10,7 @@ import {
   posterFor,
   runtimeLabel
 } from '@renderer/lib/selectors';
+import { useFullBackdrop } from '@renderer/lib/useFullBackdrop';
 import { BackdropPicker } from '@renderer/components/Modal/BackdropPicker';
 import { PosterPicker } from '@renderer/components/Modal/PosterPicker';
 import { PosterLightbox } from './PosterLightbox';
@@ -48,6 +49,9 @@ export function BackdropLayer({
   item: LibraryItem | null;
   profileState: ProfileState | null;
 }): React.JSX.Element {
+  // Showing a backdrop is what earns it a full-size copy — a pick made in an
+  // earlier session never passes back through the picker.
+  useFullBackdrop(item, profileState);
   const backdrop = item ? backdropFor(item, profileState) : null;
   return (
     <div className={styles.backdropLayer} data-visible={backdrop !== null} aria-hidden="true">
@@ -209,9 +213,7 @@ export function Sidebar({ item, profileState }: SidebarProps): React.JSX.Element
               <>
                 <div className={styles.chips}>
                   {(showAllCast ? meta.cast : meta.cast.slice(0, CAST_PREVIEW)).map((person) => (
-                    <span key={`${person.name}-${person.order}`} className={styles.chip}>
-                      {person.name}
-                    </span>
+                    <CastChip key={`${person.name}-${person.order}`} person={person} />
                   ))}
                 </div>
                 {meta.cast.length > CAST_PREVIEW && (
@@ -298,6 +300,69 @@ export function Sidebar({ item, profileState }: SidebarProps): React.JSX.Element
         <p style={{ margin: '10px 0 0' }}>{TMDB_ATTRIBUTION}</p>
       </div>
     </aside>
+  );
+}
+
+/** Milliseconds of travel per pixel, plus a fixed pause at each end. */
+const SCROLL_MS_PER_PX = 14;
+const SCROLL_BASE_MS = 1100;
+
+/**
+ * One cast chip, which swaps the actor for the character on hover.
+ *
+ * The chip is sized by the **actor** and never changes width. An earlier
+ * version stacked both names in one grid cell so the box fitted the longer of
+ * the two, which kept the size stable but left every chip padded out to a width
+ * its visible text did not explain — a row of ragged gaps. Here the character
+ * is clipped instead, and scrolls horizontally if it does not fit, so the grid
+ * stays even and nothing moves when a pointer crosses it.
+ *
+ * The overrun cannot be known in CSS — it is the difference between two
+ * measured widths — so it is read once on hover and handed to the animation as
+ * a custom property. Chips whose character already fits simply cross-fade.
+ *
+ * No `title`: a native tooltip would arrive a second after the fade had already
+ * said the same thing, on top of it. Both names stay in the accessibility tree.
+ */
+function CastChip({ person }: { person: CastMember }): React.JSX.Element {
+  const character = person.character.trim();
+  const viewportRef = useRef<HTMLSpanElement>(null);
+  const characterRef = useRef<HTMLSpanElement>(null);
+  const [shift, setShift] = useState(0);
+
+  const measure = useCallback(() => {
+    const viewport = viewportRef.current;
+    const name = characterRef.current;
+    if (!viewport || !name) return;
+    // Measured on hover rather than on mount: the sidebar is laid out before
+    // fonts settle, and a stale number would scroll to the wrong place.
+    setShift(Math.max(0, Math.round(name.scrollWidth - viewport.clientWidth)));
+  }, []);
+
+  if (character === '') return <span className={styles.chip}>{person.name}</span>;
+
+  return (
+    <span
+      className={styles.chip}
+      data-swaps="true"
+      data-scrolls={shift > 0}
+      onMouseEnter={measure}
+      onFocus={measure}
+      tabIndex={0}
+      style={
+        {
+          '--chip-shift': `${-shift}px`,
+          '--chip-scroll-ms': `${SCROLL_BASE_MS + shift * SCROLL_MS_PER_PX}ms`
+        } as React.CSSProperties
+      }
+    >
+      <span className={styles.chipViewport} ref={viewportRef}>
+        <span className={styles.chipActor}>{person.name}</span>
+        <span className={styles.chipCharacter} ref={characterRef}>
+          {character}
+        </span>
+      </span>
+    </span>
   );
 }
 

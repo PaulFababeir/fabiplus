@@ -410,6 +410,118 @@
   color: var(--text-dim);
 }
 
+/*
+ * Cast chips reveal the character on hover.
+ *
+ * The chip is sized by the actor's name and never changes width. The character
+ * is clipped to that same box and scrolls sideways when it does not fit, which
+ * is what keeps the grid even — sizing each chip to whichever of its two names
+ * is longer left a row of gaps that the visible text did not explain.
+ */
+.chip[data-swaps='true'] {
+  outline: none;
+  transition:
+    border-color 160ms var(--ease-out),
+    background 160ms var(--ease-out);
+}
+
+.chip[data-swaps='true']:hover,
+.chip[data-swaps='true']:focus-visible {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+/*
+ * The clipping box. Its width comes from `.chipActor`, which is the only child
+ * still in normal flow — the character is taken out of it so it cannot widen
+ * anything.
+ */
+.chipViewport {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.chipActor {
+  display: block;
+  transition: opacity 170ms var(--ease-out);
+}
+
+/*
+ * Centred while it fits. The chip is sized by the actor, so a short character
+ * name — "Tom" in a box cut for "Joseph Gordon-Levitt" — reads as mis-set when
+ * it hugs the left edge. Stretching to both edges and centring costs nothing:
+ * `scrollWidth` still reports the text's own width when it overruns, so the
+ * measurement below is unaffected.
+ */
+.chipCharacter {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  color: var(--accent);
+  text-align: center;
+  opacity: 0;
+  transition: opacity 170ms var(--ease-out);
+}
+
+/*
+ * Once it overruns there is nothing to centre — it starts flush left and the
+ * animation walks it across, so the reading always begins at the first letter.
+ */
+.chip[data-scrolls='true'] .chipCharacter {
+  right: auto;
+  text-align: left;
+}
+
+.chip[data-swaps='true']:hover .chipActor,
+.chip[data-swaps='true']:focus-visible .chipActor {
+  opacity: 0;
+}
+
+.chip[data-swaps='true']:hover .chipCharacter,
+.chip[data-swaps='true']:focus-visible .chipCharacter {
+  opacity: 1;
+}
+
+/*
+ * Only when the name actually overruns. `--chip-shift` is the measured overrun
+ * as a negative length; the holds at each end are what make it readable rather
+ * than a constantly moving ticker.
+ */
+.chip[data-scrolls='true']:hover .chipCharacter,
+.chip[data-scrolls='true']:focus-visible .chipCharacter {
+  animation: chipScroll var(--chip-scroll-ms) ease-in-out infinite alternate;
+}
+
+@keyframes chipScroll {
+  0%,
+  20% {
+    transform: translateX(0);
+  }
+  80%,
+  100% {
+    transform: translateX(var(--chip-shift));
+  }
+}
+
+/*
+ * Reduced motion keeps the reveal but drops the travel: the character is shown
+ * from its start and simply clipped, which is still more than was there before.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .chipActor,
+  .chipCharacter {
+    transition: none;
+  }
+
+  .chip[data-scrolls='true']:hover .chipCharacter,
+  .chip[data-scrolls='true']:focus-visible .chipCharacter {
+    animation: none;
+  }
+}
+
 .detailRow {
   display: flex;
   gap: 12px;
