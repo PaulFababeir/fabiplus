@@ -11,7 +11,7 @@ returns is cached to disk so the app runs with the network off.
 npm run dev          # electron-vite dev, HMR on the renderer
 npm start            # run the production build
 npm run build        # tsc --build && electron-vite build
-npm test             # 243 tests, node:test via tsx
+npm test             # 258 tests, node:test via tsx
 npm run typecheck    # tsc --build — see below, --noEmit checks nothing here
 npm run scan:report  # print the parse table for every folder, no network
 npm run dist         # NSIS installer into release/ (~102 MB)
@@ -26,7 +26,7 @@ under `src/main/` or `src/preload/` restarts the app; renderer edits hot-reload.
 
 ```
 src/main/          Electron main. Scanner, TMDB provider, matcher, stores.
-                   All 243 tests live here or in shared.
+                   All 258 tests live here or in shared.
 src/preload/       The entire renderer API surface (contextBridge).
 src/renderer/      React UI. No Node access.
 src/shared/        Types, constants, and pure logic both processes need.
@@ -154,6 +154,44 @@ can play several parts across a run; the role with the most episodes is the one
 worth naming. That endpoint is TV-only, so films still ask for `credits` alone.
 It also returns *everyone* who ever appeared, which is why series cast is capped
 at `MAX_SERIES_CAST` (10) rather than the films' 30.
+
+**Backdrops are cached at two sizes, and only one of them is the big one.** A
+film caches twenty backdrops but ever *shows* one, so `CachedImage.localPath`
+holds a w500 preview sized for the picker grid and `fullPath` holds the original
+— fetched at enrichment for `backdrops[0]` and on demand, through
+`library:backdrop-full`, the first time a profile picks any of the others.
+Caching twenty originals to display one cost about seven times the disk for
+pixels nothing drew: ~12MB a film against ~2MB.
+
+Three things follow. `backdropFor` returns `fullPath ?? localPath`, so a
+freshly picked backdrop is briefly soft rather than missing, and a catalog
+written before the split still resolves. `withBackdropFull` must move the legacy
+`metadata.backdrop` scalar too when index 0 is upgraded, because that scalar
+*is* `backdrops[0]`. And the upgrade is fire-and-forget from the picker — it
+must never block the dialog or flag the library busy, since the chosen backdrop
+is already on screen.
+
+**The artwork cache is keyed by URL, not by the provider path.** TMDB puts the
+size in the URL, so the path alone does not identify what was fetched. Keying on
+it meant raising `BACKDROP_SIZE` found the old w780 file already on disk and
+kept serving it — the larger image would never arrive, no matter how many times
+the user ran Refetch all, and nothing anywhere would report a problem. Changing
+any size constant now simply produces new entries; the superseded ones are
+orphans in a cache that is disposable by design.
+
+**`KindFilter` is not a `MediaKind`.** The library view can show `all`, but no
+`LibraryItem` is ever `all` and the provider has one endpoint per kind with
+nothing to search for "both". Widening `MediaKind` would put `all` in reach of
+`searchProvider` and `fetchDetails`, where it means nothing — so the view type
+lives beside `SortKey` and `matchesKind` is the only thing that reads it.
+
+**Avatars are re-encoded on the way in, and a GIF must not be.** A phone photo
+is 4000px and several MB, all of which was decoded to paint a 32px chip and the
+row tint; `compressedAvatar` shrinks it once to a 512px JPEG. GIF is excluded on
+purpose — `nativeImage` returns the first frame only, so re-encoding silently
+turns an animated avatar into a still. PNG stays PNG for its alpha. Anything the
+decoder cannot read comes back empty and is copied untouched, which is also what
+happens to a re-encode that came out no smaller.
 
 **TMDB artwork.** Do not send `include_image_language`. Restricting to `en,null`
 starves non-English films — Solanin had exactly one usable poster because the
@@ -506,9 +544,10 @@ brightness, on-demand audio conversion), acrylic translucency.
   `tsconfig.node.json` to include it, since `tsconfig.web.json` now excludes
   `*.test.ts`.
 - **The grid is not virtualized.** Fine at 79; not at thousands.
-- **Avatars are copied at full size.** Anything under 30 MB is accepted and
-  nothing resizes it, so a phone photo is decoded in full to draw a 32px chip.
-  The cap is about renderer memory, not disk; resizing on copy would remove it.
+- **An animated avatar is stored uncompressed.** `avatarEncoding` returns
+  `copy` for a GIF because a decoder hands back only its first frame, so a
+  30 MB animation is kept whole where a still would be shrunk to a few tens of
+  KB. Same for any format `nativeImage` cannot decode.
 
 **Unresolved:** `library.json` was once found reverted to an older version with
 its original mtime, while `library.backup.json` held the correct data. Never
