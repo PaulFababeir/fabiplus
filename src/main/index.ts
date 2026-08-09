@@ -27,7 +27,7 @@ import { serveFile } from './services/media-server.js';
 import { isHdrTagged, probeVideoColour } from './services/video-colour.js';
 import { checkForUpdate, currentVersion, downloadUpdate } from './services/updater.js';
 import { presence } from './services/discord-presence.js';
-import { applyManualMatch, enrichLibrary } from './services/enrichment.js';
+import { applyManualMatch, enrichLibrary, withFullBackdrop } from './services/enrichment.js';
 import {
   backupLibrary,
   loadLibrary,
@@ -316,6 +316,32 @@ function registerIpc(): void {
     console.log(`[library] fetched metadata for ${fresh.length} new film(s)`);
     return summary;
   });
+
+  ipcMain.handle(
+    IPC.libraryBackdropFull,
+    async (_event, movieId: unknown, index: unknown): Promise<LibraryCatalog> => {
+      const catalog = await loadLibrary();
+      const config = await loadConfig();
+      if (!config.tmdbApiKey || typeof movieId !== 'string' || typeof index !== 'number') {
+        return catalog;
+      }
+
+      const target = catalog.items.find((item) => item.id === movieId);
+      if (!target) return catalog;
+
+      // Offline, or a dead URL: the preview stays on screen and the upgrade is
+      // simply retried the next time this backdrop is chosen.
+      const updated = await withFullBackdrop(target, index, new TmdbProvider(config.tmdbApiKey));
+      if (updated === target) return catalog;
+
+      const next: LibraryCatalog = {
+        ...catalog,
+        items: catalog.items.map((item) => (item.id === movieId ? updated : item))
+      };
+      await saveLibrary(next);
+      return next;
+    }
+  );
 
   ipcMain.handle(
     IPC.libraryRematch,

@@ -262,14 +262,33 @@ describe('TmdbProvider errors', () => {
 
 describe('TmdbProvider.imageUrl', () => {
   /**
-   * Backdrops are w780, one step below the widest TMDB offers. Twenty per film
-   * at full width cost roughly 240MB across an 80-film library; this halves it
-   * and still exceeds the size the sidebar ever draws them at.
+   * Backdrops are full size while posters are not: a poster is drawn at
+   * thumbnail scale, a backdrop fills the Continue Watching stage and the
+   * sidebar plate, where anything smaller is upscaled and reads as soft.
    */
   it('uses different sizes for posters and backdrops', () => {
     const p = new TmdbProvider('k');
     assert.equal(p.imageUrl('/x.jpg', 'poster'), 'https://image.tmdb.org/t/p/w500/x.jpg');
-    assert.equal(p.imageUrl('/x.jpg', 'backdrop'), 'https://image.tmdb.org/t/p/w780/x.jpg');
+    assert.equal(p.imageUrl('/x.jpg', 'backdrop'), 'https://image.tmdb.org/t/p/original/x.jpg');
+  });
+
+  /**
+   * The tiering. Twenty originals a film were cached to display one; the picker
+   * grid draws its cells at about 470 device px, which w500 covers almost
+   * exactly, so only what is actually on screen needs the full size.
+   */
+  it('asks for a small preview for the picker grid', () => {
+    const p = new TmdbProvider('k');
+    assert.equal(
+      p.imageUrl('/x.jpg', 'backdrop-preview'),
+      'https://image.tmdb.org/t/p/w500/x.jpg'
+    );
+  });
+
+  /** Different URLs, so the two sizes are separate cache entries. */
+  it('gives the two backdrop sizes different urls', () => {
+    const p = new TmdbProvider('k');
+    assert.notEqual(p.imageUrl('/x.jpg', 'backdrop'), p.imageUrl('/x.jpg', 'backdrop-preview'));
   });
 
   /** A show carries one still per episode, where a film carries twenty images

@@ -15,6 +15,7 @@ interface LibraryStore {
   enrich: (force: boolean) => Promise<void>;
   fetchNew: () => Promise<void>;
   rematch: (movieId: string, remoteId: number) => Promise<void>;
+  ensureBackdropFull: (movieId: string, index: number) => Promise<void>;
   setProgress: (progress: EnrichmentProgress | null) => void;
   dismissSummary: () => void;
 }
@@ -100,6 +101,23 @@ export const useLibrary = create<LibraryStore>((set, get) => ({
       set({ error: message(err) });
     } finally {
       set({ busy: false });
+    }
+  },
+
+  /**
+   * Pulls the full-size copy of a backdrop that was cached only as a preview.
+   *
+   * Deliberately not `busy`: this runs after the picker has already closed and
+   * the chosen backdrop is on screen, so flagging the library as busy would put
+   * a spinner over a UI that is working perfectly. A failure is silent for the
+   * same reason — the preview is already showing and the upgrade retries the
+   * next time the backdrop is picked.
+   */
+  ensureBackdropFull: async (movieId, index) => {
+    try {
+      set({ catalog: await window.api.ensureBackdropFull(movieId, index) });
+    } catch {
+      // Offline, or no API key. The preview stands.
     }
   },
 

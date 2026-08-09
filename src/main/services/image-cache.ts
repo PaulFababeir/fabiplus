@@ -24,12 +24,20 @@ async function exists(path: string): Promise<boolean> {
 }
 
 /**
- * Deterministic local name derived from the provider path, so re-running
+ * Deterministic local name derived from the **full URL**, so re-running
  * enrichment reuses what is already downloaded instead of refetching.
+ *
+ * The URL and not the provider path, because the path alone does not say what
+ * was fetched. TMDB encodes the size in the URL (`/w780/abc.jpg` against
+ * `/original/abc.jpg`), so keying on the path meant a change of `BACKDROP_SIZE`
+ * found the old file already present and kept serving the smaller image — the
+ * new size would never arrive, however many times the user refetched. Every
+ * size is now its own entry; the superseded ones are orphans in a cache that is
+ * disposable by design.
  */
-export function cacheFileName(remotePath: string): string {
-  const digest = createHash('sha1').update(remotePath).digest('hex').slice(0, 16);
-  const ext = /\.([a-z0-9]{2,4})$/i.exec(remotePath)?.[1]?.toLowerCase() ?? 'jpg';
+export function cacheFileName(url: string): string {
+  const digest = createHash('sha1').update(url).digest('hex').slice(0, 16);
+  const ext = /\.([a-z0-9]{2,4})$/i.exec(url)?.[1]?.toLowerCase() ?? 'jpg';
   return `${digest}.${ext}`;
 }
 
@@ -45,8 +53,8 @@ const SUBDIR: Record<ImageKind, string> = {
   still: 'stills'
 };
 
-export function cachePathFor(remotePath: string, kind: ImageKind): string {
-  return join(imageCacheDir(), SUBDIR[kind], cacheFileName(remotePath));
+export function cachePathFor(url: string, kind: ImageKind): string {
+  return join(imageCacheDir(), SUBDIR[kind], cacheFileName(url));
 }
 
 /**
@@ -55,12 +63,12 @@ export function cachePathFor(remotePath: string, kind: ImageKind): string {
  * runs would treat as complete.
  */
 export async function cacheImage(
-  image: RemoteImage,
+  image: Pick<RemoteImage, 'path' | 'width' | 'height'>,
   kind: ImageKind,
   url: string,
   fetchImpl?: FetchLike
 ): Promise<CachedImage | null> {
-  const localPath = cachePathFor(image.path, kind);
+  const localPath = cachePathFor(url, kind);
 
   if (await exists(localPath)) {
     return { remotePath: image.path, localPath, width: image.width, height: image.height };

@@ -81,6 +81,20 @@ export interface CachedImage {
   localPath: string;
   width: number;
   height: number;
+  /**
+   * Full-resolution copy, for backdrops only.
+   *
+   * A film caches twenty backdrops but only ever *shows* one, so `localPath`
+   * holds a preview sized for the picker grid and this holds the large version
+   * — fetched at enrichment for the default, and on demand when a profile picks
+   * a different one. Storing twenty originals to display one cost about seven
+   * times the disk for pixels nothing drew.
+   *
+   * Null when the full size has not been fetched, absent entirely on posters,
+   * stills, and any catalog written before the split. `backdropFor` falls back
+   * to `localPath` in all three cases.
+   */
+  fullPath?: string | null;
 }
 
 export interface Metadata {
@@ -365,4 +379,15 @@ export interface AppConfig {
 // ---------------------------------------------------------------------------
 
 export type SortKey = 'alphabetical' | 'release-date' | 'recently-added';
+
+/**
+ * What the library view is showing.
+ *
+ * Deliberately not a `MediaKind`. `all` is a property of the view, not of an
+ * item: every `LibraryItem` is exactly one kind, and the provider has separate
+ * endpoints per kind with nothing to search for "both". Widening `MediaKind`
+ * would put `all` in reach of `searchProvider` and `fetchDetails`, where it
+ * means nothing.
+ */
+export type KindFilter = MediaKind | 'all';
 

@@ -19,8 +19,12 @@ export const POSTERS_PER_MOVIE = 20;
 
 /**
  * How many backdrops to cache per film, matching the posters so the pickers
- * behave alike. At w780 this is roughly 1.6MB per film — the cost is disk, not
- * metadata: twenty extra image records add about 3KB to a catalog entry.
+ * behave alike.
+ *
+ * Only one of them is stored at full size — see `BACKDROP_SIZE` — so twenty
+ * costs roughly 2MB a film rather than the 12MB it would if each were an
+ * original. The rest is metadata, and that is cheap: twenty image records add
+ * about 3KB to a catalog entry.
  */
 export const BACKDROPS_PER_MOVIE = 20;
 

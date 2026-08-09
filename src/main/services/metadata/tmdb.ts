@@ -3,6 +3,7 @@ import type { MediaKind } from '@shared/types';
 import type { Candidate } from './matcher.js';
 import {
   ProviderError,
+  type ImageSizeKind,
   type MetadataProvider,
   type ProviderDetails,
   type ProviderEpisode,
@@ -15,12 +16,19 @@ const IMAGE_BASE = 'https://image.tmdb.org/t/p';
 const POSTER_SIZE = 'w500';
 const THUMB_SIZE = 'w154';
 /*
- * One step down from w1280. With twenty backdrops cached per film instead of
- * one, the full width would have cost roughly 240MB across an 80-film library;
- * w780 halves that and is still sharp behind a sidebar that never shows the
- * image at full width.
+ * Backdrops are cached at two sizes, and the split is the whole point.
+ *
+ * Full size for the one on screen: the Continue Watching stage runs the width
+ * of the content column and the sidebar plate is 500 CSS px, both doubled again
+ * on a HiDPI display, so anything smaller is upscaled and reads as soft.
+ *
+ * Preview for the other nineteen, which exist only to fill the picker grid at
+ * 236 CSS px a cell — about 470 device px, which w500 covers almost exactly.
+ * Caching twenty originals to display one cost roughly seven times the disk for
+ * pixels nothing ever drew.
  */
-const BACKDROP_SIZE = 'w780';
+const BACKDROP_SIZE = 'original';
+const BACKDROP_PREVIEW_SIZE = 'w500';
 /*
  * Episode stills render in a sidebar row a little over 100px wide, so w300 is
  * already generous — and a show carries one per episode, where a film carries
@@ -28,6 +36,15 @@ const BACKDROP_SIZE = 'w780';
  * would triple that for pixels the row never shows.
  */
 const STILL_SIZE = 'w300';
+
+/** Every rendition in one place, so a size can never be picked by a fall-through. */
+const SIZES: Record<ImageSizeKind, string> = {
+  poster: POSTER_SIZE,
+  backdrop: BACKDROP_SIZE,
+  'backdrop-preview': BACKDROP_PREVIEW_SIZE,
+  thumb: THUMB_SIZE,
+  still: STILL_SIZE
+};
 
 /** Crew jobs worth showing in the sidebar; the full list runs to hundreds. */
 const KEY_CREW_JOBS = new Set([
@@ -369,15 +386,8 @@ export class TmdbProvider implements MetadataProvider {
     };
   }
 
-  imageUrl(path: string, kind: 'poster' | 'backdrop' | 'thumb' | 'still'): string {
-    const size =
-      kind === 'poster'
-        ? POSTER_SIZE
-        : kind === 'backdrop'
-          ? BACKDROP_SIZE
-          : kind === 'still'
-            ? STILL_SIZE
-            : THUMB_SIZE;
+  imageUrl(path: string, kind: ImageSizeKind): string {
+    const size = SIZES[kind];
     return `${IMAGE_BASE}/${size}${path}`;
   }
 }

@@ -3,6 +3,7 @@ import { BACKDROPS_PER_MOVIE } from '@shared/constants';
 import type { LibraryItem } from '@shared/types';
 import { displayTitle } from '@renderer/lib/selectors';
 import { useOnEscape } from '@renderer/lib/useDismiss';
+import { useLibrary } from '@renderer/state/useLibrary';
 import { useProfile } from '@renderer/state/useProfile';
 import { IconButton } from '@renderer/components/ui/IconButton';
 import styles from './Modal.module.css';
@@ -28,6 +29,7 @@ export function BackdropPicker({
   onClose
 }: BackdropPickerProps): React.JSX.Element {
   const chooseBackdrop = useProfile((s) => s.chooseBackdrop);
+  const ensureBackdropFull = useLibrary((s) => s.ensureBackdropFull);
   const backdrops = item.metadata?.backdrops ?? [];
 
   useOnEscape(onClose);
@@ -61,6 +63,11 @@ export function BackdropPicker({
                     aria-pressed={i === chosenIndex}
                     onClick={() => {
                       void chooseBackdrop(item.id, i);
+                      // Only the default is cached at full size, so the pick
+                      // shows its preview until this lands. Fired after the
+                      // choice, not awaited — the dialog should not sit open
+                      // waiting on a download.
+                      void ensureBackdropFull(item.id, i);
                       onClose();
                     }}
                   >

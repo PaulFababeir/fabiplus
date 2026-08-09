@@ -9,6 +9,7 @@ import type {
 } from '@shared/types';
 import { BACKDROPS_PER_MOVIE, POSTERS_PER_MOVIE } from '@shared/constants';
 import { cacheImage } from './image-cache.js';
+import { withBackdropFull } from './library-merge.js';
 import { decideMatch } from './metadata/matcher.js';
 import {
   ProviderError,
@@ -63,16 +64,72 @@ async function cacheArtwork(
   );
   const posters = settled.filter((p): p is CachedImage => p !== null);
 
-  // Twenty, like the posters, so the picker has the same range of choice.
-  // Failures are skipped rather than aborting: one bad URL should not cost the
-  // film every other backdrop.
+  /*
+   * Twenty, like the posters, so the picker has the same range of choice — but
+   * only the first is fetched at full size. The rest are previews for the
+   * picker grid and get their large version on demand, if one is ever chosen.
+   *
+   * Failures are skipped rather than aborting: one bad URL should not cost the
+   * film every other backdrop.
+   */
   const backdrops: CachedImage[] = [];
-  for (const candidate of details.backdrops.slice(0, BACKDROPS_PER_MOVIE)) {
-    const cached = await cacheImage(candidate, 'backdrop', provider.imageUrl(candidate.path, 'backdrop'));
-    if (cached) backdrops.push(cached);
+  for (const [index, candidate] of details.backdrops.slice(0, BACKDROPS_PER_MOVIE).entries()) {
+    const preview = await cacheImage(
+      candidate,
+      'backdrop',
+      provider.imageUrl(candidate.path, 'backdrop-preview')
+    );
+    if (!preview) continue;
+
+    const full =
+      index === 0 ? await fetchFullBackdrop(candidate.path, candidate, provider) : null;
+    backdrops.push({ ...preview, fullPath: full });
   }
 
   return { posters, backdrops };
+}
+
+/**
+ * Downloads the full-size version of one backdrop and returns its local path.
+ *
+ * Separate from the preview pass so it can also be called long after
+ * enrichment, the first time a profile picks a backdrop that was only ever
+ * cached small. Null on failure, which leaves the preview standing rather than
+ * blanking the sidebar.
+ */
+export async function fetchFullBackdrop(
+  remotePath: string,
+  size: { width: number; height: number },
+  provider: MetadataProvider
+): Promise<string | null> {
+  const cached = await cacheImage(
+    { path: remotePath, width: size.width, height: size.height },
+    'backdrop',
+    provider.imageUrl(remotePath, 'backdrop')
+  );
+  return cached?.localPath ?? null;
+}
+
+/**
+ * Ensures the chosen backdrop exists at full size, returning the item with
+ * `fullPath` filled in — or the same item when there is nothing to do.
+ *
+ * The picker only ever had previews for anything but the default, so this is
+ * what upgrades one the moment it is actually put on screen. Already-fetched
+ * backdrops short-circuit, so picking back and forth costs nothing.
+ */
+export async function withFullBackdrop(
+  item: LibraryItem,
+  index: number,
+  provider: MetadataProvider
+): Promise<LibraryItem> {
+  const target = item.metadata?.backdrops?.[index];
+  if (!target || target.fullPath) return item;
+
+  const fullPath = await fetchFullBackdrop(target.remotePath, target, provider);
+  if (!fullPath) return item;
+
+  return withBackdropFull(item, index, fullPath);
 }
 
 function toMetadata(
@@ -138,7 +195,7 @@ async function cacheStill(
 ): Promise<CachedImage | null> {
   if (stillPath === null) return null;
   return cacheImage(
-    { path: stillPath, width: 0, height: 0, voteAverage: 0, language: null },
+    { path: stillPath, width: 0, height: 0 },
     'still',
     provider.imageUrl(stillPath, 'still')
   );

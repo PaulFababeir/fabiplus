@@ -7,6 +7,9 @@ import type { Candidate } from './matcher.js';
  * enrichment pipeline or the UI knowing the difference.
  */
 
+/** Which rendition of an image is wanted. */
+export type ImageSizeKind = 'poster' | 'backdrop' | 'backdrop-preview' | 'thumb' | 'still';
+
 /** An image the provider knows about but that has not been downloaded yet. */
 export interface RemoteImage {
   /** Provider-side path, e.g. "/abc123.jpg". Doubles as the cache key. */
@@ -66,8 +69,12 @@ export interface MetadataProvider {
    * Absolute URL for a remote image. `thumb` is the small size used by the
    * re-match dialog, which streams straight from the provider rather than
    * caching candidates the user may never pick.
+   *
+   * Backdrops come in two: `backdrop-preview` fills the picker grid, and
+   * `backdrop` is the full-size version the sidebar and the Continue Watching
+   * stage actually display.
    */
-  imageUrl(path: string, kind: 'poster' | 'backdrop' | 'thumb' | 'still'): string;
+  imageUrl(path: string, kind: ImageSizeKind): string;
 }
 
 export class ProviderError extends Error {

@@ -90,6 +90,45 @@ export function mergeScan(
 }
 
 /**
+ * Records the full-size copy of one backdrop against an item.
+ *
+ * Only the default backdrop is fetched large at enrichment; the rest are picker
+ * previews until one is chosen. This is the patch that records the upgrade, and
+ * it lives here rather than in `enrichment.ts` for the usual reason — that
+ * module reaches the image cache, which reaches `config.ts`, which imports
+ * `electron`, so no test can load it.
+ *
+ * Returns the same item when there is nothing to record, which is what lets the
+ * caller skip a catalog write.
+ */
+export function withBackdropFull(
+  item: LibraryItem,
+  index: number,
+  fullPath: string
+): LibraryItem {
+  const backdrops = item.metadata?.backdrops ?? [];
+  const target = backdrops[index];
+  if (!item.metadata || !target || target.fullPath) return item;
+
+  const next = backdrops.map((b, i) => (i === index ? { ...b, fullPath } : b));
+
+  return {
+    ...item,
+    metadata: {
+      ...item.metadata,
+      backdrops: next,
+      /*
+       * The legacy scalar is `backdrops[0]` by definition, so upgrading index
+       * zero has to move both or `backdropFor` would read the full size from
+       * the list while a catalog written before the list existed kept serving
+       * the preview from the scalar.
+       */
+      backdrop: index === 0 ? (next[0] ?? item.metadata.backdrop) : item.metadata.backdrop
+    }
+  };
+}
+
+/**
  * Guards against a rescan wiping enrichment. If the stored catalog had
  * metadata and the merged result has none, something is wrong with the merge
  * (renamed roots, changed id scheme) and the write should be refused.

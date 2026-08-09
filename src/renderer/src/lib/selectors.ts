@@ -1,4 +1,4 @@
-import type { LibraryItem, MediaKind, ProfileState, SortKey } from '@shared/types';
+import type { KindFilter, LibraryItem, ProfileState, SortKey } from '@shared/types';
 
 /** Derived views over the catalog. Pure, so they stay cheap to memoize. */
 
@@ -33,7 +33,16 @@ export function backdropFor(item: LibraryItem, state: ProfileState | null): stri
 
   // A choice outlives a refetch that returned fewer images.
   const chosen = state?.backdropChoice[item.id] ?? 0;
-  return (backdrops[chosen] ?? backdrops[0])?.localPath ?? null;
+  const backdrop = backdrops[chosen] ?? backdrops[0];
+  if (!backdrop) return null;
+
+  /*
+   * The full size when it has been fetched, the picker preview until then.
+   * Only the default is stored large, so a freshly picked backdrop shows soft
+   * for as long as the upgrade takes — which beats showing nothing, and beats
+   * caching twenty originals per film against the chance one is chosen.
+   */
+  return backdrop.fullPath ?? backdrop.localPath;
 }
 
 /** Genres actually present in the library, most common first. */
@@ -93,16 +102,21 @@ function compare(a: LibraryItem, b: LibraryItem, sort: SortKey): number {
 
 export interface FilterArgs {
   items: LibraryItem[];
-  /** Films and shows share one catalog, so the view has to pick a side. */
-  kind: MediaKind;
+  /** Films and shows share one catalog, so the view says which it wants. */
+  kind: KindFilter;
   search: string;
   genre: string | null;
   sort: SortKey;
 }
 
+/** True when the view is showing this item. `all` mixes both. */
+export function matchesKind(item: LibraryItem, kind: KindFilter): boolean {
+  return kind === 'all' || item.kind === kind;
+}
+
 export function filterAndSort({ items, kind, search, genre, sort }: FilterArgs): LibraryItem[] {
   return items
-    .filter((item) => item.kind === kind)
+    .filter((item) => matchesKind(item, kind))
     .filter((item) => (genre === null ? true : (item.metadata?.genres ?? []).includes(genre)))
     .filter((item) => matchesSearch(item, search))
     .sort((a, b) => compare(a, b, sort));

@@ -31,6 +31,7 @@ export const IPC = {
   libraryFetchNew: 'library:fetch-new',
   libraryEnrichProgress: 'library:enrich-progress',
   libraryRematch: 'library:rematch',
+  libraryBackdropFull: 'library:backdrop-full',
   librarySearchProvider: 'library:search-provider',
   subtitleLoad: 'player:subtitle-load',
   subtitleRescan: 'player:subtitle-rescan',
@@ -91,6 +92,17 @@ export interface RendererApi {
   fetchNewLibrary(): Promise<EnrichmentSummary>;
   /** Forces a film to a specific provider id, overriding the fuzzy match. */
   rematch(movieId: string, remoteId: number): Promise<LibraryCatalog>;
+
+  /**
+   * Downloads the full-size version of a backdrop that was only cached as a
+   * picker preview, and returns the updated catalog.
+   *
+   * Backdrops other than the default are stored small — see `CachedImage`. This
+   * is what upgrades one when a profile actually puts it on screen. Safe to
+   * call for a backdrop that already has its full size, or with no network: it
+   * resolves to a catalog either way, leaving the preview in place on failure.
+   */
+  ensureBackdropFull(movieId: string, index: number): Promise<LibraryCatalog>;
   /**
    * Free-text provider search, for fixing a match the scorer got wrong. `kind`
    * picks the endpoint — a show cannot be found on the film one.

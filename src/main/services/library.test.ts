@@ -2,7 +2,12 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import type { CachedImage, LibraryCatalog, LibraryItem, ScanResult } from '@shared/types';
-import { mergeScan, withSubtitles, wouldDestroyMetadata } from './library-merge.js';
+import {
+  mergeScan,
+  withBackdropFull,
+  withSubtitles,
+  wouldDestroyMetadata
+} from './library-merge.js';
 
 /** Only `metadata` matters to the guard; the rest is scaffolding. */
 function catalog(metadataFlags: boolean[]): LibraryCatalog {
@@ -125,6 +130,60 @@ describe('mergeScan and episode enrichment', () => {
     const film = { id: 'f', seasons: null, addedAt: 'x' } as unknown as LibraryItem;
     const merged = mergeScan(catalogOf([film]), scanOf([film]), ROOTS);
     assert.equal(merged.items[0]?.seasons, null);
+  });
+});
+
+/**
+ * Only the default backdrop is fetched at full size; the other nineteen are
+ * picker previews until one is actually chosen.
+ */
+describe('withBackdropFull', () => {
+  const preview = (path: string): CachedImage => ({
+    remotePath: path,
+    localPath: `D:/cache/backdrops/${path}-w500.jpg`,
+    width: 500,
+    height: 281,
+    fullPath: null
+  });
+
+  const film = (backdrops: CachedImage[]): LibraryItem =>
+    ({
+      id: 'a',
+      metadata: { backdrops, backdrop: backdrops[0] ?? null }
+    }) as unknown as LibraryItem;
+
+  it('records the full path against the chosen backdrop', () => {
+    const next = withBackdropFull(film([preview('/x'), preview('/y')]), 1, 'D:/full/y.jpg');
+    assert.equal(next.metadata?.backdrops[1]?.fullPath, 'D:/full/y.jpg');
+  });
+
+  it('leaves the others alone', () => {
+    const next = withBackdropFull(film([preview('/x'), preview('/y')]), 1, 'D:/full/y.jpg');
+    assert.equal(next.metadata?.backdrops[0]?.fullPath, null);
+  });
+
+  /**
+   * The legacy scalar *is* `backdrops[0]`, so upgrading index zero has to move
+   * both — otherwise a catalog written before the list existed keeps serving
+   * the preview through `metadata.backdrop`.
+   */
+  it('keeps the legacy scalar in step when the default is upgraded', () => {
+    const next = withBackdropFull(film([preview('/x'), preview('/y')]), 0, 'D:/full/x.jpg');
+    assert.equal(next.metadata?.backdrop?.fullPath, 'D:/full/x.jpg');
+  });
+
+  it('does not touch the scalar for any other index', () => {
+    const next = withBackdropFull(film([preview('/x'), preview('/y')]), 1, 'D:/full/y.jpg');
+    assert.equal(next.metadata?.backdrop?.fullPath, null);
+  });
+
+  /** Returning the same object is what lets the caller skip a catalog write. */
+  it('returns the item unchanged when there is nothing to record', () => {
+    const already = film([{ ...preview('/x'), fullPath: 'D:/full/x.jpg' }]);
+    assert.equal(withBackdropFull(already, 0, 'D:/other.jpg'), already);
+
+    const none = film([]);
+    assert.equal(withBackdropFull(none, 3, 'D:/full/x.jpg'), none);
   });
 });
 
