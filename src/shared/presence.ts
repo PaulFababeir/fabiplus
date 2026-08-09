@@ -12,7 +12,7 @@ import type { DiscordActivity, LibraryItem } from './types.js';
  */
 
 /** Shown when no film is open. Discord puts this on the second line. */
-const BROWSING = 'Browsing the library';
+const BROWSING = 'Farming My Letterboxd';
 
 /**
  * Discord's activity verbs, rendered before the first line.

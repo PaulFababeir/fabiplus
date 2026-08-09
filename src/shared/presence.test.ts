@@ -92,7 +92,7 @@ describe('buildPresence', () => {
     const activity = buildPresence({ ...base, selected: solanin });
     assert.equal(activity.name, null);
     assert.equal(activity.type, ACTIVITY_PLAYING);
-    assert.equal(activity.details, 'Browsing the library');
+    assert.equal(activity.details, 'Farming My Letterboxd');
     assert.equal(activity.state, 'Solanin');
     assert.equal(activity.largeImage, FALLBACK_ART);
   });
@@ -100,7 +100,7 @@ describe('buildPresence', () => {
   it('falls back to the library size when nothing is chosen', () => {
     const activity = buildPresence(base);
     assert.equal(activity.name, null);
-    assert.equal(activity.details, 'Browsing the library');
+    assert.equal(activity.details, 'Farming My Letterboxd');
     assert.equal(activity.state, '79 films');
   });
 
