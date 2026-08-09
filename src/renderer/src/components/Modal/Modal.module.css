@@ -434,9 +434,11 @@
   cursor: default;
 }
 
+/* Mixed from the token rather than a literal: these were the old accent written
+   out as rgb(), which is exactly how they survived a change of accent. */
 .candidate[data-current='true'] {
-  border-color: rgb(167 139 250 / 45%);
-  background: rgb(167 139 250 / 8%);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
 }
 
 .candidateThumb {
@@ -475,7 +477,7 @@
 .currentBadge {
   padding: 1px 6px;
   border-radius: var(--radius-pill);
-  background: rgb(167 139 250 / 20%);
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
   color: var(--accent);
   font-size: 10px;
   font-weight: 700;

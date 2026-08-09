@@ -17,8 +17,15 @@ import { wouldEmptyProfiles } from './profile-rules.js';
  * lives in its own file — one corrupt profile can never take the others down.
  */
 
-/** Avatar accents, handed out in order as profiles are created. */
-const ACCENTS = ['#a78bfa', '#f472b6', '#4ade80', '#60a5fa', '#fbbf24'] as const;
+/**
+ * Avatar accents, handed out in order as profiles are created. The first is the
+ * app's own accent, so a fresh install's single profile matches the UI around
+ * it; the rest exist only to tell several profiles apart at a glance.
+ *
+ * Changing this list is safe: a profile stores the accent it was given, so
+ * existing chips keep their colour and only new profiles draw from the new set.
+ */
+const ACCENTS = ['#88a34d', '#f472b6', '#4ade80', '#60a5fa', '#fbbf24'] as const;
 
 export class ProfileLimitError extends Error {
   constructor() {
@@ -42,11 +49,12 @@ export class AvatarTooLargeError extends Error {
 }
 
 /**
- * The chip renders at 32px and nothing resizes the file on the way in, so a
- * 40-megapixel photo would be decoded in full every time the menu opens. The
- * dialog already filters to images; this is the guard against a large one.
+ * Nothing resizes the file on the way in, so the whole image is decoded to draw
+ * a 32px chip — the cap is about memory, not disk. Raised to 30MB because 8MB
+ * turned away ordinary phone photos, which is the common case for an avatar.
+ * The dialog already filters to images; this is the guard against a huge one.
  */
-const AVATAR_MAX_BYTES = 8 * 1024 * 1024;
+const AVATAR_MAX_BYTES = 30 * 1024 * 1024;
 
 /** Extensions the renderer can actually display through `movie://`. */
 const AVATAR_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif', '.avif']);

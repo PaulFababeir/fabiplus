@@ -16,8 +16,16 @@
   --text-muted: #8b8d93;
   --text-dim: #5f6167;
 
-  --accent: #a78bfa;
-  --accent-contrast: #1a1130;
+  /*
+   * Matcha. Deep enough to read as green rather than lime, light enough to
+   * carry small text on `--bg` — it is used both ways, as a fill under
+   * `--accent-contrast` (badges, the save button) and as a colour on the dark
+   * page (the current-match badge), so it cannot go much darker without one of
+   * those failing. Nothing should hardcode it; `color-mix` the variable when a
+   * translucent version is needed.
+   */
+  --accent: #88a34d;
+  --accent-contrast: #10180a;
 
   --radius-sm: 6px;
   --radius-md: 10px;
