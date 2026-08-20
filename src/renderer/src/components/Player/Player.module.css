@@ -96,7 +96,12 @@
   right: 0;
   left: 0;
   height: var(--drag-band);
-  z-index: 1;
+  /*
+   * Above the chrome, not below it. `.header` is a no-drag element that
+   * spans the top of the window, and painting it over this band cancelled
+   * the drag region entirely — the band existed and did nothing.
+   */
+  z-index: 250;
   -webkit-app-region: drag;
 }
 

@@ -231,6 +231,14 @@ function runFfmpeg(
        * converted files refusing to play, which is the thing this fixes.
        */
       '-movflags', '+faststart',
+      /*
+       * The container has to be named, because the output is written to a
+       * `.part` and ffmpeg picks its muxer from the file extension. Without
+       * this it fails with "Unable to choose an output format" before it
+       * reads a single frame — which meant no file was ever converted, and
+       * the player quietly fell back to the original and played it silently.
+       */
+      '-f', 'mp4',
       output
     ]);
 
