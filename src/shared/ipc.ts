@@ -43,6 +43,7 @@ export const IPC = {
   updateCheck: 'update:check',
   updateDownload: 'update:download',
   appVersion: 'app:version',
+  openLetterboxd: 'app:open-letterboxd',
   discordSet: 'discord:set',
   configSetDiscord: 'config:set-discord',
 
@@ -150,6 +151,16 @@ export interface RendererApi {
   probeVideoColour(path: string): Promise<VideoColourInfo>;
 
   getAppVersion(): Promise<string>;
+
+  /**
+   * Opens a film's Letterboxd page in the system browser.
+   *
+   * Takes the TMDB id rather than a URL, so the renderer cannot ask the shell
+   * to open anything it likes — main builds the address itself. Letterboxd's
+   * `/tmdb/{id}` route redirects to the right film, which beats guessing a slug
+   * from a title. Films only; Letterboxd does not catalogue television.
+   */
+  openLetterboxd(tmdbId: number): Promise<void>;
   /** Manual only — nothing checks on its own. */
   checkForUpdate(): Promise<UpdateStatus>;
   /** Downloads the pending update; it installs on quit. */

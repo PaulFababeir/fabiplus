@@ -27,7 +27,8 @@ export type IconName =
   | 'eye-off'
   | 'maximize'
   | 'image'
-  | 'pencil';
+  | 'pencil'
+  | 'letterboxd';
 
 /** A value may be several paths when the mark cannot be drawn with one. */
 const PATHS: Record<IconName, string | string[]> = {
@@ -72,11 +73,18 @@ const PATHS: Record<IconName, string | string[]> = {
     'M9.2 10.4a1.2 1.2 0 1 0 0-2.4 1.2 1.2 0 0 0 0 2.4',
     'm4 16.5 4.2-4.2 3.3 3.3L15 12l5 5'
   ],
-  pencil: ['M12 20h8', 'M16.2 3.8a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z']
+  pencil: ['M12 20h8', 'M16.2 3.8a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z'],
+  /* Letterboxd's three overlapping dots, monochrome. They deliberately overlap
+     — merged into one shape is what the mark looks like at this size. */
+  letterboxd: [
+    'M3.6 12a3.4 3.4 0 1 0 6.8 0 3.4 3.4 0 1 0-6.8 0Z',
+    'M8.6 12a3.4 3.4 0 1 0 6.8 0 3.4 3.4 0 1 0-6.8 0Z',
+    'M13.6 12a3.4 3.4 0 1 0 6.8 0 3.4 3.4 0 1 0-6.8 0Z'
+  ]
 };
 
 /** Icons drawn as filled shapes rather than strokes. */
-const FILLED = new Set<IconName>(['play', 'search', 'user', 'pause', 'more']);
+const FILLED = new Set<IconName>(['play', 'search', 'user', 'pause', 'more', 'letterboxd']);
 
 interface IconProps {
   name: IconName;

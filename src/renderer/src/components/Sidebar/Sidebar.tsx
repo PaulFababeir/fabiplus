@@ -62,7 +62,7 @@ export function BackdropLayer({
 }
 
 export function Sidebar({ item, profileState }: SidebarProps): React.JSX.Element | null {
-  const { sidebarOpen, select, setRematchOpen } = useUi();
+  const { sidebarOpen, select, setRematchOpen, play } = useUi();
   const [tab, setTab] = useState<Tab>('cast');
   const tabs = item ? tabsFor(item) : TABS;
 
@@ -128,6 +128,24 @@ export function Sidebar({ item, profileState }: SidebarProps): React.JSX.Element
           ) : (
             <>
               {poster && <img className={styles.posterImage} src={toMovieUrl(poster)} alt="" />}
+
+              {/*
+                Films only. A show's play button would start `LibraryItem.video`
+                — a stand-in for the first episode — and store progress against
+                the show rather than the episode, so the same file could end up
+                half-watched in two places. The WATCH tab is how a show is
+                played, and it already exists.
+              */}
+              {item.kind === 'movie' && (
+                <button
+                  type="button"
+                  className={styles.posterPlay}
+                  aria-label={`Play ${displayTitle(item)}`}
+                  onClick={() => play(item.id)}
+                >
+                  <Icon name="play" size={22} />
+                </button>
+              )}
 
               <div className={styles.posterTools}>
                 <button
@@ -290,6 +308,22 @@ export function Sidebar({ item, profileState }: SidebarProps): React.JSX.Element
       )}
 
       <div className={styles.footer}>
+        {/*
+          Letterboxd has no television, so this is films only — and it needs a
+          TMDB id, since the link goes through Letterboxd's `/tmdb/` redirect
+          rather than a slug guessed from the title.
+        */}
+        {item.kind === 'movie' && meta?.providerId === 'tmdb' && (
+          <button
+            type="button"
+            className={styles.letterboxd}
+            onClick={() => void window.api.openLetterboxd(meta.remoteId)}
+          >
+            <Icon name="letterboxd" size={13} />
+            View movie
+          </button>
+        )}
+
         <button
           type="button"
           className={styles.rematchLink}

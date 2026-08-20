@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, protocol } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, protocol, shell } from 'electron';
 import { readFile, realpath, stat } from 'node:fs/promises';
 import { join, resolve as resolvePath } from 'node:path';
 
@@ -481,6 +481,19 @@ function registerIpc(): void {
   });
 
   ipcMain.handle(IPC.appVersion, async (): Promise<string> => currentVersion());
+
+  /*
+   * The only thing in the app that leaves it.
+   *
+   * The renderer sends an id, never an address: `shell.openExternal` will hand
+   * anything to the OS, so letting a URL cross the boundary would turn any bug
+   * in the renderer into "open whatever you like on this machine". Building the
+   * address here means the worst a caller can do is open the wrong film.
+   */
+  ipcMain.handle(IPC.openLetterboxd, async (_event, tmdbId: unknown): Promise<void> => {
+    if (typeof tmdbId !== 'number' || !Number.isInteger(tmdbId) || tmdbId <= 0) return;
+    await shell.openExternal(`https://letterboxd.com/tmdb/${tmdbId}/`);
+  });
   ipcMain.handle(IPC.updateCheck, async (): Promise<UpdateStatus> => checkForUpdate());
   ipcMain.handle(IPC.updateDownload, async (): Promise<UpdateStatus> => downloadUpdate());
 

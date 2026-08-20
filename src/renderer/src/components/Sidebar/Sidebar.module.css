@@ -283,6 +283,46 @@
   display: block;
 }
 
+/*
+ * Centred on the poster, revealed with the other poster tools. The corners are
+ * already taken — tools at the top right, the poster swap at the bottom right —
+ * so the middle is the only place this can sit without colliding.
+ */
+.posterPlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  padding: 0;
+  border: 1px solid rgb(255 255 255 / 22%);
+  border-radius: 50%;
+  background: rgb(10 11 13 / 62%);
+  color: #fff;
+  cursor: pointer;
+  opacity: 0;
+  backdrop-filter: blur(6px);
+  transform: translate(-50%, -50%) scale(0.9);
+  transition:
+    opacity 170ms var(--ease-out),
+    transform 170ms var(--ease-out),
+    background 170ms var(--ease-out);
+}
+
+.posterFrame:hover .posterPlay,
+.posterPlay:focus-visible {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.posterPlay:hover {
+  background: rgb(10 11 13 / 88%);
+  border-color: color-mix(in srgb, var(--accent) 70%, transparent);
+}
+
 .swap {
   position: absolute;
   right: 8px;
@@ -560,6 +600,32 @@
   color: var(--text-dim);
   font-size: 10.5px;
   line-height: 1.5;
+}
+
+/*
+ * Letterboxd's LOG button, in this app's colours rather than theirs. Their
+ * green would be a second accent fighting the matcha one everywhere else, and
+ * the point is that it reads as part of this app that happens to link out.
+ */
+.letterboxd {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: filter 140ms var(--ease-out);
+}
+
+.letterboxd:hover {
+  filter: brightness(1.1);
 }
 
 .rematchLink {

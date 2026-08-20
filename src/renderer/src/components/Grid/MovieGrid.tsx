@@ -1,3 +1,5 @@
+import { useEffect, useRef } from 'react';
+
 import { toMovieUrl } from '@shared/media-url';
 import { progressOf } from '@shared/continue-watching';
 import type { LibraryItem, ProfileState } from '@shared/types';
@@ -13,7 +15,28 @@ interface MovieGridProps {
 }
 
 export function MovieGrid({ items, profileState }: MovieGridProps): React.JSX.Element {
-  const { selectedId, select, play } = useUi();
+  const { selectedId, select, play, sidebarOpen } = useUi();
+  const selectedRef = useRef<HTMLLIElement>(null);
+
+  /*
+   * Keep the selected card on screen.
+   *
+   * Opening the sidebar narrows the content column, so the grid reflows to
+   * fewer cards per row and everything after the newcomer shifts down. The film
+   * you just clicked could end up below the fold — still selected, still
+   * described in the sidebar, but scrolled out of reach of its own play button.
+   *
+   * `nearest` scrolls only when it actually has to, so a card already in view
+   * does not jolt. The frame's delay is what lets the reflow finish first;
+   * measuring in the same tick reads the old layout.
+   */
+  useEffect(() => {
+    if (selectedId === null) return;
+    const frame = requestAnimationFrame(() => {
+      selectedRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [selectedId, sidebarOpen]);
 
   if (items.length === 0) {
     return <p className={styles.empty}>Nothing here. Try a different genre or search.</p>;
@@ -31,7 +54,7 @@ export function MovieGrid({ items, profileState }: MovieGridProps): React.JSX.El
           item.match.confidence < AUTO_ACCEPT;
 
         return (
-          <li key={item.id}>
+          <li key={item.id} ref={item.id === selectedId ? selectedRef : undefined}>
             <button
               type="button"
               className={styles.card}

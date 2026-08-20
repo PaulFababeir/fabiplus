@@ -486,7 +486,12 @@ becoming file-system access.
 - `hardenWebContents()` denies renderer-opened windows, navigation and webview
   attachment. A renderer-opened window inherits the preload and with it
   `window.api`; the CSP governs what a document may *load*, never where the top
-  frame may *go*. The UI has no external links, so a flat deny is correct.
+  frame may *go*. Nothing navigates the top frame, so a flat deny is correct.
+- **The one outward link goes through main, and takes an id rather than a URL.**
+  `app:open-letterboxd` receives a TMDB id and builds the address itself, so a
+  bug in the renderer cannot hand `shell.openExternal` an arbitrary target —
+  that call will pass anything to the OS. The worst a caller can do is open the
+  wrong film. Any future external link should be shaped the same way.
 - Every path from the renderer goes through `resolveAllowedPath` — `movie://`,
   `subtitleLoad` and `videoColour` alike. It calls `realpath` **before**
   `isInside`, so a symlink inside the library cannot point out of it.

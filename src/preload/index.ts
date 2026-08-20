@@ -48,6 +48,7 @@ const api: RendererApi = {
     ipcRenderer.invoke(IPC.videoColour, path) as Promise<VideoColourInfo>,
 
   getAppVersion: () => ipcRenderer.invoke(IPC.appVersion) as Promise<string>,
+  openLetterboxd: (tmdbId) => ipcRenderer.invoke(IPC.openLetterboxd, tmdbId) as Promise<void>,
   rescanSubtitles: (folderPath) =>
     ipcRenderer.invoke(IPC.subtitleRescan, folderPath) as Promise<SubtitleFile[]>,
   setMovieRoots: (roots) =>
