@@ -17,6 +17,7 @@ import { PosterLightbox } from './PosterLightbox';
 import { useUi } from '@renderer/state/useUi';
 import { Icon } from '@renderer/components/ui/Icon';
 import { IconButton } from '@renderer/components/ui/IconButton';
+import { LetterboxdMark } from '@renderer/components/ui/LetterboxdMark';
 import { WatchSection } from './WatchSection';
 import styles from './Sidebar.module.css';
 
@@ -319,7 +320,7 @@ export function Sidebar({ item, profileState }: SidebarProps): React.JSX.Element
             className={styles.letterboxd}
             onClick={() => void window.api.openLetterboxd(meta.remoteId)}
           >
-            <Icon name="letterboxd" size={13} />
+            <LetterboxdMark size={14} />
             View movie
           </button>
         )}

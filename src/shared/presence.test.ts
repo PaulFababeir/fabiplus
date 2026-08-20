@@ -87,14 +87,35 @@ describe('buildPresence', () => {
     assert.equal(activity.state, 'Fabi+');
   });
 
-  /** Browsing keeps the app name — nothing else identifies the app there. */
-  it('shows the chosen film while browsing', () => {
+  /**
+   * Browsing keeps the app name on line one — nothing else identifies the app
+   * there — so the chosen film takes the prominent line instead of the joke.
+   */
+  it('names the chosen film on the prominent line', () => {
     const activity = buildPresence({ ...base, selected: solanin });
     assert.equal(activity.name, null);
     assert.equal(activity.type, ACTIVITY_PLAYING);
-    assert.equal(activity.details, 'Farming My Letterboxd');
-    assert.equal(activity.state, 'Solanin');
+    assert.equal(activity.details, 'Browsing: Solanin');
     assert.equal(activity.largeImage, FALLBACK_ART);
+  });
+
+  it('puts the year and genre under a chosen film', () => {
+    const withGenre = { ...solanin, genre: 'Drama' };
+    assert.equal(buildPresence({ ...base, selected: withGenre }).state, '2010 · Drama');
+  });
+
+  /** The app name is line one already; repeating it in the subtext is noise. */
+  it('does not repeat the app name under a chosen film', () => {
+    const activity = buildPresence({ ...base, selected: solanin });
+    assert.ok(!activity.state.includes('Fabi+'));
+  });
+
+  /** A film with no metadata still reads sensibly with an empty subtext. */
+  it('survives a chosen film with no year or genre', () => {
+    const bare = { ...solanin, year: null, genre: null };
+    const activity = buildPresence({ ...base, selected: bare });
+    assert.equal(activity.details, 'Browsing: Solanin');
+    assert.equal(activity.state, '');
   });
 
   it('falls back to the library size when nothing is chosen', () => {

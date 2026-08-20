@@ -126,12 +126,21 @@ export function buildPresence(input: PresenceInput): DiscordActivity {
     };
   }
 
+  /*
+   * A film is open in the sidebar. It goes on the prominent line rather than
+   * the grey one — "Farming My Letterboxd" is the joke for having nothing
+   * chosen, and it was pushing the one piece of actual information down into
+   * the subtext.
+   *
+   * The app name is not repeated here the way it is while playing: line one is
+   * already the app name, because `name` is null.
+   */
   if (selected) {
     return {
       name: null,
       type: ACTIVITY_PLAYING,
-      details: BROWSING,
-      state: selected.title,
+      details: `Browsing: ${selected.title}`,
+      state: [selected.year, selected.genre].filter(Boolean).join(' · '),
       remainingSec: null,
       largeImage: selected.image
     };
