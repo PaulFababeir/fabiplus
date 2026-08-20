@@ -320,7 +320,7 @@ export function Sidebar({ item, profileState }: SidebarProps): React.JSX.Element
             className={styles.letterboxd}
             onClick={() => void window.api.openLetterboxd(meta.remoteId)}
           >
-            <LetterboxdMark size={14} />
+            <LetterboxdMark height={12} />
             View movie
           </button>
         )}
