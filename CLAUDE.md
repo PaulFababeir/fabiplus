@@ -405,10 +405,16 @@ the year and genre sit in `state`:
 |---|---|---|---|---|
 | Playing | `Watching <title>` | — | `<app> · 2013 · Horror` | countdown |
 | Paused | `Watching <title>` | `Paused` | `<app> · 2013 · Horror` | none |
-| Film selected | app name | `Farming My Letterboxd` | that film's title | none |
-| Idle | app name | `Farming My Letterboxd` | `79 films` | none |
+| Film selected | app name | `Browsing: <title>` | `2010 · Drama` | none |
+| Idle | app name | `Farming My Letterboxd` | `87 films` | none |
 
 While playing, the prominent line is deliberately empty — the countdown takes it.
+
+Selecting a film moves its title onto the prominent line and drops the app name
+from the subtext: line one already *is* the app name whenever `name` is null, so
+repeating it there was noise, and `Farming My Letterboxd` was pushing the one
+useful fact down a row. The joke survives where it belongs — the idle card,
+which has no film to name.
 
 The **app name in the subtext is learned from Discord, never configured.** It
 lives in the developer portal, so the app cannot know it up front; Discord fills
