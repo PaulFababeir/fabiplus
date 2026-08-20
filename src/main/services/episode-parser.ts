@@ -83,16 +83,28 @@ function titleAfter(stem: string, from: number): string | null {
 /**
  * Reads a season number from a subfolder name.
  *
- * Handles `S01`, `Season 1`, `Series 2` and a bare `1`. Anything else — the
- * "Unaired Pilot" folder in the sample library, "Specials", "Extras" — has no
- * number and is kept under its own name rather than dropped, because those
- * folders hold real episodes people want to watch.
+ * The marker may sit anywhere in the name, because a season folder is very
+ * often just the release name: `Severance.S02.1080p.WEB.h264-ETHEL` is a
+ * season folder as much as `S02` is, and anchoring the match to the whole
+ * name meant every bundle that did not happen to be named `S01` had to be
+ * renamed by hand before the app would place it.
+ *
+ * Anything with no marker at all — the "Unaired Pilot" folder in the sample
+ * library, "Specials", "Extras" — has no number here and is kept under its own
+ * name rather than dropped, because those folders hold real episodes. The
+ * scanner may still infer a number for them from the files inside; see
+ * `seasonFromEpisodeNames`.
  */
 export function parseSeasonFolder(name: string): ParsedSeason {
   const trimmed = name.trim();
 
-  const match =
-    /^s(?:eason|eries)?[\s._-]*(\d{1,2})$/i.exec(trimmed) ?? /^(\d{1,2})$/.exec(trimmed);
+  /*
+   * `(?![0-9])` is what stops `Season 2160p` reading as season 21 and then
+   * season 2 — the number has to end where it looks like it ends.
+   */
+  const marked = /(?:^|[^a-z0-9])s(?:eason|eries)?[\s._-]*(\d{1,2})(?![0-9])/i.exec(trimmed);
+  const bare = /^(\d{1,2})$/.exec(trimmed);
+  const match = marked ?? bare;
 
   if (match?.[1]) {
     const number = Number(match[1]);
@@ -103,6 +115,25 @@ export function parseSeasonFolder(name: string): ParsedSeason {
   if (/^(?:specials?|extras?)$/i.test(trimmed)) return { number: 0, label: 'Specials' };
 
   return { number: null, label: trimmed };
+}
+
+/**
+ * The season the files in a folder agree they belong to, or null.
+ *
+ * The fallback for a folder whose name says nothing — a bundle called `Disc 1`
+ * whose files are all `S02E..` is season 2 whatever the folder is called.
+ *
+ * Unanimity is required on purpose. A folder holding a mix of seasons is a
+ * flat dump rather than a season, and guessing one of them would file the rest
+ * under the wrong number; leaving it unplaced is honest and still watchable.
+ */
+export function seasonFromEpisodeNames(filenames: string[]): number | null {
+  const seasons = new Set<number>();
+  for (const name of filenames) {
+    const { season } = parseEpisodeName(name);
+    if (season !== null) seasons.add(season);
+  }
+  return seasons.size === 1 ? ([...seasons][0] ?? null) : null;
 }
 
 /**

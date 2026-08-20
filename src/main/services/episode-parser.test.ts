@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { parseEpisodeName, parseSeasonFolder, parseSeriesFolder } from './episode-parser.js';
+import {
+  parseEpisodeName,
+  parseSeasonFolder,
+  parseSeriesFolder,
+  seasonFromEpisodeNames
+} from './episode-parser.js';
 
 /**
  * Fixtures are the real `D:/Series` library, the same way the film parser tests
@@ -121,5 +126,73 @@ describe('parseSeriesFolder', () => {
   /** A number in the title must not be eaten as a season marker. */
   it('does not truncate a title containing a digit', () => {
     assert.equal(parseSeriesFolder('Person of Interest 2011 S01-S05 1080p').title, 'Person of Interest');
+  });
+});
+
+/**
+ * A season folder is very often just the release name. Anchoring the match to
+ * the whole folder name is what forced every bundle that was not literally
+ * called `S01` to be renamed by hand before the app would place it.
+ */
+describe('parseSeasonFolder with release-named folders', () => {
+  it('finds the season anywhere in the name', () => {
+    assert.deepEqual(parseSeasonFolder('Severance.S02.1080p.WEB.h264-ETHEL'), {
+      number: 2,
+      label: 'Season 2'
+    });
+    assert.deepEqual(parseSeasonFolder('The.100.S03.WEBRip.x265'), {
+      number: 3,
+      label: 'Season 3'
+    });
+  });
+
+  /** The picker should read "Season 2", not the release string. */
+  it('labels by number rather than by folder name', () => {
+    assert.equal(parseSeasonFolder('Severance.S02.1080p.WEB.h264-ETHEL').label, 'Season 2');
+    assert.equal(parseSeasonFolder('Season 2 - The Fall').label, 'Season 2');
+  });
+
+  /** `Season 2160p` is a resolution, not season 21 and not season 2. */
+  it('does not cut a number short to force a match', () => {
+    assert.equal(parseSeasonFolder('Season 2160p').number, null);
+  });
+
+  /** Still no number, so the scanner can keep it under its own name. */
+  it('leaves a folder with no marker alone', () => {
+    assert.deepEqual(parseSeasonFolder('Unaired Pilot'), {
+      number: null,
+      label: 'Unaired Pilot'
+    });
+  });
+});
+
+describe('seasonFromEpisodeNames', () => {
+  it('reads the season the files agree on', () => {
+    assert.equal(
+      seasonFromEpisodeNames([
+        'Severance.S02E01.1080p.mkv',
+        'Severance.S02E02.1080p.mkv',
+        'Severance.S02E03.1080p.mkv'
+      ]),
+      2
+    );
+  });
+
+  /** A folder holding two seasons is a flat dump, not a season. */
+  it('refuses to guess when the files disagree', () => {
+    assert.equal(seasonFromEpisodeNames(['Show.S01E01.mkv', 'Show.S02E01.mkv']), null);
+  });
+
+  /** A bare `E03` carries no season — that is the folder's job. */
+  it('returns null when nothing states a season', () => {
+    assert.equal(seasonFromEpisodeNames(['E03 - The Great Game.mkv', 'random-video.mkv']), null);
+  });
+
+  it('handles the 1x02 form', () => {
+    assert.equal(seasonFromEpisodeNames(['Show 2x05 Something.mkv', 'Show 2x06 Else.mkv']), 2);
+  });
+
+  it('survives an empty folder', () => {
+    assert.equal(seasonFromEpisodeNames([]), null);
   });
 });

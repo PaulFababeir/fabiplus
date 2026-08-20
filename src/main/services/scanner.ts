@@ -19,7 +19,12 @@ import {
   parseReleaseName,
   subtitleLabel
 } from './filename-parser.js';
-import { parseEpisodeName, parseSeasonFolder, parseSeriesFolder } from './episode-parser.js';
+import {
+  parseEpisodeName,
+  parseSeasonFolder,
+  parseSeriesFolder,
+  seasonFromEpisodeNames
+} from './episode-parser.js';
 
 /**
  * Anything smaller than this is a sample/trailer, not the feature. The
@@ -126,11 +131,15 @@ function toVideoFile(f: FoundFile): VideoFile {
 /**
  * Builds the season list for one show folder.
  *
- * The folder decides which season an episode belongs to; the filename supplies
- * the episode number and title. That split matters for the unnumbered folders
- * real releases carry — the sample library's "Unaired Pilot" holds a file named
- * `S01E00`, and trusting the filename would bury it inside Season 1 instead of
- * showing it as the separate thing the release author clearly intended.
+ * Three sources, in order of authority. A folder that names its own season
+ * wins. A folder that does not is placed by the season its files agree on —
+ * which is what makes an arbitrarily named bundle work without renaming it.
+ * A folder with neither keeps its own name.
+ *
+ * The middle step is guarded so it cannot swallow the unnumbered folders real
+ * releases carry: the sample library’s "Unaired Pilot" holds a file named
+ * `S01E00`, and a folder actually called `S01` already claims season 1, so the
+ * pilot stays the separate thing the release author laid out.
  *
  * Episodes sitting loose in the show root become a single unlabelled season, so
  * a flat show folder still works.
@@ -159,6 +168,15 @@ async function collectSeasons(showPath: string): Promise<Season[]> {
     });
   }
 
+  /*
+   * Read every subfolder first, then decide the numbers. A folder that names
+   * its own season is authoritative; one that does not can still be placed by
+   * the files inside it, but only once we know which numbers are already
+   * spoken for.
+   */
+  const found: Array<{ label: string; number: number | null; named: boolean; episodes: Episode[] }> =
+    [];
+
   for (const entry of entries.filter((e) => e.isDirectory())) {
     const seasonPath = join(showPath, entry.name);
     const parsed = parseSeasonFolder(entry.name);
@@ -166,11 +184,44 @@ async function collectSeasons(showPath: string): Promise<Season[]> {
     const videos = files.filter((f) => isVideoFile(f.name));
     if (videos.length === 0) continue;
 
-    seasons.push({
-      number: parsed.number,
+    found.push({
       label: parsed.label,
+      number: parsed.number,
+      named: parsed.number !== null,
       episodes: await toEpisodes(seasonPath, videos, files)
     });
+  }
+
+  /*
+   * A folder that named its season owns that number. This is what keeps the
+   * "Unaired Pilot" folder separate: its one file is `S01E00`, so the files
+   * would place it in season 1 — but a folder literally called `S01` already
+   * claimed that, so the differently-named folder is something else and keeps
+   * its own name. Without the guard the pilot disappears into Season 1, which
+   * is not what the release author laid out.
+   */
+  const claimed = new Set(found.filter((s) => s.named).map((s) => s.number));
+
+  for (const season of found) {
+    if (season.number !== null) continue;
+    const inferred = seasonFromEpisodeNames(season.episodes.map((e) => basename(e.video.path)));
+    if (inferred === null || claimed.has(inferred)) continue;
+    season.number = inferred;
+    season.label = inferred === 0 ? 'Specials' : `Season ${inferred}`;
+  }
+
+  /*
+   * Fold folders that resolved to the same season into one. Releases split a
+   * season across `Disc 1`/`Disc 2` often enough, and two "Season 2" rows in
+   * the picker is never what anyone wants. Unnumbered folders never merge —
+   * there is nothing to say they belong together.
+   */
+  for (const season of found) {
+    const existing =
+      season.number === null ? undefined : seasons.find((s) => s.number === season.number);
+
+    if (existing) existing.episodes = [...existing.episodes, ...season.episodes].sort(byEpisode);
+    else seasons.push({ number: season.number, label: season.label, episodes: season.episodes });
   }
 
   // Numbered seasons first and in order; unnumbered folders trail alphabetically
@@ -181,6 +232,18 @@ async function collectSeasons(showPath: string): Promise<Season[]> {
     if (b.number === null) return -1;
     return a.number - b.number;
   });
+}
+
+/**
+ * Episode order within a season: numbered first and in order, unnumbered last
+ * by path. Shared so a season merged from two folders sorts exactly like one
+ * that came from a single folder.
+ */
+function byEpisode(a: Episode, b: Episode): number {
+  if (a.number === null && b.number === null) return a.video.path.localeCompare(b.video.path);
+  if (a.number === null) return 1;
+  if (b.number === null) return -1;
+  return a.number - b.number;
 }
 
 async function toEpisodes(
@@ -208,12 +271,7 @@ async function toEpisodes(
   });
 
   // Unnumbered episodes sort last rather than colliding at position zero.
-  return episodes.sort((a, b) => {
-    if (a.number === null && b.number === null) return a.video.path.localeCompare(b.video.path);
-    if (a.number === null) return 1;
-    if (b.number === null) return -1;
-    return a.number - b.number;
-  });
+  return episodes.sort(byEpisode);
 }
 
 /**
