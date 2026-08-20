@@ -1,4 +1,9 @@
 .root {
+  /*
+   * Height of the drag band along the top, and therefore the header’s top
+   * padding. One value so the two can never overlap — see `.dragBand`.
+   */
+  --drag-band: 30px;
   position: fixed;
   inset: 0;
   z-index: 200;
@@ -72,6 +77,29 @@
   -webkit-app-region: no-drag;
 }
 
+/*
+ * The one exception, and the reason it is a band rather than the whole header.
+ *
+ * The player covers the window, including the shell’s own drag strip, so while
+ * something is playing there is nothing to pick the window up by — which makes
+ * it impossible to move to another monitor. A drag region swallows mouse input
+ * for its whole band whatever is painted above it (that is what broke the back
+ * button before), so this stops where the header’s content begins rather than
+ * sitting behind it.
+ *
+ * Outside `.chrome` on purpose: the window stays draggable once the controls
+ * have faded, which is when you are least likely to want them back.
+ */
+.dragBand {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: var(--drag-band);
+  z-index: 1;
+  -webkit-app-region: drag;
+}
+
 /* Chrome fades out together while the pointer is idle. */
 .chrome {
   position: absolute;
@@ -108,7 +136,7 @@
   display: flex;
   align-items: flex-start;
   gap: 14px;
-  padding: 26px 30px 60px;
+  padding: var(--drag-band) 30px 60px;
   background: linear-gradient(to bottom, rgb(0 0 0 / 72%) 0%, rgb(0 0 0 / 30%) 55%, transparent 100%);
 }
 

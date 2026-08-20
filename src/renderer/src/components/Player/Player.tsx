@@ -538,6 +538,13 @@ export function Player({ item, episode, startAt }: PlayerProps): React.JSX.Eleme
         toggleFullscreen();
       }}
     >
+      {/*
+        Somewhere to pick the window up by. The player covers the shell’s own
+        title strip, so without this a playing window cannot be dragged to
+        another monitor at all. Empty and invisible by design — it only needs
+        to be a surface the OS will accept a drag on.
+      */}
+      <div className={styles.dragBand} />
       <video
         ref={videoRef}
         className={styles.video}

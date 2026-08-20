@@ -318,6 +318,14 @@ belongs in the component or the divergence starts again.
 - **`titleBarOverlay` paints an opaque strip.** The backdrop runs to `top: 0`
   but its mask *fades in*, so the strip behind the window buttons is bare page
   background and matches the painted colour.
+- **A drag region swallows its whole band, whatever is painted above it.**
+  The player sets `-webkit-app-region: no-drag` on `.root` and `.chrome`
+  because the shell’s strip was eating the back button. But the player also
+  covers that strip, so a playing window could not be dragged to another
+  monitor at all. `.dragBand` puts a 30px band back — outside `.chrome`, so it
+  survives the controls fading, and it *stops* where the header’s content
+  begins rather than sitting behind it. Both heights come from `--drag-band`
+  so they cannot drift back into overlapping.
 - **motion owns `transform`.** Never also put a CSS `transition` on transform
   for an animated element — they fight and the movement stutters.
 - **Absolutely-positioned motion cards need explicit z-index awareness.** The
