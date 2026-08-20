@@ -162,6 +162,24 @@ export function Player({ item, episode, startAt }: PlayerProps): React.JSX.Eleme
     [playablePath]
   );
 
+  /*
+   * Convert the next episode while this one plays.
+   *
+   * Audio Chromium cannot decode is converted before playback, and on a real
+   * DDP5.1 episode that is minutes, not seconds — long enough that
+   * next-episode autoplay felt broken. An episode is fifty minutes of runway,
+   * so doing it now makes the wait disappear for everything after the first.
+   *
+   * Gated on `playablePath` so the two conversions never overlap: starting the
+   * next one while this one is still converting would halve the speed of the
+   * file the viewer is actually waiting for. Files that need no conversion
+   * cost a header read and return immediately.
+   */
+  useEffect(() => {
+    if (upNext === null || playablePath === null) return;
+    void window.api.prewarmVideo(upNext.video.path).catch(() => undefined);
+  }, [upNext, playablePath]);
+
   // A file tagged PQ or HLG will be tone-mapped by Chromium; knowing that up
   // front lets the correction be on before the first frame is judged.
   useEffect(() => {

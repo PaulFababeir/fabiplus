@@ -43,6 +43,7 @@ const api: RendererApi = {
   embeddedSubtitles: (path) =>
     ipcRenderer.invoke(IPC.subtitleEmbedded, path) as Promise<SubtitleFile[]>,
   prepareVideo: (path) => ipcRenderer.invoke(IPC.videoPrepare, path) as Promise<PrepareResult>,
+  prewarmVideo: (path) => ipcRenderer.invoke(IPC.videoPrewarm, path) as Promise<void>,
   probeVideoColour: (path) =>
     ipcRenderer.invoke(IPC.videoColour, path) as Promise<VideoColourInfo>,
 

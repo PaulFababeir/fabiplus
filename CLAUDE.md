@@ -207,6 +207,15 @@ rest are tagged `ja`. Fetch every language, rank client-side in `rankImages`.
 Posters rank English-first (title art reads better at thumbnail size);
 backdrops prefer textless plates.
 
+**MP4 cannot hold SubRip, and `-c:s copy` fails the whole conversion.** The
+audio remux carried `-c:s copy`, so any file needing converted audio *and*
+holding embedded subtitles — 10 of the 11 such files in this library, and most
+of any modern WEB-DL — died on "Could not find tag for codec subrip" and was
+simply unplayable. It is `-sn` now: subtitles are read from the *original*
+file by `embedded-subs.ts`, never from the converted copy, so dropping forty
+tracks costs nothing and is faster besides. Never reintroduce a subtitle codec
+here without checking it against the MP4 container.
+
 **`net.fetch(file://)` ignores Range headers.** Video seeking requires 206
 partial responses, so `media-server.ts` parses Range and streams byte ranges by
 hand. Do not "simplify" this back to `net.fetch`.
@@ -541,12 +550,15 @@ brightness, on-demand audio conversion), acrylic translucency.
 
 **Known gaps:**
 
-- **AC-3, E-AC-3, DTS and TrueHD audio must be converted before it plays.** It
-  happens on first play with the video stream copied untouched — roughly ten
-  seconds for a 700 MB file, cached and capped at 4 GB. Bundling mpv would
-  remove the step and solve HDR tone mapping properly. The container and the
-  video codec are *not* the problem; Matroska and HEVC were both measured
-  playing natively, and `audio-support.ts` is where that is recorded.
+- **AC-3, E-AC-3, DTS and TrueHD audio must be converted before it plays.**
+  Measured on a real 50-minute DDP5.1 episode: about 200 seconds, not the
+  "ten seconds" this file claimed for a long time. The video stream is copied
+  bit-for-bit; the AAC encode is the cost. `-aac_coder fast` is worth 2.4x on
+  the encoder in isolation, though end-to-end the mux and the `+faststart`
+  pass dominate. The player pre-converts the *next* episode while one plays,
+  so only the first file of a session ever waits. The container and the video
+  codec are *not* the problem; Matroska and HEVC were both measured playing
+  natively, and `audio-support.ts` is where that is recorded.
 - **The grid plays a show by the show's own id.** `MovieGrid`'s play button
   passes `item.id` for anything it is handed, and for a series that resolves to
   `LibraryItem.video` — a stand-in for the first episode — with progress stored

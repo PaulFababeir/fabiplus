@@ -36,6 +36,7 @@ export const IPC = {
   subtitleLoad: 'player:subtitle-load',
   subtitleRescan: 'player:subtitle-rescan',
   videoPrepare: 'player:video-prepare',
+  videoPrewarm: 'player:video-prewarm',
   subtitleEmbedded: 'player:subtitle-embedded',
   videoPrepareProgress: 'player:video-prepare-progress',
   videoColour: 'player:video-colour',
@@ -133,6 +134,17 @@ export interface RendererApi {
    * stream is copied untouched. Everything else resolves to the original.
    */
   prepareVideo(path: string): Promise<PrepareResult>;
+
+  /**
+   * Converts a file the user has not asked for yet, so it is ready when
+   * they do. Used on the next episode while the current one plays.
+   *
+   * Deliberately not `prepareVideo`: that one reports progress, and a
+   * background job driving the player’s "Converting audio…" overlay would
+   * claim the episode on screen was still loading. Resolves when the work
+   * finishes; callers are expected to ignore it.
+   */
+  prewarmVideo(path: string): Promise<void>;
 
   /** Reads a file's declared colour tags so the player can spot HDR content. */
   probeVideoColour(path: string): Promise<VideoColourInfo>;

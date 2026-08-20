@@ -455,6 +455,21 @@ function registerIpc(): void {
     });
   });
 
+  /*
+   * No progress callback, so nothing reaches the renderer. The result is
+   * discarded too — the point is only that the cache is warm by the time
+   * the next episode is asked for.
+   */
+  ipcMain.handle(IPC.videoPrewarm, async (_event, path: unknown): Promise<void> => {
+    if (typeof path !== 'string') return;
+
+    const safe = await resolveAllowedPath(path);
+    if (!safe) return;
+
+    const info = await stat(safe);
+    await prepareVideo(safe, info.size, info.mtimeMs);
+  });
+
   ipcMain.handle(IPC.videoColour, async (_event, path: unknown): Promise<VideoColourInfo> => {
     if (typeof path !== 'string') return { transfer: null, hdr: false };
 
