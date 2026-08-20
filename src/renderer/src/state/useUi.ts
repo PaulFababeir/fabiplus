@@ -68,7 +68,13 @@ interface UiStore {
 }
 
 export const useUi = create<UiStore>((set) => ({
-  kind: 'movie',
+  /*
+   * `all`, not `movie`. Landing in a view that hides half the library made
+   * shows look missing until you found the dropdown — and a filter that
+   * exists to combine both is the honest default for a library holding
+   * both.
+   */
+  kind: 'all',
   search: '',
   genre: null,
   sort: 'alphabetical',

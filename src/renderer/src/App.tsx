@@ -10,12 +10,33 @@ import { Player } from '@renderer/components/Player/Player';
 import { BackdropLayer, Sidebar } from '@renderer/components/Sidebar/Sidebar';
 import { TopBar } from '@renderer/components/TopBar/TopBar';
 import { AUTO_ACCEPT } from '@shared/constants';
+import type { KindFilter } from '@shared/types';
 import { filterAndSort, genresOf, matchesKind, needsReviewItems } from '@renderer/lib/selectors';
 import { useDiscordPresence } from '@renderer/lib/useDiscordPresence';
 import { useLibrary } from '@renderer/state/useLibrary';
 import { useProfile } from '@renderer/state/useProfile';
 import { useUi } from '@renderer/state/useUi';
 import styles from './App.module.css';
+
+/**
+ * What an empty library says, per view. `all` cannot name a single kind, and
+ * it is now the view a fresh install lands in, so it needed its own wording
+ * rather than falling through to the films copy.
+ */
+const EMPTY_COPY: Record<KindFilter, { title: string; body: string }> = {
+  all: {
+    title: 'Nothing here yet',
+    body: 'Choose the folders your films and shows live in — a film sits in its own subfolder, a show gets one folder per season.'
+  },
+  movie: {
+    title: 'No films yet',
+    body: 'Choose the folder your films live in — each one in its own subfolder — and they will be scanned and matched automatically.'
+  },
+  series: {
+    title: 'No shows yet',
+    body: 'Choose the folder your shows live in — one subfolder per show, with a folder per season inside it.'
+  }
+};
 
 export default function App(): React.JSX.Element {
   const { catalog, loading, error, load, setProgress } = useLibrary();
@@ -141,12 +162,10 @@ export default function App(): React.JSX.Element {
                this the grid is simply blank, which reads as a broken app. */
             <div className={styles.empty}>
               <h2 className={styles.emptyTitle}>
-                {kind === 'series' ? 'No shows yet' : 'No films yet'}
+                {EMPTY_COPY[kind].title}
               </h2>
               <p className={styles.emptyBody}>
-                {kind === 'series'
-                  ? 'Choose the folder your shows live in — one subfolder per show, with a folder per season inside it.'
-                  : 'Choose the folder your films live in — each one in its own subfolder — and they will be scanned and matched automatically.'}
+                {EMPTY_COPY[kind].body}
               </p>
               <button
                 type="button"
