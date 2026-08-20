@@ -108,7 +108,7 @@ function isYear(token: string): number | null {
  * also contain dots ("Guardians Of The Galaxy Vol. 2"). Only treat dots as
  * separators when the name has no spaces at all.
  */
-function normalizeSeparators(input: string): string {
+export function normalizeSeparators(input: string): string {
   const hasSpaces = /\s/.test(input);
   let s = input;
   if (!hasSpaces) s = s.replace(/[._]+/g, ' ');

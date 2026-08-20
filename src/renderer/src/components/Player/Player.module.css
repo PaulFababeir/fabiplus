@@ -97,9 +97,11 @@
   left: 0;
   height: var(--drag-band);
   /*
-   * Above the chrome, not below it. `.header` is a no-drag element that
-   * spans the top of the window, and painting it over this band cancelled
-   * the drag region entirely — the band existed and did nothing.
+   * The z-index is only so the band is not obscured for hit-testing; what
+   * actually makes it work is being last in the DOM. Chromium builds the
+   * drag region by walking the tree in order, unioning `drag` and
+   * subtracting `no-drag`, so `.chrome` — no-drag, covering `inset: 0` —
+   * erases anything declared before it. See the element in `Player.tsx`.
    */
   z-index: 250;
   -webkit-app-region: drag;

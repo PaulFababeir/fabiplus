@@ -196,3 +196,59 @@ describe('seasonFromEpisodeNames', () => {
     assert.equal(seasonFromEpisodeNames([]), null);
   });
 });
+
+/**
+ * Punctuation in a show's name. Release folders use dots as separators, but a
+ * dot is also just a dot — and collapsing both alike made a show display under
+ * a title nobody writes, while a film in the same folder shape parsed fine.
+ */
+describe('parseSeriesFolder with punctuation', () => {
+  it('keeps a dot that is punctuation, not a separator', () => {
+    assert.equal(parseSeriesFolder('Mr. Robot S01-S04 Complete 1080p').title, 'Mr. Robot');
+    assert.equal(parseSeriesFolder('S.W.A.T. 2017 S01 1080p').title, 'S.W.A.T.');
+    assert.equal(
+      parseSeriesFolder('Agents of S.H.I.E.L.D. S01 1080p').title,
+      'Agents of S.H.I.E.L.D.'
+    );
+  });
+
+  /** The scene form still has to collapse, or every dotted name breaks. */
+  it('still treats dots as separators when there are no spaces', () => {
+    assert.equal(parseSeriesFolder('Mr.Robot.S01.1080p.WEB-DL').title, 'Mr Robot');
+  });
+
+  it('leaves other punctuation alone', () => {
+    assert.equal(parseSeriesFolder("Bob's Burgers S01 1080p").title, "Bob's Burgers");
+    assert.equal(parseSeriesFolder('Brooklyn Nine-Nine S01 1080p').title, 'Brooklyn Nine-Nine');
+    assert.equal(parseSeriesFolder('9-1-1 S01 1080p').title, '9-1-1');
+    assert.equal(parseSeriesFolder('Kaguya-sama: Love Is War S01').title, 'Kaguya-sama: Love Is War');
+  });
+
+  /**
+   * A bracket at the front is a release tag. The trailing-bracket strip cannot
+   * tell the two apart, so a leading group emptied the title and the fallback
+   * returned the whole raw folder name.
+   */
+  it('drops a leading release group instead of the whole title', () => {
+    assert.equal(parseSeriesFolder('[Group] Show Name S01 1080p').title, 'Show Name');
+    assert.equal(parseSeriesFolder('[SubsPlease] Kaguya-sama S01 1080p').title, 'Kaguya-sama');
+  });
+
+  it('still drops trailing bracket groups', () => {
+    const r = parseSeriesFolder('Show (2017) [1080p] S01');
+    assert.equal(r.title, 'Show');
+    assert.equal(r.year, 2017);
+  });
+
+  /** The two real shows in the library must not move. */
+  it('leaves the existing library unchanged', () => {
+    assert.deepEqual(parseSeriesFolder('Severance S01-S02 Complete 1080p'), {
+      title: 'Severance',
+      year: null
+    });
+    assert.deepEqual(
+      parseSeriesFolder('Sherlock 2010 S01-S04 Complete 720p WEB-DL HEVC x265 BONE'),
+      { title: 'Sherlock', year: 2010 }
+    );
+  });
+});

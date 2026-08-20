@@ -1,3 +1,5 @@
+import { normalizeSeparators } from './filename-parser.js';
+
 /**
  * Season and episode parsing for series folders.
  *
@@ -144,7 +146,24 @@ export function seasonFromEpisodeNames(filenames: string[]): number | null {
  * and it appears before the usual resolution tags.
  */
 export function parseSeriesFolder(name: string): { title: string; year: number | null } {
-  let rest = name.replace(/[._]+/g, ' ').trim();
+  /*
+   * The same separator rule the film parser uses, and shared rather than
+   * repeated: dots are separators only when the name has no spaces at all.
+   * Collapsing them unconditionally turned "Mr. Robot" into "Mr  Robot"
+   * and "S.W.A.T." into "S W A T", so a show with punctuation in its name
+   * displayed differently from a film with the same name — and searched
+   * TMDB under a title nobody uses.
+   */
+  let rest = normalizeSeparators(name);
+
+  /*
+   * A bracket group at the very front is a release tag, not the title —
+   * "[SubsPlease] Show" and "(2017) S.W.A.T." both start with one. The
+   * trailing-bracket strip below cannot tell the difference: applied to a
+   * leading group it emptied the title outright, and the empty-string
+   * fallback then handed back the whole raw folder name.
+   */
+  rest = rest.replace(/^(?:\s*[([{][^)\]}]*[)\]}]\s*)+/, '');
 
   // A season range or single-season marker terminates the title.
   const range = /\bs\d{1,2}\s*-\s*s?\d{1,2}\b|\bs\d{1,2}\b|\bseasons?\s*\d/i.exec(rest);

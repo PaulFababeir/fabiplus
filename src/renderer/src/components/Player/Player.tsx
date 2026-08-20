@@ -556,13 +556,6 @@ export function Player({ item, episode, startAt }: PlayerProps): React.JSX.Eleme
         toggleFullscreen();
       }}
     >
-      {/*
-        Somewhere to pick the window up by. The player covers the shell’s own
-        title strip, so without this a playing window cannot be dragged to
-        another monitor at all. Empty and invisible by design — it only needs
-        to be a surface the OS will accept a drag on.
-      */}
-      <div className={styles.dragBand} />
       <video
         ref={videoRef}
         className={styles.video}
@@ -936,6 +929,19 @@ export function Player({ item, episode, startAt }: PlayerProps): React.JSX.Eleme
           </div>
         </div>
       </div>
+
+      {/*
+        Somewhere to pick the window up by. The player covers the shell’s own
+        title strip, so without this a playing window cannot be dragged to
+        another monitor at all.
+
+        Last on purpose. Chromium builds the drag region by walking the tree
+        in order — union for `drag`, difference for `no-drag` — so `.chrome`,
+        which is no-drag and covers `inset: 0`, subtracts anything declared
+        before it. Sitting earlier in the tree this band existed and did
+        nothing, however it was stacked; z-index has no say in it.
+      */}
+      <div className={styles.dragBand} />
     </motion.div>
   );
 }
