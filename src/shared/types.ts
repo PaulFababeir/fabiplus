@@ -227,6 +227,15 @@ export interface DiscordActivity {
   remainingSec: number | null;
   /** Asset key uploaded to the Discord application, or null for no artwork. */
   largeImage: string | null;
+  /**
+   * Tooltip shown when the cursor rests on the artwork.
+   *
+   * Its own field rather than something derived from `name`/`details`: it is
+   * the one place with room for a phrase the three visible lines have no space
+   * for, and deriving it meant changing the tooltip could only be done by
+   * changing what the card says.
+   */
+  largeText: string;
 }
 
 /** Result of a manual update check. */

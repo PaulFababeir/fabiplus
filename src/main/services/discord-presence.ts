@@ -110,7 +110,7 @@ export function buildActivity(activity: DiscordActivity): Record<string, unknown
   if (activity.largeImage) {
     payload['assets'] = {
       large_image: activity.largeImage,
-      large_text: activity.name ?? activity.details
+      large_text: activity.largeText
     };
   }
 

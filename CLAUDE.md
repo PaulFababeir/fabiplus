@@ -405,16 +405,17 @@ the year and genre sit in `state`:
 |---|---|---|---|---|
 | Playing | `Watching <title>` | — | `<app> · 2013 · Horror` | countdown |
 | Paused | `Watching <title>` | `Paused` | `<app> · 2013 · Horror` | none |
-| Film selected | app name | `Browsing: <title>` | `2010 · Drama` | none |
+| Film selected | app name | `Farming My Letterboxd` | that film's title | none |
 | Idle | app name | `Farming My Letterboxd` | `87 films` | none |
 
 While playing, the prominent line is deliberately empty — the countdown takes it.
 
-Selecting a film moves its title onto the prominent line and drops the app name
-from the subtext: line one already *is* the app name whenever `name` is null, so
-repeating it there was noise, and `Farming My Letterboxd` was pushing the one
-useful fact down a row. The joke survives where it belongs — the idle card,
-which has no film to name.
+**There is a fourth line, and it is the artwork's tooltip.** `largeText` is its
+own field on `DiscordActivity`, not something derived from the others — it used
+to be `name ?? details`, which meant the only way to change what the artwork
+said was to change what the card said. It is where the selected film is named in
+full (`Browsing: <title>`), leaving the three visible lines as they were. Every
+state must set it; an empty `large_text` renders as a bare grey box.
 
 The **app name in the subtext is learned from Discord, never configured.** It
 lives in the developer portal, so the app cannot know it up front; Discord fills

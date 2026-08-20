@@ -122,27 +122,27 @@ export function buildPresence(input: PresenceInput): DiscordActivity {
       // No countdown while paused: `timestamps.end` is an absolute wall-clock
       // instant, so Discord would count down a film that is not moving.
       remainingSec: playing ? remainingSec : null,
-      largeImage: film.image
+      largeImage: film.image,
+      // The poster is the film's own, so the tooltip names it rather than
+      // repeating the state of play the lines already carry.
+      largeText: film.episodeLine === null ? film.title : `${film.title} · ${film.episodeLine}`
     };
   }
 
   /*
-   * A film is open in the sidebar. It goes on the prominent line rather than
-   * the grey one — "Farming My Letterboxd" is the joke for having nothing
-   * chosen, and it was pushing the one piece of actual information down into
-   * the subtext.
-   *
-   * The app name is not repeated here the way it is while playing: line one is
-   * already the app name, because `name` is null.
+   * A film is open in the sidebar. The three visible lines stay as they were —
+   * the joke, then the title — and the film's name goes on the artwork tooltip
+   * instead, which is the one spot with room to say what it is.
    */
   if (selected) {
     return {
       name: null,
       type: ACTIVITY_PLAYING,
-      details: `Browsing: ${selected.title}`,
-      state: [selected.year, selected.genre].filter(Boolean).join(' · '),
+      details: BROWSING,
+      state: selected.title,
       remainingSec: null,
-      largeImage: selected.image
+      largeImage: selected.image,
+      largeText: `Browsing: ${selected.title}`
     };
   }
 
@@ -152,6 +152,8 @@ export function buildPresence(input: PresenceInput): DiscordActivity {
     details: BROWSING,
     state: libraryCount === 1 ? '1 film' : `${libraryCount} films`,
     remainingSec: null,
-    largeImage: FALLBACK_ART
+    largeImage: FALLBACK_ART,
+    // Nothing is chosen, so the artwork is the app icon and the tooltip says so.
+    largeText: appName ?? BROWSING
   };
 }

@@ -53,7 +53,8 @@ const main = async (): Promise<void> => {
           details: '2014 · Adventure',
           state: '',
           remainingSec: 5400,
-          largeImage: 'https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg'
+          largeImage: 'https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg',
+          largeText: 'Interstellar'
         });
         console.log('-> SET_ACTIVITY', JSON.stringify(activity));
         socket!.write(

@@ -46,6 +46,7 @@ describe('buildActivity', () => {
     state: '2014',
     remainingSec: null,
     largeImage: null
+    ,largeText: 'Interstellar'
   };
 
   it('maps details and state to the lines below the first', () => {
@@ -93,15 +94,23 @@ describe('buildActivity', () => {
     });
   });
 
-  /** The hover label should name the film, not its year and genre. */
-  it('labels the artwork with the name when there is one', () => {
+  /**
+   * The tooltip is passed through verbatim. It used to be derived from
+   * `name ?? details`, which meant the only way to change what the artwork
+   * said was to change what the card said.
+   */
+  it('labels the artwork from largeText alone', () => {
     const payload = buildActivity({
       ...base,
       name: 'Solanin',
       details: '2010 · Drama',
+      largeText: 'Browsing: Solanin',
       largeImage: 'poster'
     });
-    assert.deepEqual(payload['assets'], { large_image: 'poster', large_text: 'Solanin' });
+    assert.deepEqual(payload['assets'], {
+      large_image: 'poster',
+      large_text: 'Browsing: Solanin'
+    });
   });
 });
 
@@ -239,6 +248,7 @@ const solanin = {
   state: '',
   remainingSec: null,
   largeImage: null
+  ,largeText: 'Solanin'
 };
 
 /**
