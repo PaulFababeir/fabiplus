@@ -72,23 +72,84 @@ quit. Unsigned, so SmartScreen warns on first run.
 ### Cutting a release
 
 Nothing publishes on its own. `.github/workflows/release.yml` runs on a pushed
-`v*` tag and nothing else:
+`v*` tag and nothing else. The order below is not interchangeable — each step
+exists because skipping it has gone wrong at least once.
+
+**1. Audit and clean.** Everything must be green *before* the version moves,
+because `npm version` refuses to run on a dirty tree and a bump commit that also
+carries fixes is a bad thing to bisect later.
 
 ```bash
-npm version patch        # bumps package.json, commits, creates the tag
+npm run typecheck        # tsc --build; --noEmit checks nothing here
+npm test
+npm audit                # keep it at zero
+git status --short       # must be empty
+```
+
+Worth a sweep at the same time: exports nothing imports, CSS module classes
+nothing references, dependencies nothing pulls in. Note the two standing false
+positives — `IconButton`'s size classes are reached as `styles[size]`, and
+`--chip-shift` / `--chip-scroll-ms` are set inline from React rather than
+declared in CSS.
+
+**2. Bump.** `patch` for fixes, `minor` for features. This edits
+`package.json`, commits it, and creates the tag in one step — a hand-written
+`git tag` skips the first two and the build then fails the guard in step 5.
+
+```bash
+npm version patch
+```
+
+**3. Build the local installer.** The version has to be bumped first; the
+filename comes from `package.json`.
+
+```bash
+npm run dist
+```
+
+**4. Replace the previous installer.** Check `release/latest.yml` names the new
+version *before* deleting anything — that file is the update feed, and removing
+an installer it still points at leaves a feed advertising a file that is gone.
+
+```bash
+grep -E "^version|^path" release/latest.yml
+```
+
+Then delete the superseded `movie-app-<old>-setup.exe` and its `.blockmap`.
+`release/` is gitignored build output, so nothing there is recoverable from git
+— but it is all regenerable by rerunning step 3.
+
+**5. Push, which is what starts CI.**
+
+```bash
 git push --follow-tags
 ```
 
-It refuses to build when the tag disagrees with `package.json`, since that
-produces assets named for one version and a feed advertising another.
+The workflow's first real step compares the tag against `package.json` and
+refuses to build when they disagree, since that produces assets named for one
+version and a feed advertising another. `npm ci`, `npm test` and `npm run
+release` follow.
 
-electron-builder uploads the installer, `latest.yml` and the blockmap to a
-**draft** release. Drafts are invisible to `electron-updater`, so the release
-must be published in the GitHub UI before Settings → Check for updates sees it.
+**6. Publish the draft.** electron-builder uploads the installer, `latest.yml`
+and the blockmap to a **draft** release. Drafts are invisible to
+`electron-updater`, so nothing reaches Settings → Check for updates until it is
+published.
 
-`npm run release` does the same thing locally, but needs `GH_TOKEN` set to a
-personal access token with `repo` scope. Inside Actions the built-in
+```bash
+gh release edit v<version> --draft=false
+```
+
+**7. Install locally.** Quit the app first — Windows cannot replace a running
+executable. `%APPDATA%/movie-app/` is untouched by an upgrade, so the catalog,
+profiles and watch history carry over.
+
+`npm run release` does steps 3 and 5–6 locally instead, but needs `GH_TOKEN` set
+to a personal access token with `repo` scope. Inside Actions the built-in
 `GITHUB_TOKEN` covers it.
+
+**Anything pinned to `main` only updates once pushed.** `APP_ICON_URL` is the
+live example: Discord fetches `assets/icon.png` from the public repo, so a
+changed icon keeps serving the old one until step 5 lands.
 
 ### Versioning
 
