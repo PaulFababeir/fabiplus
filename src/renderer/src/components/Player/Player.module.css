@@ -580,3 +580,19 @@
   font-size: 13px;
   font-variant-numeric: tabular-nums;
 }
+
+/*
+ * The trailing word on a download row. Dimmer than the language beside it, so
+ * the list reads as a set of languages with an action rather than a column of
+ * repeated "Download".
+ */
+.menuHint {
+  flex: 0 0 auto;
+  margin-left: 12px;
+  color: var(--text-dim);
+  font-size: 11px;
+}
+
+.menuItem:hover .menuHint {
+  color: var(--accent);
+}

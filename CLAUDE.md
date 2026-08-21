@@ -11,7 +11,7 @@ everything it returns is cached to disk so the app runs with the network off.
 npm run dev          # electron-vite dev, HMR on the renderer
 npm start            # run the production build
 npm run build        # tsc --build && electron-vite build
-npm test             # 258 tests, node:test via tsx
+npm test             # 295 tests, node:test via tsx
 npm run typecheck    # tsc --build — see below, --noEmit checks nothing here
 npm run scan:report  # print the parse table for every folder, no network
 npm run dist         # NSIS installer into release/ (~118 MB)
@@ -26,7 +26,7 @@ under `src/main/` or `src/preload/` restarts the app; renderer edits hot-reload.
 
 ```
 src/main/          Electron main. Scanner, TMDB provider, matcher, stores.
-                   All 258 tests live here or in shared.
+                   All 295 tests live here or in shared.
 src/preload/       The entire renderer API surface (contextBridge).
 src/renderer/      React UI. No Node access.
 src/shared/        Types, constants, and pure logic both processes need.
@@ -206,6 +206,31 @@ starves non-English films — Solanin had exactly one usable poster because the
 rest are tagged `ja`. Fetch every language, rank client-side in `rankImages`.
 Posters rank English-first (title art reads better at thumbnail size);
 backdrops prefer textless plates.
+
+**Downloading a subtitle is the only thing that writes into the library.**
+Everything else in the app reads `movieRoots` and never touches them, which
+is a promise the README makes out loud. A downloaded `.srt` goes beside its
+video because that is what makes it work in every other player too, and what
+lets the existing scanner find it: `subtitleFileName` leads with the video’s
+stem so `shareStem` matches it, and ends with the language as a *word* so
+`subtitleLabel` reads it back as the track name. Neither needed changing.
+
+The destination is derived from the video’s own directory and re-checked with
+`isInside` after the filename is composed — the language comes off a scraped
+page, so it is stripped of anything that could climb out of the folder.
+
+**SubtitleCat is scraped, and that is a deliberate second choice.**
+OpenSubtitles has a real API and was tried first: it refuses every request
+without a registered key and caps downloads per day, which does not suit an
+app that otherwise needs no account. Scraping is brittle by nature, so the
+parsing lives in `subtitlecat-parse.ts` — pure, and pinned by tests against
+captured markup — apart from the fetching in `subtitlecat.ts`. A language the
+site offers to machine-translate has no `.srt` link, and that absence is what
+filters it out; nothing is offered that cannot actually be downloaded.
+
+Releases are ranked by `scoreHit` against the *file’s* name, not the film’s
+title. Subtitle timing follows the cut, so an extended edition drifts out of
+sync — the entry closest to what is on disk is the one worth taking.
 
 **MP4 cannot hold SubRip, and `-c:s copy` fails the whole conversion.** The
 audio remux carried `-c:s copy`, so any file needing converted audio *and*

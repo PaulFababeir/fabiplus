@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 
 import { toMovieUrl } from '@shared/media-url';
 import { nextEpisode } from '@shared/next-episode';
-import type { Episode, LibraryItem } from '@shared/types';
+import type { Episode, LibraryItem, SubtitleOption } from '@shared/types';
 import { displayTitle, displayYear } from '@renderer/lib/selectors';
 import { useLibrary } from '@renderer/state/useLibrary';
 import { useProfile } from '@renderer/state/useProfile';
@@ -202,6 +202,50 @@ export function Player({ item, episode, startAt }: PlayerProps): React.JSX.Eleme
    */
   const [subtitleFiles, setSubtitleFiles] = useState(episode?.subtitles ?? item.subtitles);
   const [rescanning, setRescanning] = useState(false);
+
+  /**
+   * Languages available online. Null until asked for, so opening the menu never
+   * reaches the network on its own — the app works offline and should not start
+   * making requests because someone looked at the settings.
+   */
+  const [online, setOnline] = useState<SubtitleOption[] | null>(null);
+  const [searching, setSearching] = useState(false);
+  const [downloading, setDownloading] = useState<string | null>(null);
+
+  const searchOnline = useCallback(async (): Promise<void> => {
+    setSearching(true);
+    try {
+      setOnline(await window.api.findSubtitlesOnline(video.path));
+    } finally {
+      setSearching(false);
+    }
+  }, [video.path]);
+
+  /**
+   * Downloads one language and picks it up immediately.
+   *
+   * The file lands beside the video, so the returned list is what a rescan
+   * would have found — no separate bookkeeping, and the track appears in the
+   * list above without leaving the player.
+   */
+  const downloadOne = useCallback(
+    async (option: SubtitleOption): Promise<void> => {
+      setDownloading(option.code);
+      try {
+        const found = await window.api.downloadSubtitle(video.path, option.path, option.language);
+        if (found.length > 0) setSubtitleFiles(found);
+        await reloadLibrary();
+      } finally {
+        setDownloading(null);
+      }
+    },
+    [video.path, reloadLibrary]
+  );
+
+  // A different file has a different set; keep nothing from the last one.
+  useEffect(() => {
+    setOnline(null);
+  }, [video.path]);
 
   useEffect(
     () => setSubtitleFiles(episode?.subtitles ?? item.subtitles),
@@ -869,6 +913,47 @@ export function Player({ item, episode, startAt }: PlayerProps): React.JSX.Eleme
                         {rescanning ? 'Looking…' : 'Rescan for subtitles'}
                       </span>
                     </button>
+
+                    {/*
+                      Downloading, so a film with nothing beside it does not
+                      send the user out to a browser and a file manager.
+                      Searched only when asked: it is a network call, and the
+                      app is otherwise usable with the network off.
+                    */}
+                    <div className={styles.menuDivider} />
+                    <div className={styles.menuLabel}>Download</div>
+
+                    {online === null ? (
+                      <button
+                        type="button"
+                        className={styles.menuItem}
+                        disabled={searching}
+                        onClick={() => void searchOnline()}
+                      >
+                        <span className={styles.menuItemLabel}>
+                          {searching ? 'Searching…' : 'Find subtitles online'}
+                        </span>
+                      </button>
+                    ) : online.length === 0 ? (
+                      <div className={styles.menuLabel} style={{ textTransform: 'none' }}>
+                        Nothing found for this release
+                      </div>
+                    ) : (
+                      online.map((option) => (
+                        <button
+                          key={option.code}
+                          type="button"
+                          className={styles.menuItem}
+                          disabled={downloading !== null}
+                          onClick={() => void downloadOne(option)}
+                        >
+                          <span className={styles.menuItemLabel}>{option.language}</span>
+                          <span className={styles.menuHint}>
+                            {downloading === option.code ? 'Saving…' : 'Download'}
+                          </span>
+                        </button>
+                      ))
+                    )}
 
                     {hdrTagged && (
                       <>

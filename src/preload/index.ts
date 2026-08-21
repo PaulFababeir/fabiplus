@@ -11,6 +11,7 @@ import type {
   PrepareResult,
   ReviewCandidate,
   SubtitleFile,
+  SubtitleOption,
   UpdateStatus,
   VideoColourInfo
 } from '../shared/types.js';
@@ -42,6 +43,15 @@ const api: RendererApi = {
   loadSubtitle: (path) => ipcRenderer.invoke(IPC.subtitleLoad, path) as Promise<string | null>,
   embeddedSubtitles: (path) =>
     ipcRenderer.invoke(IPC.subtitleEmbedded, path) as Promise<SubtitleFile[]>,
+  findSubtitlesOnline: (videoPath) =>
+    ipcRenderer.invoke(IPC.subtitleFind, videoPath) as Promise<SubtitleOption[]>,
+  downloadSubtitle: (videoPath, path, language) =>
+    ipcRenderer.invoke(
+      IPC.subtitleDownload,
+      videoPath,
+      path,
+      language
+    ) as Promise<SubtitleFile[]>,
   prepareVideo: (path) => ipcRenderer.invoke(IPC.videoPrepare, path) as Promise<PrepareResult>,
   prewarmVideo: (path) => ipcRenderer.invoke(IPC.videoPrewarm, path) as Promise<void>,
   probeVideoColour: (path) =>

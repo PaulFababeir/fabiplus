@@ -20,6 +20,19 @@ export interface VideoFile {
   ext: string;
 }
 
+/**
+ * One downloadable subtitle offered by the online provider.
+ *
+ * `path` is provider-relative, never a URL: main resolves it against the
+ * provider it came from, so the renderer cannot point the download at an
+ * arbitrary host.
+ */
+export interface SubtitleOption {
+  code: string;
+  language: string;
+  path: string;
+}
+
 export interface SubtitleFile {
   path: string;
   /** Best-effort language/name pulled from the filename, e.g. "English". */

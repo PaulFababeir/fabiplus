@@ -10,6 +10,7 @@ import type {
   ProfileState,
   ReviewCandidate,
   SubtitleFile,
+  SubtitleOption,
   UpdateStatus,
   VideoColourInfo
 } from './types.js';
@@ -35,6 +36,8 @@ export const IPC = {
   librarySearchProvider: 'library:search-provider',
   subtitleLoad: 'player:subtitle-load',
   subtitleRescan: 'player:subtitle-rescan',
+  subtitleFind: 'player:subtitle-find',
+  subtitleDownload: 'player:subtitle-download',
   videoPrepare: 'player:video-prepare',
   videoPrewarm: 'player:video-prewarm',
   subtitleEmbedded: 'player:subtitle-embedded',
@@ -128,6 +131,24 @@ export interface RendererApi {
    * Matroska routinely carries them and `<track>` cannot read them in place.
    */
   embeddedSubtitles(path: string): Promise<SubtitleFile[]>;
+
+  /**
+   * Languages available online for one video, best-matching release first.
+   *
+   * Resolves to an empty list when offline or when nothing matches — a missing
+   * subtitle is not an error worth interrupting playback for.
+   */
+  findSubtitlesOnline(videoPath: string): Promise<SubtitleOption[]>;
+
+  /**
+   * Downloads one language and writes it beside the video, then returns the
+   * folder's subtitles as the player should now see them.
+   *
+   * `path` comes from `findSubtitlesOnline` and is resolved against the
+   * provider's own host in main; the renderer never supplies a URL. Resolves to
+   * the unchanged list if the download fails.
+   */
+  downloadSubtitle(videoPath: string, path: string, language: string): Promise<SubtitleFile[]>;
 
   /**
    * Returns a path the player can actually load. Files whose audio Chromium

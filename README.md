@@ -91,7 +91,12 @@ default.
 The split is deliberate: a corrupt catalog or a full rescan can never touch your
 watch history. Every write goes to a temp file and is renamed into place.
 
-Your films are never moved, renamed, or written to. The app only reads them.
+Your films are never moved, renamed, or modified. The app only reads them.
+
+The one thing it writes into your library is a subtitle you asked it to
+download: the `.srt` lands next to the video it belongs to, named after it, so
+it works in any other player too. Nothing else is ever written there, and
+nothing is downloaded unless you press the button.
 
 ## Discord Rich Presence
 

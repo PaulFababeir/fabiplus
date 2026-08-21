@@ -1,6 +1,6 @@
 import { app, BrowserWindow, dialog, ipcMain, protocol, shell } from 'electron';
-import { readFile, realpath, stat } from 'node:fs/promises';
-import { join, resolve as resolvePath } from 'node:path';
+import { readFile, realpath, stat, writeFile } from 'node:fs/promises';
+import { basename, dirname, join, resolve as resolvePath } from 'node:path';
 
 import { DISCORD_APP_ID } from '@shared/constants';
 import { IPC } from '@shared/ipc';
@@ -16,6 +16,7 @@ import type {
   ProfileState,
   ReviewCandidate,
   SubtitleFile,
+  SubtitleOption,
   UpdateStatus,
   VideoColourInfo
 } from '@shared/types';
@@ -55,6 +56,8 @@ import {
   setWatchProgress
 } from './services/profiles.js';
 import { rescanSubtitles, scanLibrary } from './services/scanner.js';
+import { findSubtitles, fetchSubtitle } from './services/subtitles/subtitlecat.js';
+import { subtitleFileName } from './services/subtitles/subtitlecat-parse.js';
 
 const isDev = !app.isPackaged;
 
@@ -141,6 +144,32 @@ function registerMovieProtocol(): void {
     // honoured — without 206 responses the video element cannot seek.
     return serveFile(safe, request.headers.get('Range'));
   });
+}
+
+/**
+ * The film or episode a video file belongs to, for naming a subtitle search.
+ *
+ * An episode is searched under its show’s title: subtitle sites index by
+ * release, and the release name is what the ranking actually compares.
+ */
+function findByVideoPath(
+  catalog: LibraryCatalog,
+  videoPath: string
+): { title: string; year: number | null } | null {
+  const key = resolvePath(videoPath).toLowerCase();
+
+  for (const item of catalog.items) {
+    const title = item.metadata?.title ?? item.parsed.title;
+    const year = item.metadata?.year ?? item.parsed.year;
+    if (resolvePath(item.video.path).toLowerCase() === key) return { title, year };
+
+    for (const season of item.seasons ?? []) {
+      for (const episode of season.episodes) {
+        if (resolvePath(episode.video.path).toLowerCase() === key) return { title, year };
+      }
+    }
+  }
+  return null;
 }
 
 function registerIpc(): void {
@@ -408,6 +437,66 @@ function registerIpc(): void {
       return null;
     }
   });
+
+  ipcMain.handle(IPC.subtitleFind, async (_event, videoPath: unknown): Promise<SubtitleOption[]> => {
+    if (typeof videoPath !== 'string') return [];
+
+    const safe = await resolveAllowedPath(videoPath);
+    if (!safe) return [];
+
+    // Searched by the film's own title, but ranked against the file's release
+    // name — see `scoreHit`. The catalog is where the title comes from, so an
+    // unmatched film falls back to whatever the folder parsed to.
+    const catalog = await loadLibraryForDisplay();
+    const owner = findByVideoPath(catalog, safe);
+    if (!owner) return [];
+
+    return findSubtitles(owner.title, owner.year, basename(safe));
+  });
+
+  /*
+   * Writes into the user's own library folder, which nothing else in this app
+   * does — see the note in README. The guard is `resolveAllowedPath`: the
+   * destination is derived from the video's own directory and re-checked, so a
+   * download can only ever land beside a file that is already in a configured
+   * root. The filename comes from `subtitleFileName`, which strips separators
+   * out of the provider-supplied language.
+   */
+  ipcMain.handle(
+    IPC.subtitleDownload,
+    async (
+      _event,
+      videoPath: unknown,
+      path: unknown,
+      language: unknown
+    ): Promise<SubtitleFile[]> => {
+      if (typeof videoPath !== 'string' || typeof path !== 'string' || typeof language !== 'string') {
+        return [];
+      }
+
+      const safe = await resolveAllowedPath(videoPath);
+      if (!safe) return [];
+
+      const folder = dirname(safe);
+      const body = await fetchSubtitle(path);
+      if (body === null) return rescanSubtitles(folder);
+
+      const target = join(folder, subtitleFileName(basename(safe), language));
+      // Re-check the composed path, not just the folder it came from.
+      if (!isInside(resolvePath(target), resolvePath(folder))) return rescanSubtitles(folder);
+
+      await writeFile(target, body, 'utf8');
+
+      const found = await rescanSubtitles(folder);
+      try {
+        const { catalog, changed } = withSubtitles(await loadLibrary(), folder, found);
+        if (changed) await saveLibrary(catalog);
+      } catch (err) {
+        console.warn('[subtitles] downloaded but could not be recorded:', err);
+      }
+      return found;
+    }
+  );
 
   ipcMain.handle(IPC.subtitleRescan, async (_event, folderPath: unknown): Promise<SubtitleFile[]> => {
     if (typeof folderPath !== 'string') return [];
