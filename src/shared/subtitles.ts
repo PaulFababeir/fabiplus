@@ -1,4 +1,23 @@
 /**
+ * Filename for a downloaded subtitle, beside the video it belongs to.
+ *
+ * Shared because both sides need the same answer: main writes the file, and
+ * the player decides from it whether a language has already been fetched.
+ *
+ * The video’s stem leads so `shareStem` matches it, and the language goes on
+ * as a word rather than a code so `subtitleLabel` reads it back as the track
+ * name. Neither of those needed changing to accept a download.
+ *
+ * The language comes off a scraped page, so anything that could climb out of
+ * the folder is stripped before it reaches a path.
+ */
+export function subtitleFileName(videoFileName: string, language: string): string {
+  const stem = videoFileName.replace(/\.[a-z0-9]{2,4}$/i, '');
+  const safe = language.replace(/[^A-Za-z0-9 ()-]/g, '').replace(/\s+/g, ' ').trim();
+  return `${stem}.${safe || 'Downloaded'}.srt`;
+}
+
+/**
  * SubRip → WebVTT conversion.
  *
  * The library ships `.srt` files, which `<track>` will not load — browsers

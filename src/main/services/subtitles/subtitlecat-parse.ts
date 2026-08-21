@@ -90,16 +90,3 @@ function stripTags(input: string): string {
   return input.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
 }
 
-/**
- * Filename for a downloaded subtitle, beside the video it belongs to.
- *
- * The language goes on as a word rather than a code because `subtitleLabel`
- * already reads exactly that off a filename — so a download is labelled in the
- * player by the same path a hand-placed `.srt` is, with nothing added.
- * `shareStem` matches on the video's stem, which is why it leads.
- */
-export function subtitleFileName(videoFileName: string, language: string): string {
-  const stem = videoFileName.replace(/\.[a-z0-9]{2,4}$/i, '');
-  const safe = language.replace(/[^A-Za-z0-9 ()-]/g, '').replace(/\s+/g, ' ').trim();
-  return `${stem}.${safe || 'Downloaded'}.srt`;
-}

@@ -4,7 +4,7 @@ import { basename, dirname, join, resolve as resolvePath } from 'node:path';
 
 import { DISCORD_APP_ID } from '@shared/constants';
 import { IPC } from '@shared/ipc';
-import { isVtt, srtToVtt } from '@shared/subtitles';
+import { isVtt, srtToVtt, subtitleFileName } from '@shared/subtitles';
 import type {
   AppConfig,
   DiscordActivity,
@@ -57,7 +57,6 @@ import {
 } from './services/profiles.js';
 import { rescanSubtitles, scanLibrary } from './services/scanner.js';
 import { findSubtitles, fetchSubtitle } from './services/subtitles/subtitlecat.js';
-import { subtitleFileName } from './services/subtitles/subtitlecat-parse.js';
 
 const isDev = !app.isPackaged;
 

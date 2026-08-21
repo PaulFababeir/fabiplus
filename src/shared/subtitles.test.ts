@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { isVtt, srtToVtt } from './subtitles.js';
+import { isVtt, srtToVtt, subtitleFileName } from './subtitles.js';
 
 describe('srtToVtt', () => {
   it('adds the WEBVTT header', () => {
@@ -93,5 +93,32 @@ describe('isVtt', () => {
 
   it('does not mistake SRT for VTT', () => {
     assert.equal(isVtt('1\n00:00:01,000 --> 00:00:02,000\nHi\n'), false);
+  });
+});
+
+describe('subtitleFileName', () => {
+  /**
+   * Named so the existing scanner picks it up unaided: `shareStem` matches on
+   * the video's stem, and `subtitleLabel` reads the trailing word as the label.
+   */
+  it('leads with the video stem and ends with the language', () => {
+    assert.equal(
+      subtitleFileName('Interstellar.2014.1080p.BluRay.x264.YIFY.mp4', 'English'),
+      'Interstellar.2014.1080p.BluRay.x264.YIFY.English.srt'
+    );
+  });
+
+  it('keeps a regional name readable', () => {
+    assert.equal(
+      subtitleFileName('Film.mkv', 'Portuguese (Brazil)'),
+      'Film.Portuguese (Brazil).srt'
+    );
+  });
+
+  /** The language comes off a scraped page, so it cannot be trusted as a path. */
+  it('strips anything that could escape the folder', () => {
+    assert.equal(subtitleFileName('Film.mkv', '../../evil'), 'Film.evil.srt');
+    assert.equal(subtitleFileName('Film.mkv', 'a/b\\c'), 'Film.abc.srt');
+    assert.equal(subtitleFileName('Film.mkv', '???'), 'Film.Downloaded.srt');
   });
 });

@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 
 import { toMovieUrl } from '@shared/media-url';
 import { nextEpisode } from '@shared/next-episode';
+import { subtitleFileName } from '@shared/subtitles';
 import type { Episode, LibraryItem, SubtitleOption } from '@shared/types';
 import { displayTitle, displayYear } from '@renderer/lib/selectors';
 import { useLibrary } from '@renderer/state/useLibrary';
@@ -246,6 +247,26 @@ export function Player({ item, episode, startAt }: PlayerProps): React.JSX.Eleme
   useEffect(() => {
     setOnline(null);
   }, [video.path]);
+
+  /**
+   * Which offered languages are already sitting beside the video.
+   *
+   * Matched on the filename `subtitleFileName` produces rather than on the
+   * track label: `subtitleLabel` reads a single trailing word, so anything like
+   * "Portuguese (Brazil)" comes back as "Default" and would never line up.
+   * Comparing the name main actually wrote is exact for every language.
+   */
+  const downloaded = useMemo(() => {
+    const fileName = video.path.split(/[\\/]/).pop() ?? '';
+    const have = subtitleFiles.map((f) => f.path.toLowerCase());
+    const owned = new Set<string>();
+
+    for (const option of online ?? []) {
+      const expected = subtitleFileName(fileName, option.language).toLowerCase();
+      if (have.some((p) => p.endsWith(expected))) owned.add(option.code);
+    }
+    return owned;
+  }, [online, subtitleFiles, video.path]);
 
   useEffect(
     () => setSubtitleFiles(episode?.subtitles ?? item.subtitles),
@@ -944,13 +965,20 @@ export function Player({ item, episode, startAt }: PlayerProps): React.JSX.Eleme
                           key={option.code}
                           type="button"
                           className={styles.menuItem}
-                          disabled={downloading !== null}
+                          // Already on disk, so there is nothing to fetch. The
+                          // track itself is in the list above.
+                          data-active={downloaded.has(option.code)}
+                          disabled={downloading !== null || downloaded.has(option.code)}
                           onClick={() => void downloadOne(option)}
                         >
                           <span className={styles.menuItemLabel}>{option.language}</span>
-                          <span className={styles.menuHint}>
-                            {downloading === option.code ? 'Saving…' : 'Download'}
-                          </span>
+                          {downloaded.has(option.code) ? (
+                            <Icon name="check" size={14} className={styles.menuCheck} />
+                          ) : (
+                            <span className={styles.menuHint}>
+                              {downloading === option.code ? 'Saving…' : 'Download'}
+                            </span>
+                          )}
                         </button>
                       ))
                     )}
