@@ -202,6 +202,54 @@ describe('seasonFromEpisodeNames', () => {
  * dot is also just a dot — and collapsing both alike made a show display under
  * a title nobody writes, while a film in the same folder shape parsed fine.
  */
+/**
+ * Release tags in brackets. The real Sherlock folder carries both styles —
+ * `(1080p x265 q22 FS81 Joy)` on season 1 and `[1080p x265 10bit Joy]` on the
+ * rest — and a bracket stuck to the front of a tag meant `[1080p` did not read
+ * as `1080p`, so the title ran on and stopped one word late.
+ */
+describe('parseEpisodeName with bracketed release tags', () => {
+  it('stops at a tag wrapped in square brackets', () => {
+    assert.equal(
+      parseEpisodeName('Sherlock S02E01 A Scandal in Belgravia  [1080p x265 10bit Joy].mkv').title,
+      'A Scandal in Belgravia'
+    );
+  });
+
+  it('stops at a tag wrapped in parentheses', () => {
+    assert.equal(
+      parseEpisodeName('Sherlock S01E01 A Study in Pink  (1080p x265 q22 FS81 Joy).mkv').title,
+      'A Study in Pink'
+    );
+  });
+
+  it('reads season and episode from the same names', () => {
+    const parsed = parseEpisodeName('Sherlock S03E02 The Sign of Three  [1080p x265 10bit Joy].mkv');
+    assert.equal(parsed.season, 3);
+    assert.equal(parsed.episode, 2);
+    assert.equal(parsed.title, 'The Sign of Three');
+  });
+
+  /**
+   * The reason tags are peeled rather than treated as a terminator: this real
+   * episode's title opens with a bracket, and breaking there would leave it
+   * with no title at all.
+   */
+  it('keeps a title that opens with a bracket', () => {
+    assert.equal(
+      parseEpisodeName('Sherlock S03E00 (Mini Episode) Many Happy Returns [1080p x265].mkv').title,
+      '(Mini Episode) Many Happy Returns'
+    );
+  });
+
+  it('still handles a dotted scene name', () => {
+    assert.equal(
+      parseEpisodeName('Sherlock.S01E01.A.Study.in.Pink.720p.WEB-DL.HEVC.x265-BONE.mkv').title,
+      'A Study in Pink'
+    );
+  });
+});
+
 describe('parseSeriesFolder with punctuation', () => {
   it('keeps a dot that is punctuation, not a separator', () => {
     assert.equal(parseSeriesFolder('Mr. Robot S01-S04 Complete 1080p').title, 'Mr. Robot');

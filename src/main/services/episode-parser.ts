@@ -72,9 +72,21 @@ function titleAfter(stem: string, from: number): string | null {
   const words: string[] = [];
   for (const word of rest.split(/[\s._]+/)) {
     if (!word) continue;
+
+    /*
+     * Test the word with its punctuation peeled off, not as it appears.
+     * Release tags routinely open a bracket group — `…Belgravia [1080p x265
+     * 10bit Joy]` — and `[1080p` is not `1080p`, so the run sailed past it and
+     * only stopped at `x265`, leaving a stray `[1080p` on the end of the title.
+     *
+     * Peeling rather than breaking at the bracket, because an episode title can
+     * open with one: Sherlock's `(Mini Episode) Many Happy Returns` would
+     * otherwise parse to nothing at all.
+     */
+    const unwrapped = word.replace(/^[[({]+/, '').replace(/[\])}]+$/, '');
     // A trailing "-GROUP" is part of the release, not the title.
-    const bare = word.replace(/-[a-z0-9]+$/i, '');
-    if (HARD_STOP.test(word) || HARD_STOP.test(bare)) break;
+    const bare = unwrapped.replace(/-[a-z0-9]+$/i, '');
+    if (HARD_STOP.test(word) || HARD_STOP.test(unwrapped) || HARD_STOP.test(bare)) break;
     words.push(word);
   }
 

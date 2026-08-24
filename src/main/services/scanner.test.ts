@@ -41,6 +41,14 @@ describe('collectSeasons', () => {
     await put('Unaired Pilot', 'Testshow.S01E00.720p.BluRay.mkv');
     await put('Extras', 'Testshow.S00E01.Behind.The.Scenes.mkv');
 
+    // Bonus material inside a season folder, exactly as the real Sherlock
+    // season 4 ships it.
+    await put(
+      'Testshow.S02.1080p.WEB.h264-ETHEL/Featurettes',
+      'Behind 221B.mkv',
+      'The Writers Chat.mkv'
+    );
+
     const scan = await scanLibrary([], [root]);
     seasons = scan.items[0]?.seasons ?? [];
   });
@@ -79,6 +87,17 @@ describe('collectSeasons', () => {
     assert.ok(pilot, 'the Unaired Pilot folder was swallowed');
     assert.equal(pilot.number, null);
     assert.deepEqual(episodes('Unaired Pilot'), [0]);
+  });
+
+  /**
+   * `walk` already flags anything under a Featurettes/Extras/Subs folder; the
+   * season builder just was not reading the flag. Ten behind-the-scenes clips
+   * were filed as untitled episodes behind the three real ones.
+   */
+  it('keeps a season’s bonus material out of the episode list', () => {
+    assert.deepEqual(episodes('Season 2'), [1, 2]);
+    const titles = (seasons.find((s) => s.label === 'Season 2')?.episodes ?? []).map((e) => e.title);
+    assert.ok(!titles.some((t) => t?.includes('221B')), String(titles));
   });
 
   it('sorts numbered seasons first and in order', () => {

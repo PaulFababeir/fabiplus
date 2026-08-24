@@ -181,7 +181,14 @@ async function collectSeasons(showPath: string): Promise<Season[]> {
     const seasonPath = join(showPath, entry.name);
     const parsed = parseSeasonFolder(entry.name);
     const files = await walk(seasonPath, 1, false);
-    const videos = files.filter((f) => isVideoFile(f.name));
+    /*
+     * `deprioritized` is what keeps a season's bonus material out of the
+     * episode list. The real Sherlock season 4 ships a `Featurettes/` folder of
+     * ten behind-the-scenes clips, and without this they were filed as episodes
+     * — an unnumbered, untitled tail thirteen long behind three real ones.
+     * `walk` already flags them; only this filter was missing.
+     */
+    const videos = files.filter((f) => isVideoFile(f.name) && !f.deprioritized);
     if (videos.length === 0) continue;
 
     found.push({
