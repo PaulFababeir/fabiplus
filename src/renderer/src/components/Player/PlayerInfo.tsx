@@ -37,13 +37,13 @@ function initials(name: string): string {
   return (first + last).toUpperCase();
 }
 
-function CastRow({ person }: { person: CastMember }): React.JSX.Element {
+function CastCard({ person }: { person: CastMember }): React.JSX.Element {
   const [failed, setFailed] = useState(false);
   const src = person.profilePath === null ? null : `${TMDB_IMAGE_BASE}/${PROFILE_SIZE}${person.profilePath}`;
   const character = person.character.trim();
 
   return (
-    <li className={styles.castRow}>
+    <li className={styles.castCard}>
       {src !== null && !failed ? (
         <img
           className={styles.face}
@@ -132,7 +132,7 @@ export function PlayerInfo({ item, onClose }: PlayerInfoProps): React.JSX.Elemen
       {meta && meta.cast.length > 0 ? (
         <ul className={styles.cast}>
           {meta.cast.map((person) => (
-            <CastRow key={`${person.name}-${person.order}`} person={person} />
+            <CastCard key={`${person.name}-${person.order}`} person={person} />
           ))}
         </ul>
       ) : (
