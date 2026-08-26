@@ -13,6 +13,7 @@ import { Icon } from '@renderer/components/ui/Icon';
 import { IconButton } from '@renderer/components/ui/IconButton';
 import { useOnClickOutside } from '@renderer/lib/useDismiss';
 import { useScrubPreview } from './useScrubPreview';
+import { PlayerInfo } from './PlayerInfo';
 import styles from './Player.module.css';
 
 /** Seconds the skip buttons jump. */
@@ -111,6 +112,12 @@ export function Player({ item, episode, startAt }: PlayerProps): React.JSX.Eleme
   const [menuOpen, setMenuOpen] = useState(false);
   /** Chrome pinned shut by the hide button, independent of the idle timer. */
   const [forcedHidden, setForcedHidden] = useState(false);
+  /**
+   * The details panel. Kept outside `.chrome` when rendered, so it stays put
+   * while the controls fade — reading a cast list takes longer than the idle
+   * timeout, and having it vanish mid-scroll would be maddening.
+   */
+  const [infoOpen, setInfoOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   /** Transient notice, VLC-style, so a blind cycle still tells you where it landed. */
@@ -745,6 +752,16 @@ export function Player({ item, episode, startAt }: PlayerProps): React.JSX.Eleme
         </div>
       )}
 
+
+
+      {/*
+        Outside `.chrome`, so it survives the controls fading — reading a cast
+        list takes longer than the idle timeout. Declared *before* it, though,
+        so the control bar paints over the panel's bottom edge rather than the
+        panel burying the very button that opened it.
+      */}
+      {infoOpen && <PlayerInfo item={item} onClose={() => setInfoOpen(false)} />}
+
       <div className={styles.chrome} data-visible={!chromeHidden}>
         <div className={styles.header}>
           <IconButton
@@ -859,6 +876,18 @@ export function Player({ item, episode, startAt }: PlayerProps): React.JSX.Eleme
             </div>
 
             <div className={styles.spacerRight}>
+              <button
+                type="button"
+                className={styles.ctrl}
+                aria-label={infoOpen ? 'Hide film details' : 'Show film details'}
+                title={infoOpen ? 'Hide film details' : 'Show film details'}
+                aria-pressed={infoOpen}
+                data-active={infoOpen}
+                onClick={() => setInfoOpen((v) => !v)}
+              >
+                <Icon name="info" size={20} />
+              </button>
+
               <button
                 type="button"
                 className={styles.ctrl}

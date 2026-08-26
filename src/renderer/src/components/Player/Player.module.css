@@ -425,6 +425,12 @@
   cursor: default;
 }
 
+/* A control that toggles something open, so it reads as held down. */
+.ctrl[data-active='true'] {
+  background: rgb(255 255 255 / 18%);
+  color: #fff;
+}
+
 .playPause {
   width: 46px;
   height: 46px;
