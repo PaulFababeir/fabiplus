@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { motion } from 'motion/react';
+import { AnimatePresence, motion } from 'motion/react';
 
 import { toMovieUrl } from '@shared/media-url';
 import { nextEpisode } from '@shared/next-episode';
@@ -523,18 +523,23 @@ export function Player({ item, episode, startAt }: PlayerProps): React.JSX.Eleme
           toggleFullscreen();
           break;
         case 'Escape':
-          if (document.fullscreenElement) void document.exitFullscreen();
+          // Peels one layer per press: panel, then fullscreen, then the player.
+          if (infoOpen) setInfoOpen(false);
+          else if (document.fullscreenElement) void document.exitFullscreen();
           else stopPlaying();
           break;
         default:
           return;
       }
+      // Every recognised shortcut is an interaction with the film, so the panel
+      // gets out of the way — the same rule the pointer handler follows.
+      setInfoOpen(false);
       wake();
     };
 
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [cycleSubtitle, skip, stopPlaying, toggleFullscreen, togglePlay, wake]);
+  }, [cycleSubtitle, infoOpen, skip, stopPlaying, toggleFullscreen, togglePlay, wake]);
 
   // --- Volume applied to the element --------------------------------------
 
@@ -617,6 +622,19 @@ export function Player({ item, episode, startAt }: PlayerProps): React.JSX.Eleme
       data-idle={chromeHidden}
       data-chrome={!chromeHidden}
       onMouseMove={wake}
+      /*
+       * Touching the film closes the details panel — pause, seek, skip, the
+       * picture itself. Two exclusions: the panel's own contents, where a click
+       * is reading rather than interacting, and the toggle, which owns its own
+       * open/close. Without the second the button could never open the panel,
+       * because pointerdown lands here before its click ever fires.
+       */
+      onPointerDown={(e) => {
+        if (!infoOpen) return;
+        const t = e.target as HTMLElement;
+        if (t.closest('[data-info-panel]') || t.closest('[data-info-toggle]')) return;
+        setInfoOpen(false);
+      }}
       /*
        * Only the video surface toggles fullscreen. The handler sits on the root
        * so a double-click anywhere on the picture works, but that also caught
@@ -760,7 +778,9 @@ export function Player({ item, episode, startAt }: PlayerProps): React.JSX.Eleme
         so the control bar paints over the panel's bottom edge rather than the
         panel burying the very button that opened it.
       */}
-      {infoOpen && <PlayerInfo item={item} onClose={() => setInfoOpen(false)} />}
+      <AnimatePresence>
+        {infoOpen && <PlayerInfo item={item} onClose={() => setInfoOpen(false)} />}
+      </AnimatePresence>
 
       <div className={styles.chrome} data-visible={!chromeHidden}>
         <div className={styles.header}>
@@ -883,6 +903,7 @@ export function Player({ item, episode, startAt }: PlayerProps): React.JSX.Eleme
                 title={infoOpen ? 'Hide film details' : 'Show film details'}
                 aria-pressed={infoOpen}
                 data-active={infoOpen}
+                data-info-toggle="true"
                 onClick={() => setInfoOpen((v) => !v)}
               >
                 <Icon name="info" size={20} />

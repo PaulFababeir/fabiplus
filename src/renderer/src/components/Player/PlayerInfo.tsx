@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { motion } from 'motion/react';
 
 import { TMDB_IMAGE_BASE } from '@shared/constants';
 import { toMovieUrl } from '@shared/media-url';
@@ -91,7 +92,25 @@ export function PlayerInfo({ item, onClose }: PlayerInfoProps): React.JSX.Elemen
   const director = meta?.crew.find((c) => c.job === 'Director')?.name ?? null;
 
   return (
-    <aside className={styles.panel} aria-label={`About ${displayTitle(item)}`}>
+    <motion.aside
+      className={styles.panel}
+      aria-label={`About ${displayTitle(item)}`}
+      /* Marks the panel for the player's close-on-interaction handler: a click
+         in here is reading, not interacting with the film. */
+      data-info-panel="true"
+      /*
+       * Slides in from the edge it is anchored to. Short and shallow — it sits
+       * over a moving picture, so anything longer reads as lag rather than as
+       * motion. The easing matches the player's own enter transition.
+       *
+       * motion owns the transform. There is deliberately no CSS transition on
+       * transform in the stylesheet: the two fight and the slide stutters.
+       */
+      initial={{ opacity: 0, x: 28 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: 28 }}
+      transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+    >
       <div className={styles.head}>
         <IconButton icon="close" label="Close details" onClick={onClose} className={styles.close} />
       </div>
@@ -138,6 +157,6 @@ export function PlayerInfo({ item, onClose }: PlayerInfoProps): React.JSX.Elemen
       ) : (
         <p className={styles.empty}>No cast recorded for this title.</p>
       )}
-    </aside>
+    </motion.aside>
   );
 }
