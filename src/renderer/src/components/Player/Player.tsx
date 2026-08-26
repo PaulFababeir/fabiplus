@@ -4,8 +4,8 @@ import { AnimatePresence, motion } from 'motion/react';
 import { toMovieUrl } from '@shared/media-url';
 import { nextEpisode } from '@shared/next-episode';
 import { subtitleFileName } from '@shared/subtitles';
-import type { Episode, LibraryItem, SubtitleOption } from '@shared/types';
-import { displayTitle, displayYear } from '@renderer/lib/selectors';
+import type { Episode, LibraryItem, Season, SubtitleOption } from '@shared/types';
+import { displayTitle, displayYear, runtimeLabel } from '@renderer/lib/selectors';
 import { useLibrary } from '@renderer/state/useLibrary';
 import { useProfile } from '@renderer/state/useProfile';
 import { useUi } from '@renderer/state/useUi';
@@ -38,11 +38,16 @@ const BRIGHTNESS = [1, 1.1, 1.2, 1.3] as const;
  */
 const HDR_GAMMA = 0.72;
 
-/** The label of the season holding an episode, for the player's subtitle line. */
-function episodeSeason(item: LibraryItem, episode: Episode | null): string | null {
+/**
+ * The season holding an episode.
+ *
+ * Returns the season rather than its label because two things want it now: the
+ * subtitle line under the title, and the episode drawer, which offers exactly
+ * this season's episodes and nothing else.
+ */
+function episodeSeason(item: LibraryItem, episode: Episode | null): Season | null {
   if (episode === null) return null;
-  const season = (item.seasons ?? []).find((s) => s.episodes.some((e) => e.id === episode.id));
-  return season?.label ?? null;
+  return (item.seasons ?? []).find((s) => s.episodes.some((e) => e.id === episode.id)) ?? null;
 }
 
 function formatTime(seconds: number): string {
@@ -81,6 +86,15 @@ export function Player({ item, episode, startAt }: PlayerProps): React.JSX.Eleme
     () => (episode === null ? null : nextEpisode(item, episode.id)),
     [item, episode]
   );
+  /*
+   * Only the current season is offered. A show's full episode list is the
+   * sidebar's job; mid-film the useful question is "what else is in this run",
+   * and a flat strip of every season would need a picker of its own inside a
+   * bar that is already full.
+   */
+  const season = useMemo(() => episodeSeason(item, episode), [item, episode]);
+  const episodeList = season?.episodes ?? [];
+
   const stopPlaying = useUi((s) => s.stopPlaying);
   const play = useUi((s) => s.play);
   const setPlayback = useUi((s) => s.setPlayback);
@@ -110,6 +124,7 @@ export function Player({ item, episode, startAt }: PlayerProps): React.JSX.Eleme
   const [fullscreen, setFullscreen] = useState(false);
   const [idle, setIdle] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [episodesOpen, setEpisodesOpen] = useState(false);
   /** Chrome pinned shut by the hide button, independent of the idle timer. */
   const [forcedHidden, setForcedHidden] = useState(false);
   /**
@@ -589,8 +604,13 @@ export function Player({ item, episode, startAt }: PlayerProps): React.JSX.Eleme
     };
   }, [scrubbing, seekTo, timeFromPointer]);
 
-  // Forced hide wins outright; otherwise chrome only fades while playing.
-  const chromeHidden = forcedHidden || (idle && playing);
+  /*
+   * Forced hide wins outright; otherwise chrome only fades while playing — and
+   * not while the episode drawer is open, which is a list to read rather than a
+   * control to press. Left alone it faded out from under the pointer after
+   * 2.6s, taking the drawer with it.
+   */
+  const chromeHidden = forcedHidden || (idle && playing && !episodesOpen);
 
   const progressPct = duration > 0 ? (current / duration) * 100 : 0;
   const bufferedPct = duration > 0 ? (buffered / duration) * 100 : 0;
@@ -600,7 +620,7 @@ export function Player({ item, episode, startAt }: PlayerProps): React.JSX.Eleme
     item.kind === 'series'
       ? [
           displayTitle(item),
-          episodeSeason(item, episode),
+          season?.label ?? null,
           episode?.number === null || episode === null
             ? null
             : `Episode ${String(episode.number).padStart(2, '0')}`
@@ -862,6 +882,26 @@ export function Player({ item, episode, startAt }: PlayerProps): React.JSX.Eleme
                   />
                 </div>
               </div>
+
+              {/*
+                Only for a series, and only once the season is known — a film
+                has nothing to list, and an empty drawer is worse than no
+                button. Labelled rather than icon-only: every other control in
+                this bar is a universally understood glyph and this one is not.
+              */}
+              {episodeList.length > 0 && (
+                <button
+                  type="button"
+                  className={styles.episodesToggle}
+                  data-open={episodesOpen}
+                  aria-expanded={episodesOpen}
+                  aria-controls="player-episodes"
+                  onClick={() => setEpisodesOpen((v) => !v)}
+                >
+                  <span>Episodes</span>
+                  <Icon name="chevron-down" size={14} />
+                </button>
+              )}
             </div>
 
             <div className={styles.center}>
@@ -1090,6 +1130,88 @@ export function Player({ item, episode, startAt }: PlayerProps): React.JSX.Eleme
               </div>
             </div>
           </div>
+
+          {/*
+            Below the control row and inside `.controls`, which is anchored to
+            `bottom: 0` — so the drawer growing is what pushes the scrub bar and
+            the buttons upward. The controls are not separately animated; they
+            are simply displaced by this.
+          */}
+          <AnimatePresence initial={false}>
+            {episodesOpen && episodeList.length > 0 && (
+              <motion.div
+                id="player-episodes"
+                className={styles.episodesWrap}
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
+              >
+                <div className={styles.episodeStrip}>
+                  {episodeList.map((ep) => {
+                    const number = ep.number === null ? null : String(ep.number).padStart(2, '0');
+                    const epLabel = ep.title ?? `Episode ${number ?? '?'}`;
+                    const current = ep.id === episode?.id;
+
+                    return (
+                      <article
+                        key={ep.id}
+                        className={styles.episodeCard}
+                        data-current={current}
+                        aria-current={current ? 'true' : undefined}
+                      >
+                        {ep.still ? (
+                          <img
+                            className={styles.episodeStill}
+                            src={toMovieUrl(ep.still.localPath)}
+                            alt=""
+                            loading="lazy"
+                            draggable={false}
+                          />
+                        ) : (
+                          <div className={styles.episodeStill} data-placeholder="true">
+                            <Icon name="image" size={18} />
+                          </div>
+                        )}
+
+                        <div className={styles.episodeHead}>
+                          <span className={styles.episodeTitle}>
+                            {number && <span className={styles.episodeNum}>{number}</span>}
+                            {epLabel}
+                          </span>
+                          <span className={styles.episodeTime}>
+                            {runtimeLabel(ep.runtimeMin) ?? '—'}
+                          </span>
+                        </div>
+
+                        <div className={styles.episodeFoot}>
+                          {/*
+                            Synopses arrive with enrichment, so a catalog that
+                            has not been refetched since they were added shows
+                            the placeholder rather than a collapsed card.
+                          */}
+                          <p className={styles.episodeDesc} data-empty={!ep.overview}>
+                            {ep.overview ? ep.overview : 'No synopsis.'}
+                          </p>
+                          <button
+                            type="button"
+                            className={styles.episodePlay}
+                            aria-label={current ? `Restart ${epLabel}` : `Play ${epLabel}`}
+                            onClick={() => {
+                              play(item.id, ep.id);
+                              setEpisodesOpen(false);
+                            }}
+                          >
+                            <Icon name="play" size={13} />
+                          </button>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 

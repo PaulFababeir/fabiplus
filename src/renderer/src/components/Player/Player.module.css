@@ -492,6 +492,201 @@
   background: #fff;
 }
 
+/* --- Episode drawer ------------------------------------------------------- */
+
+/*
+ * Labelled, unlike every other control in this bar. A bare chevron beside the
+ * volume slider says nothing about what it opens, and the glyphs it would sit
+ * among — play, skip, fullscreen — are ones everyone already knows.
+ */
+.episodesToggle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 32px;
+  margin-left: 4px;
+  padding: 0 12px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: rgb(255 255 255 / 10%);
+  color: rgb(255 255 255 / 88%);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background 140ms var(--ease-out),
+    color 140ms var(--ease-out);
+}
+
+.episodesToggle:hover {
+  background: rgb(255 255 255 / 18%);
+  color: #fff;
+}
+
+.episodesToggle[data-open='true'] {
+  background: rgb(255 255 255 / 22%);
+  color: #fff;
+}
+
+/*
+ * One glyph, rotated, rather than two icons swapped. Swapping would snap; this
+ * turns. It points up while closed — where the drawer is about to push the
+ * controls — and down once open, back the way they will come.
+ *
+ * A CSS transition on transform is safe here: motion animates the drawer's
+ * height, never this element. The two must not both own one property.
+ */
+.episodesToggle svg {
+  transform: rotate(180deg);
+  transition: transform 260ms var(--ease-out);
+}
+
+.episodesToggle[data-open='true'] svg {
+  transform: rotate(0deg);
+}
+
+/*
+ * What motion animates from height 0 to auto. It owns the clipping and nothing
+ * else — padding here would still paint at height 0 and show as a sliver under
+ * the closed control bar.
+ */
+.episodesWrap {
+  overflow: hidden;
+}
+
+/*
+ * Horizontal, because the drawer's budget is height: the controls sit on top of
+ * the film and every pixel this takes is picture the viewer loses. A vertical
+ * list of ten episodes would cover half the frame; a strip costs one card.
+ *
+ * The scrollbar comes from tokens.css like every other one in the app.
+ */
+.episodeStrip {
+  display: flex;
+  gap: 14px;
+  padding: 18px 2px 6px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+
+.episodeCard {
+  display: flex;
+  flex: 0 0 auto;
+  width: 260px;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid rgb(255 255 255 / 8%);
+  border-radius: var(--radius-md);
+  background: rgb(255 255 255 / 6%);
+  transition:
+    background 160ms var(--ease-out),
+    border-color 160ms var(--ease-out);
+}
+
+.episodeCard:hover {
+  background: rgb(255 255 255 / 11%);
+}
+
+/* What is playing right now, so the strip answers "where am I" at a glance. */
+.episodeCard[data-current='true'] {
+  border-color: var(--accent);
+  background: rgb(255 255 255 / 12%);
+}
+
+.episodeStill {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  background: rgb(0 0 0 / 45%);
+}
+
+/* Sized by the same ratio so a missing still leaves the card the same height. */
+.episodeStill[data-placeholder='true'] {
+  display: grid;
+  place-items: center;
+  color: rgb(255 255 255 / 30%);
+}
+
+.episodeHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+/* Truncates rather than pushing the runtime off the right edge. */
+.episodeTitle {
+  overflow: hidden;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.episodeNum {
+  margin-right: 7px;
+  color: rgb(255 255 255 / 45%);
+  font-variant-numeric: tabular-nums;
+}
+
+.episodeTime {
+  flex: 0 0 auto;
+  color: rgb(255 255 255 / 55%);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Description and play button share the last line, per the layout. */
+.episodeFoot {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.episodeDesc {
+  display: -webkit-box;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  color: rgb(255 255 255 / 62%);
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+
+.episodeDesc[data-empty='true'] {
+  color: rgb(255 255 255 / 32%);
+  font-style: italic;
+}
+
+.episodePlay {
+  display: grid;
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 16%);
+  color: #fff;
+  cursor: pointer;
+  place-items: center;
+  transition: background 140ms var(--ease-out);
+}
+
+.episodePlay:hover {
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+
 /* --- Settings menu -------------------------------------------------------- */
 
 .menuWrap {
