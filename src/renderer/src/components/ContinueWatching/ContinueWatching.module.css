@@ -221,7 +221,9 @@
 .menu {
   position: fixed;
   z-index: 60;
-  width: 190px;
+  /* Kept in step with MENU_WIDTH in the component, which clamps the position
+     so a card near the edge does not open its menu off-screen. */
+  width: 240px;
   padding: 5px;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);

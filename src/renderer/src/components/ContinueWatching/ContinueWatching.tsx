@@ -29,8 +29,8 @@ const QUEUE_SIZE = 3;
 const EASE = [0.16, 1, 0.3, 1] as const;
 
 /** Kept in step with `.menu` in the stylesheet, for the edge clamp only. */
-const MENU_WIDTH = 190;
-const MENU_HEIGHT = 84;
+const MENU_WIDTH = 240;
+const MENU_HEIGHT = 124;
 
 /**
  * "S01E03 · The Great Game", or null for a film.
@@ -82,6 +82,7 @@ export function ContinueWatching({
   const play = useUi((s) => s.play);
   const select = useUi((s) => s.select);
   const setFinished = useProfile((s) => s.setFinished);
+  const clearProgress = useProfile((s) => s.clearProgress);
   const [index, setIndex] = useState(0);
 
   /**
@@ -325,6 +326,25 @@ export function ContinueWatching({
           >
             <Icon name="check" size={14} />
             Mark as watched
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            className={styles.menuItem}
+            onClick={() => {
+              /*
+               * Forgetting, not finishing. `setFinished` records that the film
+               * was watched and keeps the position; this drops the entry
+               * outright, so the film returns to the deck from the start the
+               * next time it is played. That is the difference between "I have
+               * seen this" and "I am not part-way through this after all".
+               */
+              void clearProgress(menu.id);
+              closeMenu();
+            }}
+          >
+            <Icon name="close" size={14} />
+            Remove from Continue watching
           </button>
           <button
             type="button"
