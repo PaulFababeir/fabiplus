@@ -1,65 +1,66 @@
 /*
  * The in-player details panel.
  *
- * Glass rather than the library sidebar's backdrop plate: a still frame is
- * already behind it, and painting artwork over artwork would fight. The blur is
- * what keeps the cast list readable over a bright scene without hiding the film
- * entirely.
+ * Glass rather than the library sidebar's backdrop plate: a moving frame is
+ * already behind it, and painting artwork over artwork would fight. It floats —
+ * inset from every edge with its own radius — so it reads as something laid
+ * over the film rather than a wall the film stops at.
  */
 .panel {
   position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
+  /* Clear of the window controls even on a short window, where 4vh would not
+     be enough on its own. */
+  top: max(4vh, calc(var(--titlebar-strip) + 12px));
+  right: 24px;
+  bottom: 4vh;
   z-index: 30;
   display: flex;
-  width: clamp(320px, 27vw, 420px);
+  width: clamp(340px, 25vw, 520px);
   flex-direction: column;
-  /* The control bar paints over this panel's bottom edge, so the list needs
-     room to scroll clear of it rather than ending underneath. */
-  padding: 0 26px 130px;
+  padding: 0 24px 28px;
   overflow-y: auto;
-  border-left: 1px solid rgb(255 255 255 / 8%);
-  background: rgb(12 14 17 / 62%);
-  backdrop-filter: blur(26px) saturate(130%);
-  -webkit-backdrop-filter: blur(26px) saturate(130%);
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: var(--radius-lg);
+  /*
+   * Deliberately thin. The blur is what makes the text legible, so the fill can
+   * stay light and let the picture through — at the 62% this started on, the
+   * panel read as a solid slab and hid a quarter of the frame.
+   */
+  background: rgb(12 14 17 / 42%);
+  box-shadow: 0 24px 60px rgb(0 0 0 / 45%);
+  backdrop-filter: blur(30px) saturate(135%);
+  -webkit-backdrop-filter: blur(30px) saturate(135%);
   scrollbar-gutter: stable;
 }
 
-/*
- * Clears the window controls, which the frameless title bar leaves floating
- * over whatever is beneath them — the close button would otherwise sit on top
- * of this panel's own.
- */
 .head {
+  position: sticky;
+  top: 0;
   display: flex;
   justify-content: flex-end;
-  padding-top: calc(var(--titlebar-strip) + 8px);
+  padding-top: 14px;
 }
 
 .close {
   flex: 0 0 auto;
 }
 
-/*
- * Poster and headline side by side at the top, rather than a large centred
- * poster. The panel's job here is the cast list, so the identity block earns a
- * strip and not a third of the height.
- */
-.top {
+/* --- Identity ------------------------------------------------------------- */
+
+.posterBlock {
   display: flex;
-  gap: 14px;
-  margin-top: 4px;
+  justify-content: center;
+  padding: 6px 0 20px;
 }
 
 .poster {
-  flex: 0 0 auto;
-  width: 96px;
+  width: 62%;
+  min-width: 150px;
   aspect-ratio: var(--poster-ratio);
   object-fit: cover;
   border-radius: var(--radius-md);
   background: var(--surface);
-  box-shadow: 0 10px 26px rgb(0 0 0 / 45%);
+  box-shadow: 0 18px 40px rgb(0 0 0 / 55%);
 }
 
 .poster[data-placeholder='true'] {
@@ -69,29 +70,29 @@
 }
 
 .headline {
-  min-width: 0;
-  align-self: center;
+  text-align: center;
 }
 
 .title {
   margin: 0;
-  font-size: 19px;
+  font-size: 20px;
   font-weight: 700;
   letter-spacing: -0.01em;
   line-height: 1.2;
 }
 
 .year {
-  margin: 4px 0 0;
+  margin-left: 6px;
   color: var(--text-muted);
-  font-size: 12.5px;
+  font-size: 15px;
+  font-weight: 500;
 }
 
-.director {
-  margin: 6px 0 0;
-  color: var(--text-dim);
+.metaLine {
+  margin-top: 6px;
+  color: var(--text-muted);
   font-size: 12px;
-  line-height: 1.45;
+  line-height: 1.5;
 }
 
 /* One tab, styled like the sidebar's so the two read as the same family. */
@@ -105,6 +106,8 @@
   letter-spacing: 0.08em;
 }
 
+/* --- Cast ----------------------------------------------------------------- */
+
 .cast {
   margin: 0;
   padding: 0;
@@ -114,27 +117,29 @@
 .castRow {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 8px 0;
+  gap: 14px;
+  padding: 9px 0;
 }
 
 /*
- * Fixed size on both the image and its placeholder, so a row that falls back to
- * initials — offline, or a face TMDB has no picture for — keeps the list from
- * going ragged.
+ * A small poster rather than a circle — the same shape and radius as the one
+ * above it, so the panel has one vocabulary. Sized by aspect ratio, and the
+ * placeholder shares it, so a row that falls back to initials keeps the list
+ * from going ragged.
  */
 .face {
   display: grid;
   flex: 0 0 auto;
-  width: 44px;
-  height: 44px;
+  width: 54px;
+  aspect-ratio: var(--poster-ratio);
   place-items: center;
   overflow: hidden;
-  border-radius: 50%;
+  border-radius: var(--radius-sm);
   object-fit: cover;
+  object-position: center top;
   background: var(--surface);
   color: var(--text-muted);
-  font-size: 12.5px;
+  font-size: 14px;
   font-weight: 600;
 }
 
@@ -146,13 +151,14 @@
   display: flex;
   min-width: 0;
   flex-direction: column;
+  gap: 2px;
 }
 
 /* The part is the headline; the performer is the footnote. */
 .character {
   overflow: hidden;
   color: var(--text);
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   letter-spacing: -0.005em;
   text-overflow: ellipsis;
@@ -162,7 +168,7 @@
 .actor {
   overflow: hidden;
   color: var(--text-dim);
-  font-size: 12px;
+  font-size: 12.5px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }

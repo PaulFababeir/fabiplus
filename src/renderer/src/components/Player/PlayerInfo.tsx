@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { TMDB_IMAGE_BASE } from '@shared/constants';
 import { toMovieUrl } from '@shared/media-url';
 import type { CastMember, LibraryItem } from '@shared/types';
-import { displayTitle, displayYear, posterFor } from '@renderer/lib/selectors';
+import { displayTitle, displayYear, posterFor, runtimeLabel } from '@renderer/lib/selectors';
 import { useProfile } from '@renderer/state/useProfile';
 import { Icon } from '@renderer/components/ui/Icon';
 import { IconButton } from '@renderer/components/ui/IconButton';
@@ -96,7 +96,9 @@ export function PlayerInfo({ item, onClose }: PlayerInfoProps): React.JSX.Elemen
         <IconButton icon="close" label="Close details" onClick={onClose} className={styles.close} />
       </div>
 
-      <div className={styles.top}>
+      {/* Centred and high, mirroring the library sidebar so the two read as
+          the same panel in two places. */}
+      <div className={styles.posterBlock}>
         {poster ? (
           <img className={styles.poster} src={toMovieUrl(poster)} alt="" />
         ) : (
@@ -104,11 +106,21 @@ export function PlayerInfo({ item, onClose }: PlayerInfoProps): React.JSX.Elemen
             <Icon name="image" size={22} />
           </div>
         )}
+      </div>
 
-        <div className={styles.headline}>
-          <h2 className={styles.title}>{displayTitle(item)}</h2>
-          <p className={styles.year}>{displayYear(item) ?? '—'}</p>
-          {director && <p className={styles.director}>Directed by {director}</p>}
+      <div className={styles.headline}>
+        <h2 className={styles.title}>
+          {displayTitle(item)}
+          <span className={styles.year}>{displayYear(item) ?? ''}</span>
+        </h2>
+        <div className={styles.metaLine}>
+          {[
+            director && `Directed by ${director}`,
+            runtimeLabel(meta?.runtimeMin ?? null),
+            meta?.rating ? `★ ${meta.rating.toFixed(1)}` : null
+          ]
+            .filter(Boolean)
+            .join('  ·  ')}
         </div>
       </div>
 
