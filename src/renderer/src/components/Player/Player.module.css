@@ -504,7 +504,6 @@
   align-items: center;
   gap: 7px;
   height: 32px;
-  margin-left: 4px;
   padding: 0 12px;
   border: none;
   border-radius: var(--radius-pill);
@@ -565,22 +564,38 @@
  */
 .episodeStrip {
   display: flex;
+  /* Never more than half the frame, however tall the window is. */
+  max-height: 50vh;
   gap: 14px;
   padding: 18px 2px 6px;
   overflow-x: auto;
   overscroll-behavior-x: contain;
 }
 
+/*
+ * The whole card is the button.
+ *
+ * Width is set in vh, not px or vw, because height is the scarce thing here —
+ * the drawer displaces the picture, and the still's height follows the width
+ * through its 16:9 ratio. Sizing off the viewport height is what keeps the
+ * drawer at roughly the same fraction of the frame on a laptop panel and on a
+ * tall monitor alike; a px width made it a third of one screen and two-thirds
+ * of another.
+ */
 .episodeCard {
   display: flex;
   flex: 0 0 auto;
-  width: 260px;
+  width: clamp(300px, 38vh, 460px);
   flex-direction: column;
-  gap: 8px;
+  gap: 9px;
   padding: 10px;
   border: 1px solid rgb(255 255 255 / 8%);
   border-radius: var(--radius-md);
   background: rgb(255 255 255 / 6%);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
   transition:
     background 160ms var(--ease-out),
     border-color 160ms var(--ease-out);
@@ -592,7 +607,7 @@
 
 /* What is playing right now, so the strip answers "where am I" at a glance. */
 .episodeCard[data-current='true'] {
-  border-color: var(--accent);
+  border-color: rgb(255 255 255 / 75%);
   background: rgb(255 255 255 / 12%);
 }
 
@@ -642,49 +657,22 @@
   white-space: nowrap;
 }
 
-/* Description and play button share the last line, per the layout. */
-.episodeFoot {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 10px;
-}
-
+/* Three lines now that the card is wider — two clipped most synopses mid-word. */
 .episodeDesc {
   display: -webkit-box;
   min-width: 0;
   margin: 0;
   overflow: hidden;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   color: rgb(255 255 255 / 62%);
-  font-size: 11.5px;
+  font-size: 12px;
   line-height: 1.5;
 }
 
 .episodeDesc[data-empty='true'] {
   color: rgb(255 255 255 / 32%);
   font-style: italic;
-}
-
-.episodePlay {
-  display: grid;
-  flex: 0 0 auto;
-  width: 30px;
-  height: 30px;
-  padding: 0;
-  border: none;
-  border-radius: 50%;
-  background: rgb(255 255 255 / 16%);
-  color: #fff;
-  cursor: pointer;
-  place-items: center;
-  transition: background 140ms var(--ease-out);
-}
-
-.episodePlay:hover {
-  background: var(--accent);
-  color: var(--accent-contrast);
 }
 
 /* --- Settings menu -------------------------------------------------------- */

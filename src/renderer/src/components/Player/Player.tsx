@@ -857,6 +857,26 @@ export function Player({ item, episode, startAt }: PlayerProps): React.JSX.Eleme
 
           <div className={styles.row}>
             <div className={styles.spacerLeft}>
+              {/*
+                Only for a series, and only once the season is known — a film
+                has nothing to list, and an empty drawer is worse than no
+                button. Labelled rather than icon-only: every other control in
+                this bar is a universally understood glyph and this one is not.
+              */}
+              {episodeList.length > 0 && (
+                <button
+                  type="button"
+                  className={styles.episodesToggle}
+                  data-open={episodesOpen}
+                  aria-expanded={episodesOpen}
+                  aria-controls="player-episodes"
+                  onClick={() => setEpisodesOpen((v) => !v)}
+                >
+                  <span>Episodes</span>
+                  <Icon name="chevron-down" size={14} />
+                </button>
+              )}
+
               <div className={styles.volumeWrap}>
                 <button
                   type="button"
@@ -882,26 +902,6 @@ export function Player({ item, episode, startAt }: PlayerProps): React.JSX.Eleme
                   />
                 </div>
               </div>
-
-              {/*
-                Only for a series, and only once the season is known — a film
-                has nothing to list, and an empty drawer is worse than no
-                button. Labelled rather than icon-only: every other control in
-                this bar is a universally understood glyph and this one is not.
-              */}
-              {episodeList.length > 0 && (
-                <button
-                  type="button"
-                  className={styles.episodesToggle}
-                  data-open={episodesOpen}
-                  aria-expanded={episodesOpen}
-                  aria-controls="player-episodes"
-                  onClick={() => setEpisodesOpen((v) => !v)}
-                >
-                  <span>Episodes</span>
-                  <Icon name="chevron-down" size={14} />
-                </button>
-              )}
             </div>
 
             <div className={styles.center}>
@@ -1154,11 +1154,23 @@ export function Player({ item, episode, startAt }: PlayerProps): React.JSX.Eleme
                     const current = ep.id === episode?.id;
 
                     return (
-                      <article
+                      /*
+                        The card is the control. A 400px target with a 30px
+                        button in the corner asks the user to aim at the corner
+                        for no reason — everything on the card describes the
+                        one thing it does.
+                      */
+                      <button
                         key={ep.id}
+                        type="button"
                         className={styles.episodeCard}
                         data-current={current}
                         aria-current={current ? 'true' : undefined}
+                        aria-label={current ? `Restart ${epLabel}` : `Play ${epLabel}`}
+                        onClick={() => {
+                          play(item.id, ep.id);
+                          setEpisodesOpen(false);
+                        }}
                       >
                         {ep.still ? (
                           <img
@@ -1184,28 +1196,15 @@ export function Player({ item, episode, startAt }: PlayerProps): React.JSX.Eleme
                           </span>
                         </div>
 
-                        <div className={styles.episodeFoot}>
-                          {/*
-                            Synopses arrive with enrichment, so a catalog that
-                            has not been refetched since they were added shows
-                            the placeholder rather than a collapsed card.
-                          */}
-                          <p className={styles.episodeDesc} data-empty={!ep.overview}>
-                            {ep.overview ? ep.overview : 'No synopsis.'}
-                          </p>
-                          <button
-                            type="button"
-                            className={styles.episodePlay}
-                            aria-label={current ? `Restart ${epLabel}` : `Play ${epLabel}`}
-                            onClick={() => {
-                              play(item.id, ep.id);
-                              setEpisodesOpen(false);
-                            }}
-                          >
-                            <Icon name="play" size={13} />
-                          </button>
-                        </div>
-                      </article>
+                        {/*
+                          Synopses arrive with enrichment, so a catalog that has
+                          not been refetched since they were added shows the
+                          placeholder rather than a collapsed card.
+                        */}
+                        <p className={styles.episodeDesc} data-empty={!ep.overview}>
+                          {ep.overview ? ep.overview : 'No synopsis.'}
+                        </p>
+                      </button>
                     );
                   })}
                 </div>
