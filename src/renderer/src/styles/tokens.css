@@ -58,6 +58,17 @@
 
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 
+  /*
+   * Scrollbars. Four components had grown their own near-copies of these —
+   * 10px and 12px wide, four different thumb alphas — and any scroller nobody
+   * had thought about got Chromium's own light bar, which is what the player's
+   * settings menu was showing.
+   */
+  --scrollbar-size: 10px;
+  --scrollbar-inset: 3px;
+  --scrollbar-thumb: rgb(255 255 255 / 12%);
+  --scrollbar-thumb-hover: rgb(255 255 255 / 26%);
+
   /* Opaque by default; the acrylic build swaps in a translucent veil. */
   --bg-veil: var(--bg);
 }
@@ -101,6 +112,51 @@ body {
 .titlebar-drag input,
 .titlebar-drag select {
   -webkit-app-region: no-drag;
+}
+
+/*
+ * One scrollbar for the whole app.
+ *
+ * Applied to every element rather than opted into per component: the default
+ * here is a solid light bar that suits nothing in a dark UI, so a scroller
+ * that was never styled is always a bug. A component that genuinely wants no
+ * bar overrides this — FilterRow's chip track does, and a class selector beats
+ * the universal one without needing !important.
+ *
+ * `scrollbar-width` must stay out of this file. Setting it anywhere — even to
+ * `thin` — switches Chromium to the standard scrollbar and makes it ignore
+ * every rule below, restoring the exact bar this replaces. The one legitimate
+ * use is `none`, to hide a bar entirely, which is why FilterRow may carry it.
+ *
+ * The thumb is drawn inside a transparent border via background-clip, so it
+ * reads as a floating capsule rather than a filled gutter. `height` covers
+ * horizontal scrollers with the same measurement.
+ */
+*::-webkit-scrollbar {
+  width: var(--scrollbar-size);
+  height: var(--scrollbar-size);
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  border: var(--scrollbar-inset) solid transparent;
+  border-radius: var(--radius-pill);
+  background: var(--scrollbar-thumb);
+  background-clip: content-box;
+  transition: background 160ms var(--ease-out);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+  background-clip: content-box;
+}
+
+/* Where a vertical and a horizontal bar meet. */
+*::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 /*

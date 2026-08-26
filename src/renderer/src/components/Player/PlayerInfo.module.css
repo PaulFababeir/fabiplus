@@ -38,33 +38,6 @@
   scrollbar-gutter: stable both-edges;
 }
 
-/*
- * Note the absence of `scrollbar-width`. Setting it — even to `thin` — makes
- * Chromium ignore every rule below and paint its own solid light bar, which is
- * exactly the default this replaces. The track stays transparent so the glass
- * shows through, and the thumb is inset by a transparent border rather than by
- * a narrower track, which would clip its radius.
- */
-.panel::-webkit-scrollbar {
-  width: 10px;
-}
-
-.panel::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.panel::-webkit-scrollbar-thumb {
-  border: 3px solid transparent;
-  border-radius: 10px;
-  background: rgb(255 255 255 / 16%);
-  background-clip: content-box;
-}
-
-.panel::-webkit-scrollbar-thumb:hover {
-  background: rgb(255 255 255 / 30%);
-  background-clip: content-box;
-}
-
 .head {
   position: sticky;
   top: 0;

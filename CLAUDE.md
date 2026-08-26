@@ -397,8 +397,15 @@ belongs in the component or the divergence starts again.
 
 ### CSS traps
 
+- **Scrollbars are defined once**, in `tokens.css`, as `*::-webkit-scrollbar`.
+  Four components had grown near-copies of the same rules at three widths and
+  four thumb alphas, and every scroller nobody had thought to style — the
+  player's settings menu among them — fell back to Chromium's light bar. A
+  component that wants no bar opts out with a class selector, which beats the
+  universal one; `FilterRow`'s chip track is the only one that does.
 - **`scrollbar-width` makes Chromium ignore every `::-webkit-scrollbar` rule**
-  and fall back to a solid light bar. It is deliberately absent.
+  and fall back to a solid light bar. It is absent everywhere but that opt-out,
+  where `none` is the whole point.
 - **`scrollbar-gutter: stable`** on the sidebar. Without it the content box
   narrows by the scrollbar width when a tab overflows, and the poster —
   percentage-sized — visibly changes size between tabs.

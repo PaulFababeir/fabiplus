@@ -148,26 +148,6 @@
   scrollbar-gutter: stable;
 }
 
-.body::-webkit-scrollbar {
-  width: 10px;
-}
-
-.body::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.body::-webkit-scrollbar-thumb {
-  border: 3px solid transparent;
-  border-radius: var(--radius-pill);
-  background: rgb(255 255 255 / 12%);
-  background-clip: content-box;
-}
-
-.body::-webkit-scrollbar-thumb:hover {
-  background: rgb(255 255 255 / 24%);
-  background-clip: content-box;
-}
-
 .divider {
   height: 1px;
   margin: 20px 0 16px;

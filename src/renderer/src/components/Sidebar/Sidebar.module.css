@@ -144,30 +144,6 @@
    */
 }
 
-/*
- * `scrollbar-width` is deliberately absent: setting it makes Chromium ignore
- * every ::-webkit-scrollbar rule and fall back to a solid light bar.
- */
-.panel::-webkit-scrollbar {
-  width: 10px;
-}
-
-.panel::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.panel::-webkit-scrollbar-thumb {
-  border: 3px solid transparent;
-  border-radius: var(--radius-pill);
-  background: rgb(255 255 255 / 9%);
-  background-clip: content-box;
-}
-
-.panel::-webkit-scrollbar-thumb:hover {
-  background: rgb(255 255 255 / 20%);
-  background-clip: content-box;
-}
-
 /* Closes the panel. Replaces the old click-anywhere-to-collapse behaviour. */
 /*
  * Placement only — the look lives in IconButton. The negative margin pulls the

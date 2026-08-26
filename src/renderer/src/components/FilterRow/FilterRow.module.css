@@ -38,6 +38,11 @@
   );
 }
 
+/*
+ * The one place that opts out of the app-wide scrollbar in tokens.css: the
+ * chip strip is scrolled by its arrows and masked at both ends, and a bar
+ * across the bottom of it would cut through the fade.
+ */
 .track::-webkit-scrollbar {
   display: none;
 }
