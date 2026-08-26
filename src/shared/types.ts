@@ -172,6 +172,12 @@ export interface Episode {
   runtimeMin: number | null;
   /** Episode thumbnail from the provider, cached locally. Null until enriched. */
   still: CachedImage | null;
+  /**
+   * Provider synopsis. Not in the filename, so null until enriched — and
+   * absent entirely from a catalog written before this field existed, which is
+   * why readers test it for truthiness rather than assuming a string.
+   */
+  overview: string | null;
   video: VideoFile;
   subtitles: SubtitleFile[];
   /** The season folder this file sits in, for a targeted subtitle rescan. */

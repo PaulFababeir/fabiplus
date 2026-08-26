@@ -268,6 +268,7 @@ async function toEpisodes(
       // in, and `mergeScan` carries them across later rescans.
       runtimeMin: null,
       still: null,
+      overview: null,
       video: toVideoFile(file),
       // Subtitles that sit beside this episode, matched on the filename stem.
       subtitles: collectSubtitles(

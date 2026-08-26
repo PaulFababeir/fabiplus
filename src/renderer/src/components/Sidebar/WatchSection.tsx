@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 
 import { toMovieUrl } from '@shared/media-url';
 import type { LibraryItem, ProfileState, Season } from '@shared/types';
@@ -42,6 +43,24 @@ export function WatchSection({ item, profileState }: WatchSectionProps): React.J
 
   const [seasonIndex, setSeasonIndex] = useState(0);
   const [pickerOpen, setPickerOpen] = useState(false);
+
+  /**
+   * Which synopses are expanded, by episode id.
+   *
+   * A set rather than a single id: these are independent disclosures, not a
+   * one-at-a-time accordion. Comparing two episodes is a real thing to want,
+   * and collapsing the one just read to open the next is the worse default.
+   * Ids are path hashes and unique across seasons, so switching season hides
+   * the open rows without this needing to be cleared.
+   */
+  const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
+  const toggleExpanded = useCallback((id: string) => {
+    setExpanded((open) => {
+      const next = new Set(open);
+      if (!next.delete(id)) next.add(id);
+      return next;
+    });
+  }, []);
 
   /**
    * Right-click menu for one episode, positioned at the pointer — the same
@@ -112,57 +131,101 @@ export function WatchSection({ item, profileState }: WatchSectionProps): React.J
           const watched = profileState?.watch[episode.id];
           const number = episode.number === null ? null : String(episode.number).padStart(2, '0');
           const runtime = runtimeLabel(episode.runtimeMin);
+          const label = episode.title ?? `Episode ${number ?? '?'}`;
+          /*
+           * Truthiness, not a null check. A catalog written before episode
+           * synopses existed has no such key at all, and TMDB holds no synopsis
+           * for plenty of episodes it does know about. Both cases must leave
+           * the row exactly as it was — no toggle, nothing to reveal.
+           */
+          const synopsis = episode.overview ? episode.overview : null;
+          const open = expanded.has(episode.id);
+          const panelId = `episode-synopsis-${episode.id}`;
 
           return (
             <li
               key={episode.id}
-              className={styles.row}
-              data-watched={watched?.finished === true}
+              className={styles.item}
               onContextMenu={(e) => {
                 e.preventDefault();
                 setMenu({
                   id: episode.id,
-                  label: episode.title ?? `Episode ${number ?? '?'}`,
+                  label,
                   watched: watched?.finished === true,
                   x: e.clientX,
                   y: e.clientY
                 });
               }}
             >
-              <IconButton
-                icon="play"
-                label={`Play ${episode.title ?? `episode ${number ?? ''}`}`}
-                size="sm"
-                onClick={() => play(item.id, episode.id)}
-              />
+              <div className={styles.row} data-watched={watched?.finished === true}>
+                <IconButton
+                  icon="play"
+                  label={`Play ${label}`}
+                  size="sm"
+                  onClick={() => play(item.id, episode.id)}
+                />
+
+                {/*
+                  The number stays even with a still beside it: an episode
+                  thumbnail is often a plain frame of two people talking, which
+                  identifies nothing on its own.
+                */}
+                <span className={styles.number}>{number ?? '—'}</span>
+
+                {episode.still && (
+                  <img
+                    className={styles.still}
+                    src={toMovieUrl(episode.still.localPath)}
+                    alt=""
+                    loading="lazy"
+                    draggable={false}
+                  />
+                )}
+
+                <span className={styles.text}>
+                  <span className={styles.title}>{label}</span>
+                  <span className={styles.sub}>
+                    {[runtime, watched?.finished === true ? 'Watched' : null]
+                      .filter(Boolean)
+                      .join(' · ') || '—'}
+                  </span>
+                </span>
+
+                {synopsis && (
+                  <button
+                    type="button"
+                    className={styles.expand}
+                    data-open={open}
+                    aria-expanded={open}
+                    aria-controls={panelId}
+                    aria-label={`${open ? 'Hide' : 'Show'} synopsis for ${label}`}
+                    onClick={() => toggleExpanded(episode.id)}
+                  >
+                    <Icon name="chevron-down" size={13} />
+                  </button>
+                )}
+              </div>
 
               {/*
-                The number stays even with a still beside it: an episode
-                thumbnail is often a plain frame of two people talking, which
-                identifies nothing on its own.
+                `initial={false}` so a row left open when the list remounts —
+                switching tabs and coming back — is simply open, rather than
+                replaying every expansion on arrival.
               */}
-              <span className={styles.number}>{number ?? '—'}</span>
-
-              {episode.still && (
-                <img
-                  className={styles.still}
-                  src={toMovieUrl(episode.still.localPath)}
-                  alt=""
-                  loading="lazy"
-                  draggable={false}
-                />
-              )}
-
-              <span className={styles.text}>
-                <span className={styles.title}>
-                  {episode.title ?? `Episode ${number ?? '?'}`}
-                </span>
-                <span className={styles.sub}>
-                  {[runtime, watched?.finished === true ? 'Watched' : null]
-                    .filter(Boolean)
-                    .join(' · ') || '—'}
-                </span>
-              </span>
+              <AnimatePresence initial={false}>
+                {synopsis && open && (
+                  <motion.div
+                    key="synopsis"
+                    id={panelId}
+                    className={styles.synopsisWrap}
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                  >
+                    <p className={styles.synopsis}>{synopsis}</p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </li>
           );
         })}

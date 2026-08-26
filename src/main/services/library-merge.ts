@@ -44,8 +44,10 @@ function mergeSeasons(scanned: Season[] | null, prior: Season[] | null): Season[
         title: episode.title ?? known.title,
         runtimeMin: episode.runtimeMin ?? known.runtimeMin,
         // `?? null` because a catalog written before stills existed has no such
-        // key at all, and `undefined` is not what the type promises.
-        still: known.still ?? null
+        // key at all, and `undefined` is not what the type promises. The same
+        // applies to the synopsis, which is newer still.
+        still: known.still ?? null,
+        overview: known.overview ?? null
       };
     })
   }));

@@ -100,6 +100,15 @@
   list-style: none;
 }
 
+/*
+ * The row and its synopsis stack inside one list item, so the disclosure is
+ * plainly part of the episode it belongs to rather than a sibling of it.
+ */
+.item {
+  display: flex;
+  flex-direction: column;
+}
+
 .row {
   display: flex;
   align-items: center;
@@ -167,6 +176,79 @@
 .sub {
   color: var(--text-dim);
   font-size: 11px;
+}
+
+/* --- Synopsis disclosure -------------------------------------------------- */
+
+/*
+ * Sits at the right hug of the row, past the title column. Kept dim until the
+ * row is hovered or it is open, so a season of forty episodes is not a column
+ * of forty chevrons competing with the titles.
+ */
+.expand {
+  display: grid;
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  opacity: 0.45;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  place-items: center;
+  transition:
+    opacity 140ms var(--ease-out),
+    background 140ms var(--ease-out),
+    color 140ms var(--ease-out);
+}
+
+.row:hover .expand,
+.expand:focus-visible,
+.expand[data-open='true'] {
+  opacity: 1;
+  color: var(--text);
+}
+
+.expand:hover {
+  background: rgb(255 255 255 / 8%);
+}
+
+/*
+ * The glyph rotates, not the button — rotating the button would spin its hover
+ * circle too. A CSS transition on transform is safe here because nothing
+ * animates this element from JS; the height animation belongs to the wrapper
+ * below, and motion owns that one alone.
+ */
+.expand svg {
+  transition: transform 180ms var(--ease-out);
+}
+
+.expand[data-open='true'] svg {
+  transform: rotate(180deg);
+}
+
+/*
+ * The element motion animates from height 0 to auto. It must own nothing but
+ * the clipping: any padding here would still be painted at height 0 and show
+ * as a sliver under a collapsed row.
+ */
+.synopsisWrap {
+  overflow: hidden;
+}
+
+/*
+ * Indented to the number rather than to the title. Aligning under the title
+ * would mean clearing the still as well, leaving about half the sidebar for
+ * prose — and rows without a still would not line up with rows that have one.
+ */
+.synopsis {
+  margin: 0;
+  padding: 2px 34px 12px 40px;
+  color: var(--text-muted);
+  font-size: 11.5px;
+  line-height: 1.6;
 }
 
 /* --- Episode context menu ------------------------------------------------- */

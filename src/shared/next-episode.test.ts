@@ -11,6 +11,7 @@ function episode(id: string, number: number | null): Episode {
     title: id,
     runtimeMin: 88,
     still: null,
+    overview: null,
     video: { path: `D:/Series/Sherlock/${id}.mkv`, size: 1, ext: 'mkv' },
     subtitles: [],
     folderPath: 'D:/Series/Sherlock'

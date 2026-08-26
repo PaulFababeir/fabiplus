@@ -86,11 +86,20 @@ describe('mergeScan and episode enrichment', () => {
 
   /** What enrichment left behind. */
   const stored = showAs([
-    { id: 'e1', number: 1, title: 'A Study in Pink', runtimeMin: 88, still }
+    {
+      id: 'e1',
+      number: 1,
+      title: 'A Study in Pink',
+      runtimeMin: 88,
+      still,
+      overview: 'A dead body, a pink suitcase.'
+    }
   ]);
 
   /** What a fresh scan of the same folder produces. */
-  const scanned = showAs([{ id: 'e1', number: 1, title: null, runtimeMin: null, still: null }]);
+  const scanned = showAs([
+    { id: 'e1', number: 1, title: null, runtimeMin: null, still: null, overview: null }
+  ]);
 
   const scanOf = (items: LibraryItem[]): ScanResult =>
     ({ items, issues: [], durationMs: 0 }) as ScanResult;
@@ -105,12 +114,13 @@ describe('mergeScan and episode enrichment', () => {
     assert.equal(episode?.title, 'A Study in Pink');
     assert.equal(episode?.runtimeMin, 88);
     assert.deepEqual(episode?.still, still);
+    assert.equal(episode?.overview, 'A dead body, a pink suitcase.');
   });
 
   /** The filename describes the file the user actually has, so it wins. */
   it('prefers a title the scan recovered from the filename', () => {
     const withTitle = showAs([
-      { id: 'e1', number: 1, title: 'From The Filename', runtimeMin: null, still: null }
+      { id: 'e1', number: 1, title: 'From The Filename', runtimeMin: null, still: null, overview: null }
     ]);
     const merged = mergeScan(catalogOf([stored]), scanOf([withTitle]), ROOTS);
     assert.equal(merged.items[0]?.seasons?.[0]?.episodes[0]?.title, 'From The Filename');
@@ -118,12 +128,15 @@ describe('mergeScan and episode enrichment', () => {
 
   /** Ids are path hashes, so a renamed file is a different episode. */
   it('does not hand a renamed file the old episode data', () => {
-    const renamed = showAs([{ id: 'e9', number: 1, title: null, runtimeMin: null, still: null }]);
+    const renamed = showAs([
+      { id: 'e9', number: 1, title: null, runtimeMin: null, still: null, overview: null }
+    ]);
     const merged = mergeScan(catalogOf([stored]), scanOf([renamed]), ROOTS);
     const episode = merged.items[0]?.seasons?.[0]?.episodes[0];
 
     assert.equal(episode?.runtimeMin, null);
     assert.equal(episode?.still, null);
+    assert.equal(episode?.overview, null);
   });
 
   it('leaves a film alone', () => {

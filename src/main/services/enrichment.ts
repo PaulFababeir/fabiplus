@@ -240,6 +240,10 @@ async function enrichSeasons(
           ...episode,
           title: episode.title ?? (match.name === '' ? null : match.name),
           runtimeMin: match.runtimeMin,
+          // TMDB returns '' rather than omitting the field for an episode it
+          // has no synopsis for, and an empty string would render as a blank
+          // expanded row instead of hiding the toggle.
+          overview: match.overview === '' ? null : match.overview,
           // A failed download leaves whatever was already cached rather than
           // blanking the row — one bad URL is not worth losing the thumbnail.
           still: (await cacheStill(match.stillPath, provider)) ?? episode.still

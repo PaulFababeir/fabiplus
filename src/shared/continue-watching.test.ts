@@ -150,6 +150,7 @@ describe('continueWatching with shows', () => {
       title,
       runtimeMin: 88,
       still: null,
+      overview: null,
       video: { path: `D:/Series/Sherlock/S01/${id}.mkv`, size: 1, ext: 'mkv' },
       subtitles: [],
       folderPath: 'D:/Series/Sherlock/S01'
