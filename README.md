@@ -1,21 +1,77 @@
-# Fabi+
+<h1 align="center">
+  <br>
+  <a href="https://github.com/PaulFababeir/movie-app"><img src="assets/icon.png" alt="Fabi+" width="200"></a>
+  <br>
+  Fabi+
+  <br>
+</h1>
 
-An offline desktop library and player for a local collection of films and shows.
-Point it at a folder and it scans it, pulls artwork and metadata from TMDB, and
-plays it back — with per-profile watch progress, resume, subtitles, and optional
-Discord Rich Presence.
+<h4 align="center">An offline desktop library and player for your own film and show collection, built on <a href="https://electronjs.org" target="_blank">Electron</a>.</h4>
 
-No account, no cloud, no telemetry. The only network call is TMDB metadata
-enrichment, and everything it returns is cached to disk, so the app works with
-the network off.
+<p align="center">
+  <a href="https://github.com/PaulFababeir/movie-app/releases/latest">
+    <img src="https://img.shields.io/github/v/release/PaulFababeir/movie-app?color=22304A&label=release"
+         alt="Latest release">
+  </a>
+  <a href="https://github.com/PaulFababeir/movie-app/releases">
+    <img src="https://img.shields.io/github/downloads/PaulFababeir/movie-app/total?color=22304A"
+         alt="Downloads">
+  </a>
+  <img src="https://img.shields.io/badge/platform-Windows-22304A" alt="Platform">
+  <a href="LICENSE">
+    <img src="https://img.shields.io/badge/license-MIT-22304A" alt="License">
+  </a>
+</p>
 
+<p align="center">
+  <a href="#key-features">Key Features</a> •
+  <a href="#download">Download</a> •
+  <a href="#first-run">First Run</a> •
+  <a href="#where-your-data-lives">Your Data</a> •
+  <a href="#building-from-source">Build</a> •
+  <a href="#credits">Credits</a> •
+  <a href="#license">License</a>
+</p>
+
+![screenshot](assets/screenshot.png)
+
+## Key Features
+
+* **Offline by design** — no account, no cloud, no telemetry
+  - The only network call is TMDB metadata enrichment, and everything it returns
+    is cached to disk, so the app runs with the network off.
+* **Scans what you already have**
+  - Release-tagged folder names are parsed for title and year, so most
+    collections work as they are. Nothing is moved, renamed, or modified.
+* **Films and shows alike**
+  - Seasons read from the folder tree, per-episode resume, next-episode
+    autoplay, and episode stills.
+* **Up to five profiles**
+  - Each with its own watch history, poster and backdrop picks, and image avatar.
+* **Continue Watching**
+  - Films and part-watched episodes together, with a right-click to mark watched
+    or remove the entry.
+* **A real player**
+  - Seek with hover scrub preview, ±10s, speed, brightness, embedded and
+    external subtitles with `V` to cycle, and an episode drawer in the controls.
+* **Subtitle search and download**
+  - Finds releases matching the file on disk, not just the title, so an extended
+    cut does not drift out of sync. The `.srt` lands beside the video, so it
+    works in every other player too.
+* **Discord Rich Presence** — opt-in, one toggle, nothing to register
+  - Talks to the local Discord client over its named pipe and never contacts
+    Discord's servers.
+* **Updates are manual**
+  - Checked from Settings when you ask. Nothing phones home on launch.
+
+> **Note**
 > Windows only for now. Nothing in the code is Windows-specific except the
 > installer and the Discord named-pipe path, but it has not been tried elsewhere.
 
-## Installing
+## Download
 
-**Windows 10/11, 64-bit.** One file, from
-[Releases](https://github.com/PaulFababeir/movie-app/releases):
+You can [download](https://github.com/PaulFababeir/movie-app/releases/latest) the
+latest installable version of Fabi+ for Windows 10/11, 64-bit. One file:
 
 ```
 movie-app-<version>-setup.exe
@@ -28,8 +84,7 @@ Ignore the other two files on a release. `latest.yml` and the `.blockmap` are
 what the in-app updater reads; downloading them by hand does nothing.
 
 It installs per-user, so there is no UAC prompt. The build is unsigned, so
-SmartScreen will warn the first time — **More info → Run anyway**. Updates are
-manual, from Settings; nothing phones home on its own.
+SmartScreen will warn the first time — **More info → Run anyway**.
 
 ### What you supply
 
@@ -43,7 +98,7 @@ The app ships no films and no API key of its own:
 Discord Rich Presence needs nothing at all: one toggle in Settings, off by
 default.
 
-## First run
+## First Run
 
 1. **Settings → Movie folders → Add folder…** and choose the folder holding your
    films. Each film should be in its own subfolder:
@@ -74,7 +129,7 @@ default.
    film it is unsure about is listed for you to confirm, and you can re-match a
    title by hand at any time.
 
-## Where your data lives
+## Where Your Data Lives
 
 `%APPDATA%/movie-app/`
 
@@ -108,46 +163,84 @@ poster and a countdown; paused and browsing states are shown too. It talks to
 the local Discord client over its named pipe and never contacts Discord's
 servers. If Discord is not running, presence simply stays off.
 
-## Building from source
+## Building From Source
+
+To clone and run this application, you'll need [Git](https://git-scm.com) and
+[Node.js](https://nodejs.org/en/download/) 20 or newer installed on your
+computer. From your command line:
 
 ```bash
-npm install
-npm run dev        # electron-vite dev, hot reload on the renderer
-npm test           # 185 tests, node:test via tsx
-npm run typecheck  # tsc --build
-npm run dist       # NSIS installer into release/
+# Clone this repository
+$ git clone https://github.com/PaulFababeir/movie-app
+
+# Go into the repository
+$ cd movie-app
+
+# Install dependencies
+$ npm install
+
+# Run the app
+$ npm run dev
 ```
 
-Requires Node 20+. Only one instance runs at a time — launching a second focuses
-the first, which can look like nothing happened.
+Other scripts worth knowing:
+
+```bash
+$ npm test           # 298 tests, node:test via tsx
+$ npm run typecheck  # tsc --build
+$ npm run dist       # NSIS installer into release/
+```
+
+> **Note**
+> Only one instance runs at a time — launching a second focuses the first, which
+> can look like nothing happened.
 
 ### Cutting a release
 
 ```bash
-npm version patch        # bumps package.json, commits, creates the tag
-git push --follow-tags
+$ npm version patch      # bumps package.json, commits, creates the tag
+$ git push --follow-tags
 ```
 
 That tag triggers `.github/workflows/release.yml`, which builds on Windows and
 uploads the installer and update feed to a **draft** release. Publish the draft
 on GitHub to make it downloadable and visible to the in-app updater.
 
-## Known gaps
+## Known Gaps
 
 - **AC-3, E-AC-3, DTS and TrueHD audio must be converted before it plays.** It
-  happens automatically on first play with the video stream copied untouched —
-  about ten seconds for a 700 MB file, then cached. Bundling mpv would remove
-  the step. The Matroska container and HEVC video both play natively.
+  happens automatically on first play, with the video stream copied bit-for-bit
+  — around three minutes for a 50-minute DDP5.1 episode, then cached. While one
+  episode plays the next is converted in the background, so only the first file
+  of a session ever waits. The Matroska container and HEVC video both play
+  natively; the audio codec is the whole problem.
 - **The grid is not virtualized.** Fine at a few hundred films, not at thousands.
+- **An animated avatar is stored uncompressed.** Still images are re-encoded down
+  to a few tens of KB; a GIF is kept whole, because decoding one returns only its
+  first frame.
 
 ## Credits
+
+This software uses the following open source packages:
+
+- [Electron](https://electronjs.org)
+- [React](https://react.dev)
+- [Vite](https://vitejs.dev) / [electron-vite](https://electron-vite.org)
+- [Motion](https://motion.dev)
+- [Zustand](https://zustand-demo.pmnd.rs)
+- [FFmpeg](https://ffmpeg.org) (via `ffmpeg-static`)
+- [Poppins](https://fonts.google.com/specimen/Poppins), bundled under the SIL
+  Open Font License
 
 This product uses the TMDB API but is not endorsed or certified by TMDB.
 Metadata and artwork come from [TMDB](https://www.themoviedb.org/).
 
-Bundles [Poppins](https://fonts.google.com/specimen/Poppins) under the SIL Open
-Font License.
-
 ## License
 
-[MIT](LICENSE)
+MIT
+
+---
+
+> GitHub [@PaulFababeir](https://github.com/PaulFababeir) &nbsp;&middot;&nbsp;
+> Built with [Electron](https://electronjs.org) &nbsp;&middot;&nbsp;
+> Metadata by [TMDB](https://www.themoviedb.org/)
