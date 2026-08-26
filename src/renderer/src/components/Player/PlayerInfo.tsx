@@ -122,6 +122,9 @@ export function PlayerInfo({ item, onClose }: PlayerInfoProps): React.JSX.Elemen
             .filter(Boolean)
             .join('  ·  ')}
         </div>
+
+        {meta?.tagline && <p className={styles.tagline}>{meta.tagline}</p>}
+        {meta?.overview && <p className={styles.overview}>{meta.overview}</p>}
       </div>
 
       <div className={styles.tab}>CAST</div>
