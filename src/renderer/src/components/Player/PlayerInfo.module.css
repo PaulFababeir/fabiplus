@@ -30,7 +30,12 @@
   box-shadow: 0 24px 60px rgb(0 0 0 / 45%);
   backdrop-filter: blur(30px) saturate(135%);
   -webkit-backdrop-filter: blur(30px) saturate(135%);
-  scrollbar-gutter: stable;
+  /*
+   * `both-edges`, not plain `stable`. The latter reserves the gutter on the
+   * scrolling edge alone, which put the panel's centre line 5px left of its
+   * visual centre — enough to see once the cast grid was centred against it.
+   */
+  scrollbar-gutter: stable both-edges;
 }
 
 /*
@@ -123,7 +128,7 @@
 }
 
 .tagline {
-  margin: 14px 0 0;
+  margin: 18px 0 0;
   color: var(--text-muted);
   font-size: 12.5px;
   font-style: italic;
@@ -133,7 +138,7 @@
 /* Left-aligned even though the headline above is centred: centred prose of
    this length is hard to read, the eye loses the start of each line. */
 .overview {
-  margin: 12px 0 0;
+  margin: 14px 0 0;
   color: var(--text);
   font-size: 13px;
   line-height: 1.62;
@@ -149,13 +154,19 @@
  * synthetic bold smeared over the same outlines.
  */
 .tab {
-  margin: 24px 0 4px;
-  padding-bottom: 8px;
+  /*
+   * The rule needs room on both sides or it reads as underlining the label
+   * rather than opening the section: 10px above it, 20px below before the
+   * grid, which was sitting 4px off it and looked crowded.
+   */
+  margin: 28px 0 20px;
+  padding-bottom: 10px;
   border-bottom: 1px solid rgb(255 255 255 / 10%);
   color: var(--text);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.09em;
+  text-align: center;
 }
 
 /* --- Cast ----------------------------------------------------------------- */
@@ -237,6 +248,18 @@
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   overflow-wrap: anywhere;
+  /*
+   * The glass alone cannot guarantee contrast: what is behind it is a film,
+   * and a bright frame lifts the plate to near-white. A shadow costs nothing
+   * over a dark frame and is what carries the text over a pale one.
+   *
+   * Not `mix-blend-mode: difference`, the obvious "just invert it" answer. It
+   * would blend against this panel's own fill rather than the video, since
+   * backdrop-filter establishes a stacking context; inversion lands on grey
+   * when the backdrop is mid-grey, failing exactly where it is needed; and the
+   * text would shift colour continuously as the film plays.
+   */
+  text-shadow: 0 1px 3px rgb(0 0 0 / 55%);
 }
 
 /* The part is the headline; the performer is the footnote. */
@@ -248,10 +271,18 @@
   line-height: 1.25;
 }
 
+/*
+ * White, like the part above it — --text-dim (#5f6167) is a dark grey that had
+ * next to no contrast against a 42%-opaque plate over a bright frame. The
+ * hierarchy is carried by size and weight instead of by colour, which is the
+ * half of it that survives whatever is playing behind.
+ */
 .actor {
-  color: var(--text-dim);
+  color: var(--text);
   font-size: 13.5px;
+  font-weight: 400;
   line-height: 1.3;
+  opacity: 0.82;
 }
 
 .empty {
