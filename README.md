@@ -33,7 +33,9 @@
   <a href="#license">License</a>
 </p>
 
-![Fabi+ in use](assets/demo.gif)
+<p align="center">
+  <img src="assets/demo.gif" alt="Fabi+ in use" width="720">
+</p>
 
 ## Key Features
 
