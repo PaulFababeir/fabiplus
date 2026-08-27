@@ -33,7 +33,7 @@
   <a href="#license">License</a>
 </p>
 
-![screenshot](assets/screenshot.png)
+![Fabi+ in use](assets/demo.gif)
 
 ## Key Features
 
