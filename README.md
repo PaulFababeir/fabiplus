@@ -24,6 +24,17 @@
 </p>
 
 <p align="center">
+  <img src="https://img.shields.io/badge/Electron-22304A?logo=electron&logoColor=white" alt="Electron">
+  <img src="https://img.shields.io/badge/React-22304A?logo=react&logoColor=white" alt="React">
+  <img src="https://img.shields.io/badge/TypeScript-22304A?logo=typescript&logoColor=white" alt="TypeScript">
+  <img src="https://img.shields.io/badge/Vite-22304A?logo=vite&logoColor=white" alt="Vite">
+  <img src="https://img.shields.io/badge/FFmpeg-22304A?logo=ffmpeg&logoColor=white" alt="FFmpeg">
+  <a href="https://www.themoviedb.org/">
+    <img src="https://img.shields.io/badge/Data%20by-TMDB-22304A?logo=themoviedatabase&logoColor=white" alt="Data by TMDB">
+  </a>
+</p>
+
+<p align="center">
   <a href="#key-features">Key Features</a> •
   <a href="#download">Download</a> •
   <a href="#first-run">First Run</a> •
