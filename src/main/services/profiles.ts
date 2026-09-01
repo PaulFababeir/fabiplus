@@ -16,7 +16,7 @@ import {
   storedExtension
 } from './avatar-rules.js';
 import { emptyProfileState, migrateProfileState } from './profile-migration.js';
-import { wouldEmptyProfiles } from './profile-rules.js';
+import { isSafeProfileId, wouldEmptyProfiles } from './profile-rules.js';
 
 /**
  * Profiles and their watch state.
@@ -54,6 +54,14 @@ export class AvatarTooLargeError extends Error {
   constructor() {
     super(`Pick an image under ${AVATAR_MAX_BYTES / 1024 / 1024} MB.`);
     this.name = 'AvatarTooLargeError';
+  }
+}
+
+/** Never shown to the user: reaching it means the renderer sent a bad id. */
+export class ProfileIdError extends Error {
+  constructor(id: string) {
+    super(`Refused an unsafe profile id: ${JSON.stringify(id)}`);
+    this.name = 'ProfileIdError';
   }
 }
 
@@ -105,7 +113,14 @@ export function profilesPath(): string {
   return join(userDataDir(), 'profiles.json');
 }
 
+/**
+ * The single choke point for turning a profile id into a path, which is why the
+ * guard lives here rather than at each of the three call sites. Reads, writes
+ * and deletes of profile state all go through it, and a check any of them could
+ * forget is a check that will eventually be forgotten.
+ */
 export function profileStatePath(id: string): string {
+  if (!isSafeProfileId(id)) throw new ProfileIdError(id);
   return join(userDataDir(), 'profiles', `${id}.json`);
 }
 

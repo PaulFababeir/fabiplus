@@ -719,16 +719,28 @@ function registerIpc(): void {
       setWatchFinished(String(profileId), String(movieId), finished === true)
   );
 
+  /*
+   * The path is checked rather than coerced. `String(undefined)` is the string
+   * "undefined", which would be stored as a pick that matches no image — the
+   * poster would silently fall back to the first and look like the bug this
+   * whole field was changed to fix.
+   */
   ipcMain.handle(
     IPC.posterChoiceSet,
-    async (_event, profileId: unknown, movieId: unknown, path: unknown): Promise<ProfileState> =>
-      setPosterChoice(String(profileId), String(movieId), String(path))
+    async (_event, profileId: unknown, movieId: unknown, path: unknown): Promise<ProfileState> => {
+      const state = await loadProfileState(String(profileId));
+      if (typeof path !== 'string' || path === '') return state;
+      return setPosterChoice(String(profileId), String(movieId), path);
+    }
   );
 
   ipcMain.handle(
     IPC.backdropChoiceSet,
-    async (_event, profileId: unknown, movieId: unknown, path: unknown): Promise<ProfileState> =>
-      setBackdropChoice(String(profileId), String(movieId), String(path))
+    async (_event, profileId: unknown, movieId: unknown, path: unknown): Promise<ProfileState> => {
+      const state = await loadProfileState(String(profileId));
+      if (typeof path !== 'string' || path === '') return state;
+      return setBackdropChoice(String(profileId), String(movieId), path);
+    }
   );
 }
 
