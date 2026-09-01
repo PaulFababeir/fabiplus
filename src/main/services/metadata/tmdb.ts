@@ -30,12 +30,23 @@ const THUMB_SIZE = 'w154';
 const BACKDROP_SIZE = 'original';
 const BACKDROP_PREVIEW_SIZE = 'w500';
 /*
- * Episode stills render in a sidebar row a little over 100px wide, so w300 is
- * already generous — and a show carries one per episode, where a film carries
- * twenty images total. Sherlock alone would be 15 stills; the next size up
- * would triple that for pixels the row never shows.
+ * `original`, and the reasoning that once said w300 no longer holds.
+ *
+ * That comment sized these for the sidebar row — a little over 100px wide, the
+ * only place a still appeared. The player's episode drawer now draws the same
+ * image at up to 460 CSS px, doubled again on a HiDPI panel, so w300 was being
+ * upscaled roughly threefold and read as soft.
+ *
+ * TMDB offers stills at w92, w185, w300 and original only. There is no
+ * intermediate rendition to reach for, so the drawer's requirement decides it.
+ *
+ * Affordable because a still is one image per episode, not twenty per title
+ * like backdrops: a full season is a few dozen, where the backdrop split was
+ * saving 1.2GB. If a very long season ever makes the sidebar list heavy, the
+ * fix is the tiered split backdrops already use — a small `localPath` for the
+ * row and `fullPath` for the drawer — not a smaller size here.
  */
-const STILL_SIZE = 'w300';
+const STILL_SIZE = 'original';
 
 /** Every rendition in one place, so a size can never be picked by a fall-through. */
 const SIZES: Record<ImageSizeKind, string> = {

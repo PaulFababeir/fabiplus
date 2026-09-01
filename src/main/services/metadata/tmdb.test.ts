@@ -291,12 +291,12 @@ describe('TmdbProvider.imageUrl', () => {
     assert.notEqual(p.imageUrl('/x.jpg', 'backdrop'), p.imageUrl('/x.jpg', 'backdrop-preview'));
   });
 
-  /** A show carries one still per episode, where a film carries twenty images
-      in total, and the sidebar row draws them barely 60px wide. */
-  it('asks for a small size for episode stills', () => {
+  /** The player's episode drawer draws a still up to 460 CSS px wide, doubled
+      again on a HiDPI panel, and TMDB offers nothing between w300 and original. */
+  it('asks for full size episode stills', () => {
     assert.equal(
       new TmdbProvider('k').imageUrl('/s.jpg', 'still'),
-      'https://image.tmdb.org/t/p/w300/s.jpg'
+      'https://image.tmdb.org/t/p/original/s.jpg'
     );
   });
 });
