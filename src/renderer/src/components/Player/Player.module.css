@@ -506,7 +506,10 @@
   height: 32px;
   padding: 0 12px;
   border: none;
-  border-radius: var(--radius-pill);
+  /* Squared rather than a pill: at 32px tall a pill radius made it read as a
+     chip among the cards instead of a control above them. --radius-sm is what
+     the stills inside those cards use. */
+  border-radius: var(--radius-sm);
   background: rgb(255 255 255 / 10%);
   color: rgb(255 255 255 / 88%);
   font: inherit;
