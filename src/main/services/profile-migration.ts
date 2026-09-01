@@ -17,7 +17,7 @@ import type { ProfileState } from '@shared/types';
  *                          does not understand
  */
 
-export const PROFILE_SCHEMA_VERSION = 2;
+export const PROFILE_SCHEMA_VERSION = 3;
 
 export class ProfileSchemaError extends Error {
   constructor(readonly found: number, readonly supported: number) {
@@ -41,7 +41,20 @@ const STEPS: Record<number, (state: Record<string, unknown>) => Record<string, u
    * existing profile simply has no choices yet — the default is index 0, which
    * is the backdrop those profiles were already seeing.
    */
-  1: (state) => ({ ...state, backdropChoice: state['backdropChoice'] ?? {}, schemaVersion: 2 })
+  1: (state) => ({ ...state, backdropChoice: state['backdropChoice'] ?? {}, schemaVersion: 2 }),
+  /*
+   * 2 → 3: artwork picks became provider paths rather than list indices, so a
+   * refetch that re-ranks the images can no longer silently repoint a choice.
+   *
+   * Nothing is rewritten here. A number is still a valid `ArtworkPick` and goes
+   * on resolving exactly as it did, because converting one needs the catalog and
+   * a migration only ever sees the profile. `normalisePicks` does the
+   * conversion where both are in hand.
+   *
+   * The version still moves, so an older build refuses the file outright rather
+   * than reading a path as an index and quietly showing the wrong poster.
+   */
+  2: (state) => ({ ...state, schemaVersion: 3 })
 };
 
 export function emptyProfileState(profileId: string): ProfileState {

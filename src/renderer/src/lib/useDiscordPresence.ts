@@ -38,7 +38,7 @@ function toFilm(
             .filter(Boolean)
             .join(' · '),
     // The profile's poster pick, so Discord shows the artwork the library does.
-    image: discordArtwork(item, profile?.posterChoice[item.id] ?? 0)
+    image: discordArtwork(item, profile?.posterChoice[item.id])
   };
 }
 

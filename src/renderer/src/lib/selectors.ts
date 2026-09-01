@@ -1,3 +1,4 @@
+import { pickedIndex } from '@shared/artwork-pick';
 import type { KindFilter, LibraryItem, ProfileState, SortKey } from '@shared/types';
 
 /** Derived views over the catalog. Pure, so they stay cheap to memoize. */
@@ -14,8 +15,7 @@ export function displayYear(item: LibraryItem): number | null {
 export function posterFor(item: LibraryItem, state: ProfileState | null): string | null {
   const posters = item.metadata?.posters ?? [];
   if (posters.length === 0) return null;
-  const chosen = state?.posterChoice[item.id] ?? 0;
-  return (posters[chosen] ?? posters[0])?.localPath ?? null;
+  return posters[pickedIndex(posters, state?.posterChoice[item.id])]?.localPath ?? null;
 }
 
 /**
@@ -31,9 +31,8 @@ export function backdropFor(item: LibraryItem, state: ProfileState | null): stri
   const backdrops = item.metadata?.backdrops ?? [];
   if (backdrops.length === 0) return item.metadata?.backdrop?.localPath ?? null;
 
-  // A choice outlives a refetch that returned fewer images.
-  const chosen = state?.backdropChoice[item.id] ?? 0;
-  const backdrop = backdrops[chosen] ?? backdrops[0];
+  // A choice outlives a refetch that dropped the image it named.
+  const backdrop = backdrops[pickedIndex(backdrops, state?.backdropChoice[item.id])];
   if (!backdrop) return null;
 
   /*

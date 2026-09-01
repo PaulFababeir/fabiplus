@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { pickedIndex } from '@shared/artwork-pick';
 import { toMovieUrl } from '@shared/media-url';
 import type { CastMember, LibraryItem, ProfileState } from '@shared/types';
 import { AUTO_ACCEPT, TMDB_ATTRIBUTION } from '@shared/constants';
@@ -90,9 +91,10 @@ export function Sidebar({ item, profileState }: SidebarProps): React.JSX.Element
 
   const poster = posterFor(item, profileState);
   const posters = item.metadata?.posters ?? [];
-  const chosenIndex = profileState?.posterChoice[item.id] ?? 0;
+  // The pickers highlight by position, so the stored pick is resolved here.
+  const chosenIndex = pickedIndex(posters, profileState?.posterChoice[item.id]);
   const backdrops = item.metadata?.backdrops ?? [];
-  const chosenBackdrop = profileState?.backdropChoice[item.id] ?? 0;
+  const chosenBackdrop = pickedIndex(backdrops, profileState?.backdropChoice[item.id]);
 
   const meta = item.metadata;
   const director = meta?.crew.find((c) => c.job === 'Director')?.name ?? null;

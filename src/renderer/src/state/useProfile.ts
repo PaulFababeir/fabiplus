@@ -20,8 +20,9 @@ interface ProfileStore {
   setProgress: (movieId: string, positionSec: number, durationSec: number) => Promise<void>;
   clearProgress: (movieId: string) => Promise<void>;
   setFinished: (movieId: string, finished: boolean) => Promise<void>;
-  choosePoster: (movieId: string, index: number) => Promise<void>;
-  chooseBackdrop: (movieId: string, index: number) => Promise<void>;
+  /** `path` is the image's `remotePath` — a position would drift on refetch. */
+  choosePoster: (movieId: string, path: string) => Promise<void>;
+  chooseBackdrop: (movieId: string, path: string) => Promise<void>;
 }
 
 /**
@@ -152,21 +153,21 @@ export const useProfile = create<ProfileStore>((set, get) => ({
     }
   },
 
-  choosePoster: async (movieId, index) => {
+  choosePoster: async (movieId, path) => {
     const activeId = get().activeId;
     if (!activeId) return;
     try {
-      set({ state: await window.api.setPosterChoice(activeId, movieId, index) });
+      set({ state: await window.api.setPosterChoice(activeId, movieId, path) });
     } catch (err) {
       set({ error: message(err) });
     }
   },
 
-  chooseBackdrop: async (movieId, index) => {
+  chooseBackdrop: async (movieId, path) => {
     const activeId = get().activeId;
     if (!activeId) return;
     try {
-      set({ state: await window.api.setBackdropChoice(activeId, movieId, index) });
+      set({ state: await window.api.setBackdropChoice(activeId, movieId, path) });
     } catch (err) {
       set({ error: message(err) });
     }

@@ -1,5 +1,6 @@
+import { pickedIndex } from './artwork-pick.js';
 import { APP_ICON_URL, TMDB_IMAGE_BASE } from './constants.js';
-import type { DiscordActivity, LibraryItem } from './types.js';
+import type { ArtworkPick, DiscordActivity, LibraryItem } from './types.js';
 
 /**
  * What the app publishes to Discord, for every state it can be in.
@@ -48,12 +49,12 @@ export const FALLBACK_ART = APP_ICON_URL;
  * `localPath` the UI renders: Discord fetches the image from its own servers,
  * and a path on this disk is meaningless to it.
  */
-export function discordArtwork(item: LibraryItem, posterIndex = 0): string {
+export function discordArtwork(item: LibraryItem, pick?: ArtworkPick): string {
   const meta = item.metadata;
   if (meta?.providerId !== 'tmdb') return FALLBACK_ART;
 
-  // A stale pick — the choice outlives a refetch that returned fewer posters.
-  const poster = meta.posters[posterIndex] ?? meta.posters[0];
+  // Absorbs a stale pick — a choice outlives a refetch that dropped the image.
+  const poster = meta.posters[pickedIndex(meta.posters, pick)];
   return poster ? `${TMDB_IMAGE_BASE}/w500${poster.remotePath}` : FALLBACK_ART;
 }
 

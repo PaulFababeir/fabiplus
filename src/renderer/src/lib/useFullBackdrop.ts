@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 
+import { pickedIndex } from '@shared/artwork-pick';
 import type { LibraryItem, ProfileState } from '@shared/types';
 import { useLibrary } from '@renderer/state/useLibrary';
 
@@ -20,10 +21,9 @@ export function useFullBackdrop(item: LibraryItem | null, state: ProfileState | 
   const ensureBackdropFull = useLibrary((s) => s.ensureBackdropFull);
 
   const backdrops = item?.metadata?.backdrops ?? [];
-  const requested = item ? (state?.backdropChoice[item.id] ?? 0) : 0;
-  // A pick can outlive a refetch that returned fewer images, and `backdropFor`
-  // falls back to the first — so upgrade whichever one is really being shown.
-  const index = backdrops[requested] ? requested : 0;
+  // `pickedIndex` already falls back to the first when the chosen image is gone,
+  // so this is whichever backdrop is really on screen — the one worth upgrading.
+  const index = pickedIndex(backdrops, item ? state?.backdropChoice[item.id] : undefined);
   const alreadyFull = backdrops[index]?.fullPath != null;
 
   useEffect(() => {

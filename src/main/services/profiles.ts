@@ -352,16 +352,22 @@ export async function setWatchFinished(
   return next;
 }
 
-/** Remembers which of the cached posters this profile prefers for a film. */
+/**
+ * Remembers which of the cached posters this profile prefers for a film.
+ *
+ * Stores the image's provider path, not its position. A position is not a
+ * reference to an image: a refetch re-ranks the list and the same index comes
+ * to mean a different poster, which is how a choice used to change on its own.
+ */
 export async function setPosterChoice(
   profileId: string,
   movieId: string,
-  index: number
+  path: string
 ): Promise<ProfileState> {
   const state = await loadProfileState(profileId);
   const next: ProfileState = {
     ...state,
-    posterChoice: { ...state.posterChoice, [movieId]: Math.max(0, index) }
+    posterChoice: { ...state.posterChoice, [movieId]: path }
   };
   await saveProfileState(next);
   return next;
@@ -371,12 +377,12 @@ export async function setPosterChoice(
 export async function setBackdropChoice(
   profileId: string,
   movieId: string,
-  index: number
+  path: string
 ): Promise<ProfileState> {
   const state = await loadProfileState(profileId);
   const next: ProfileState = {
     ...state,
-    backdropChoice: { ...state.backdropChoice, [movieId]: Math.max(0, index) }
+    backdropChoice: { ...state.backdropChoice, [movieId]: path }
   };
   await saveProfileState(next);
   return next;

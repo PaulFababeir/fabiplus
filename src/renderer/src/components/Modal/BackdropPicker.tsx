@@ -62,7 +62,7 @@ export function BackdropPicker({
                     aria-label={`Use backdrop ${i + 1} of ${backdrops.length}`}
                     aria-pressed={i === chosenIndex}
                     onClick={() => {
-                      void chooseBackdrop(item.id, i);
+                      void chooseBackdrop(item.id, backdrop.remotePath);
                       // Only the default is cached at full size, so the pick
                       // shows its preview until this lands. Fired after the
                       // choice, not awaited — the dialog should not sit open

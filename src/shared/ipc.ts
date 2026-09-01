@@ -227,9 +227,9 @@ export interface RendererApi {
    * again, where a finished one stays out until it is explicitly unmarked.
    */
   setWatchFinished(profileId: string, movieId: string, finished: boolean): Promise<ProfileState>;
-  setPosterChoice(profileId: string, movieId: string, index: number): Promise<ProfileState>;
-  /** Index into `Metadata.backdrops`, per profile — see `setPosterChoice`. */
-  setBackdropChoice(profileId: string, movieId: string, index: number): Promise<ProfileState>;
+  setPosterChoice(profileId: string, movieId: string, path: string): Promise<ProfileState>;
+  /** The chosen backdrop's provider path, per profile — see `setPosterChoice`. */
+  setBackdropChoice(profileId: string, movieId: string, path: string): Promise<ProfileState>;
 }
 
 declare global {

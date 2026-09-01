@@ -359,15 +359,26 @@ export interface WatchEntry {
   finished: boolean;
 }
 
+/**
+ * A profile's artwork choice.
+ *
+ * A string is the image's own `CachedImage.remotePath`, stable across refetches
+ * and what every pick written from schema 3 onward stores. A number is a legacy
+ * index into the list, and it drifts: a refetch re-ranks the images, so the
+ * position that meant one poster can come to mean another. `normalisePicks`
+ * converts them on load; `pickedIndex` resolves either form.
+ */
+export type ArtworkPick = string | number;
+
 export interface ProfileState {
   schemaVersion: number;
   profileId: string;
   /** Keyed by LibraryItem.id. */
   watch: Record<string, WatchEntry>;
-  /** Keyed by LibraryItem.id → index into Metadata.posters. */
-  posterChoice: Record<string, number>;
-  /** Keyed by LibraryItem.id → index into Metadata.backdrops. */
-  backdropChoice: Record<string, number>;
+  /** Keyed by LibraryItem.id → the chosen poster. See `ArtworkPick`. */
+  posterChoice: Record<string, ArtworkPick>;
+  /** Keyed by LibraryItem.id → the chosen backdrop. See `ArtworkPick`. */
+  backdropChoice: Record<string, ArtworkPick>;
 }
 
 // ---------------------------------------------------------------------------

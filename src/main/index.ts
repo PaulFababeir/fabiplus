@@ -49,12 +49,14 @@ import {
   loadProfiles,
   loadProfileState,
   renameProfile,
+  saveProfileState,
   setProfileAvatar,
   setBackdropChoice,
   setPosterChoice,
   setWatchFinished,
   setWatchProgress
 } from './services/profiles.js';
+import { normalisePicks } from './services/profile-picks.js';
 import { rescanSubtitles, scanLibrary } from './services/scanner.js';
 import { findSubtitles, fetchSubtitle } from './services/subtitles/subtitlecat.js';
 
@@ -672,7 +674,23 @@ function registerIpc(): void {
   });
 
   ipcMain.handle(IPC.profileStateGet, async (_event, id: unknown): Promise<ProfileState> => {
-    return loadProfileState(String(id));
+    const state = await loadProfileState(String(id));
+
+    /*
+     * The one place both a profile and the catalog are in hand, which is what
+     * converting a legacy index pick into a stable path needs — a schema
+     * migration only ever sees the profile.
+     *
+     * Runs on activation rather than at startup so it covers every profile as
+     * it is switched to, and writes only when something actually changed, so a
+     * profile already on paths is never rewritten. An empty catalog is a no-op
+     * inside `normalisePicks`; the next launch with a real one finishes it.
+     */
+    const normalised = normalisePicks(state, (await loadLibrary()).items);
+    if (!normalised) return state;
+
+    await saveProfileState(normalised);
+    return normalised;
   });
 
   // -- Watch state ---------------------------------------------------------
@@ -703,14 +721,14 @@ function registerIpc(): void {
 
   ipcMain.handle(
     IPC.posterChoiceSet,
-    async (_event, profileId: unknown, movieId: unknown, index: unknown): Promise<ProfileState> =>
-      setPosterChoice(String(profileId), String(movieId), Number(index))
+    async (_event, profileId: unknown, movieId: unknown, path: unknown): Promise<ProfileState> =>
+      setPosterChoice(String(profileId), String(movieId), String(path))
   );
 
   ipcMain.handle(
     IPC.backdropChoiceSet,
-    async (_event, profileId: unknown, movieId: unknown, index: unknown): Promise<ProfileState> =>
-      setBackdropChoice(String(profileId), String(movieId), Number(index))
+    async (_event, profileId: unknown, movieId: unknown, path: unknown): Promise<ProfileState> =>
+      setBackdropChoice(String(profileId), String(movieId), String(path))
   );
 }
 

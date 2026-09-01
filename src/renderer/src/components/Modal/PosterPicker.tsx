@@ -56,7 +56,7 @@ export function PosterPicker({ item, chosenIndex, onClose }: PosterPickerProps):
                     aria-label={`Use poster ${i + 1} of ${posters.length}`}
                     aria-pressed={i === chosenIndex}
                     onClick={() => {
-                      void choosePoster(item.id, i);
+                      void choosePoster(item.id, poster.remotePath);
                       onClose();
                     }}
                   >
