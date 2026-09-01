@@ -11,7 +11,7 @@ everything it returns is cached to disk so the app runs with the network off.
 npm run dev          # electron-vite dev, HMR on the renderer
 npm start            # run the production build
 npm run build        # tsc --build && electron-vite build
-npm test             # 295 tests, node:test via tsx
+npm test             # 323 tests, node:test via tsx
 npm run typecheck    # tsc --build — see below, --noEmit checks nothing here
 npm run scan:report  # print the parse table for every folder, no network
 npm run dist         # NSIS installer into release/ (~118 MB)
@@ -26,7 +26,7 @@ under `src/main/` or `src/preload/` restarts the app; renderer edits hot-reload.
 
 ```
 src/main/          Electron main. Scanner, TMDB provider, matcher, stores.
-                   All 295 tests live here or in shared.
+                   All 323 tests live here or in shared.
 src/preload/       The entire renderer API surface (contextBridge).
 src/renderer/      React UI. No Node access.
 src/shared/        Types, constants, and pure logic both processes need.
@@ -207,6 +207,15 @@ Words that appear in real titles (`uncut`, `to`, `web`, `cam`) are weak and only
 count once the title has ended. Without this, `Uncut Gems` parses to an empty
 string and `A Walk to Remember` truncates to `A Walk`.
 
+**`Episode.overview` is provider-only, so `mergeSeasons` has to carry it.** The
+provider always returned an episode synopsis; enrichment simply dropped it until
+the drawer and the sidebar accordion needed it. It is the standing example of the
+rule below: anything added to `Episode` that the provider supplies has to be
+listed in `mergeSeasons` or the next rescan discards it silently, with no way
+back short of a full refetch. TMDB sends `''` rather than omitting the field for
+an episode it has no synopsis for, which is why it is normalised to null —
+an empty string renders a toggle that opens onto nothing.
+
 **A show's cast is not in `credits`.** `/tv/{id}?append_to_response=credits`
 returns series-level billing only — for Sherlock that is two people, and the
 sidebar showed exactly those two. The rest live in `aggregate_credits`, which
@@ -262,6 +271,16 @@ turns an animated avatar into a still. PNG stays PNG for its alpha. Anything the
 decoder cannot read comes back empty and is copied untouched, which is also what
 happens to a re-encode that came out no smaller.
 
+**`STILL_SIZE` is `original`, and the comment that once said w300 was stale.**
+That reasoning sized stills for the sidebar row — a little over 100px, the only
+place they appeared. The player's episode drawer draws the same image up to
+460 CSS px, doubled again on a HiDPI panel, so w300 was upscaled roughly
+threefold and read as soft. TMDB offers stills at w92, w185, w300 and original
+only; there is no intermediate rendition, so the drawer decides it. Affordable
+because a still is one image per episode, not twenty per title. If a very long
+season ever makes the sidebar list heavy, the fix is the tiered split backdrops
+use — not a smaller size here.
+
 **TMDB artwork.** Do not send `include_image_language`. Restricting to `en,null`
 starves non-English films — Solanin had exactly one usable poster because the
 rest are tagged `ja`. Fetch every language, rank client-side in `rankImages`.
@@ -301,6 +320,22 @@ simply unplayable. It is `-sn` now: subtitles are read from the *original*
 file by `embedded-subs.ts`, never from the converted copy, so dropping forty
 tracks costs nothing and is faster besides. Never reintroduce a subtitle codec
 here without checking it against the MP4 container.
+
+**The episode drawer rises by displacing the controls, not by animating them.**
+It is a sibling of the control row *inside* `.controls`, which is anchored to
+`bottom: 0`, so growing the drawer is what pushes the scrub bar and buttons up.
+One height animation drives the whole gesture, which is why the two cannot drift
+out of step. It also holds the chrome open — `chromeHidden` excludes
+`episodesOpen` — because a list to read is not a control to press, and the bar
+otherwise faded out from under the pointer after 2.6s and took the drawer with it.
+
+**React attaches wheel listeners as passive, so `preventDefault` is a no-op
+there.** The drawer is a horizontal scroller and a mouse reports its wheel as
+`deltaY`, which an `overflow-x` element ignores entirely — it sat still unless
+you held Shift. Translating that to `scrollLeft` needs a native listener
+registered with `{ passive: false }`; an `onWheel` prop logs a console warning
+and does nothing. A trackpad's own sideways gesture arrives as `deltaX` and is
+deliberately left alone, or it would be applied twice.
 
 **`net.fetch(file://)` ignores Range headers.** Video seeking requires 206
 partial responses, so `media-server.ts` parses Range and streams byte ranges by
@@ -358,8 +393,9 @@ use `readJsonOrFail`.
 return an empty state on any `schemaVersion` mismatch, which would have wiped
 every user's watch history the first time the schema was bumped after a release.
 `profile-migration.ts` now migrates forward through a `STEPS` registry and
-*throws* on data newer than the build understands. Adding version 2 means adding
-one entry to `STEPS` — do not edit the loader.
+*throws* on data newer than the build understands. Adding a version means adding
+one entry to `STEPS` — do not edit the loader. It is at 3: 2 added selectable
+backdrops, 3 changed artwork picks from indices to provider paths.
 
 **Watch progress is keyed by `Episode.id` for a show, not the show's id.** So
 `continueWatching` resolves each entry against a map of *both* item ids and
@@ -601,6 +637,16 @@ becoming file-system access.
   `D:/Movies-private` passing as inside `D:/Movies`.
 - Cache filenames are SHA-1 digests, so a hostile `remotePath` cannot escape the
   cache directory.
+- **A profile id becomes a filename, so it is validated as one.**
+  `profileStatePath` builds `profiles/<id>.json`, and the id arrives from the
+  renderer on every profile call — it was the one renderer string in the app
+  that became a path without a containment check, which made "load this profile"
+  an arbitrary JSON read, "save" an arbitrary write, and "delete" an arbitrary
+  unlink. `isSafeProfileId` in `profile-rules.ts` is an allowlist rather than a
+  traversal check, because an id is a single filename component: anything that is
+  not one is wrong wherever it would land. The guard sits inside
+  `profileStatePath` rather than at its three call sites, because a check any
+  caller could forget is one that eventually gets forgotten.
 
 `npm audit` is clean; keep it that way before tagging a release.
 
@@ -638,9 +684,32 @@ Chromium declines to draw it. The avatar cache is deliberately *not* under
 `cache/images/`: that one is disposable and gets cleared, and an avatar has
 nothing to refetch it from.
 
+**An artwork pick is a path, never a position.** `posterChoice` used to store an
+index, and an index is not a reference to an image — it is a reference to a slot.
+A refetch rebuilds `metadata.posters` and re-ranks it by language then by TMDB's
+live `vote_average`, so one uploaded poster, one deletion, or one vote shifting
+the order silently repointed the choice at a different picture. Nothing could
+detect it: the index was still in range. That is why "my poster changed after a
+refetch" went unexplained for so long.
+
+`ArtworkPick` is therefore `string | number`: a string is the image's own
+`remotePath` and is what every pick written since schema 3 stores; a number is
+legacy and still resolves the old way. `pickedIndex` in `shared/artwork-pick.ts`
+resolves either, and is the only thing that should — never index the array with a
+stored pick directly.
+
+**Converting a legacy pick needs the catalog, which a migration never sees.** So
+`normalisePicks` runs in the `profileStateGet` handler, the one place a profile
+and the catalog are both in hand, and writes back only when something changed.
+Three guards matter and all protect data that cannot be regenerated: an empty
+catalog is a no-op (before a first scan every pick would resolve to nothing, and
+writing that back erases good choices), a film missing from the catalog keeps its
+pick untouched (usually an unplugged drive, not a deletion), and an unchanged
+profile is never rewritten.
+
 **Read artwork through the selectors, never off `Metadata` directly.**
-`posterFor` and `backdropFor` apply the profile's pick and absorb a stale one —
-a choice outlives a refetch that returns fewer images. `backdropFor` checks the
+`posterFor` and `backdropFor` apply the pick and absorb a stale one — a choice
+outlives a refetch that dropped the image it named. `backdropFor` checks the
 `backdrops` list *first* and only falls back to the legacy `metadata.backdrop`
 scalar when it is empty; doing it the other way round pins every profile to
 `backdrops[0]` and silently ignores the pick, because the scalar is that same
@@ -650,11 +719,13 @@ image.
 
 **Working:** scan of both films and shows, TMDB enrichment with fuzzy matching
 and manual re-match, profiles (create, switch, rename, image avatar, delete),
-poster and backdrop pickers, Continue Watching for films and episodes alike with
-a right-click "mark as watched", the series episode list with stills and
-per-episode resume, next-episode autoplay, the player (seek, external and
+poster and backdrop pickers whose picks survive a refetch, Continue Watching for
+films and episodes alike with a right-click to mark watched or remove the entry,
+the series episode list with stills, per-episode resume and a per-episode
+synopsis accordion, next-episode autoplay, the player (seek, external and
 embedded subtitles with `V` cycling, hover scrub preview, ±10s, speed,
-brightness, on-demand audio conversion), acrylic translucency.
+brightness, on-demand audio conversion, subtitle search and download), the
+player's cast panel and episode drawer, acrylic translucency.
 
 **Known gaps:**
 
@@ -675,10 +746,16 @@ brightness, on-demand audio conversion), acrylic translucency.
   still resolves those ids so existing entries are not orphaned; the fix is for
   a show's card to open the sidebar instead of playing.
 - **`lib/selectors.ts` has no tests** despite load-bearing null handling, and
-  `backdropFor` has now joined `posterFor` there. The test runner only reaches
-  `src/main`, `src/shared` and `scripts` — a renderer test would need
+  `backdropFor` has now joined `posterFor` there. The pick *resolution* those two
+  depend on is covered — `pickedIndex` lives in `shared/artwork-pick.ts` precisely
+  so it could be — but the selectors' own null handling is not. The test runner
+  only reaches `src/main`, `src/shared` and `scripts`; a renderer test would need
   `tsconfig.node.json` to include it, since `tsconfig.web.json` now excludes
   `*.test.ts`.
+- **Roughly thirty symbols are exported but used only inside their own module** —
+  `scoreCandidate`, `pruneCache`, `toSearchTitle` and the rest. Harmless surplus
+  API surface rather than dead code, and some of it is deliberate room for tests,
+  but it is what a sweep for "exports nothing imports" will keep reporting.
 - **The grid is not virtualized.** Fine at 87; not at thousands.
 - **An animated avatar is stored uncompressed.** `avatarEncoding` returns
   `copy` for a GIF because a decoder hands back only its first frame, so a

@@ -70,7 +70,7 @@ export const DISCORD_APP_ID = '1533694975093768232';
  * than the state this replaced.
  */
 export const APP_ICON_URL =
-  'https://raw.githubusercontent.com/PaulFababeir/movie-app/main/assets/icon.png';
+  'https://raw.githubusercontent.com/PaulFababeir/fabiplus/main/assets/icon.png';
 
 /**
  * Required by the TMDB free-tier terms, rendered in the sidebar footer.

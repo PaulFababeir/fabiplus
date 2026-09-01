@@ -1,6 +1,6 @@
 <h1 align="center">
   <br>
-  <a href="https://github.com/PaulFababeir/movie-app"><img src="assets/icon.png" alt="Fabi+" width="200"></a>
+  <a href="https://github.com/PaulFababeir/fabiplus"><img src="assets/icon.png" alt="Fabi+" width="200"></a>
   <br>
   Fabi+
   <br>
@@ -9,12 +9,12 @@
 <h4 align="center">An offline desktop library and player for your own film and show collection, built on <a href="https://electronjs.org" target="_blank">Electron</a>.</h4>
 
 <p align="center">
-  <a href="https://github.com/PaulFababeir/movie-app/releases/latest">
-    <img src="https://img.shields.io/github/v/release/PaulFababeir/movie-app?color=22304A&label=release"
+  <a href="https://github.com/PaulFababeir/fabiplus/releases/latest">
+    <img src="https://img.shields.io/github/v/release/PaulFababeir/fabiplus?color=22304A&label=release"
          alt="Latest release">
   </a>
-  <a href="https://github.com/PaulFababeir/movie-app/releases">
-    <img src="https://img.shields.io/github/downloads/PaulFababeir/movie-app/total?color=22304A"
+  <a href="https://github.com/PaulFababeir/fabiplus/releases">
+    <img src="https://img.shields.io/github/downloads/PaulFababeir/fabiplus/total?color=22304A"
          alt="Downloads">
   </a>
   <img src="https://img.shields.io/badge/platform-Windows-22304A" alt="Platform">
@@ -83,7 +83,7 @@
 
 ## Download
 
-You can [download](https://github.com/PaulFababeir/movie-app/releases/latest) the
+You can [download](https://github.com/PaulFababeir/fabiplus/releases/latest) the
 latest installable version of Fabi+ for Windows 10/11, 64-bit. One file:
 
 ```
@@ -184,7 +184,7 @@ computer. From your command line:
 
 ```bash
 # Clone this repository
-$ git clone https://github.com/PaulFababeir/movie-app
+$ git clone https://github.com/PaulFababeir/fabiplus
 
 # Go into the repository
 $ cd movie-app
@@ -199,7 +199,7 @@ $ npm run dev
 Other scripts worth knowing:
 
 ```bash
-$ npm test           # 298 tests, node:test via tsx
+$ npm test           # 323 tests, node:test via tsx
 $ npm run typecheck  # tsc --build
 $ npm run dist       # NSIS installer into release/
 ```
