@@ -106,6 +106,7 @@ export function Player({ item, episode, startAt }: PlayerProps): React.JSX.Eleme
   const scrubRef = useRef<HTMLDivElement>(null);
   const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const stripRef = useRef<HTMLDivElement>(null);
   /** True while a click gesture began with the menu open. */
   const menuWasOpen = useRef(false);
   /** Pointer position when chrome was force-hidden, to ignore jitter. */
@@ -603,6 +604,34 @@ export function Player({ item, episode, startAt }: PlayerProps): React.JSX.Eleme
       document.removeEventListener('mousemove', onMove);
     };
   }, [scrubbing, seekTo, timeFromPointer]);
+
+  /*
+   * A wheel scrolls the episode strip sideways.
+   *
+   * A mouse reports its wheel as deltaY, and an `overflow-x` scroller ignores
+   * that entirely — the strip sat still unless you held Shift or dragged the
+   * bar, which is not discoverable. A trackpad's own sideways gesture arrives
+   * as deltaX and is left alone, so two-finger swiping still behaves natively.
+   *
+   * Registered by hand rather than through React's `onWheel`, because React
+   * attaches wheel listeners as passive: preventDefault there is a no-op and
+   * the console says so. Keyed on `episodesOpen` since the strip only exists
+   * while the drawer is open.
+   */
+  useEffect(() => {
+    const el = stripRef.current;
+    if (el === null) return;
+
+    const onWheel = (e: WheelEvent): void => {
+      if (Math.abs(e.deltaX) >= Math.abs(e.deltaY)) return;
+      e.preventDefault();
+      // Some mice report lines rather than pixels; a line is about 16px.
+      el.scrollLeft += e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
+    };
+
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, [episodesOpen]);
 
   /*
    * Forced hide wins outright; otherwise chrome only fades while playing — and
@@ -1147,7 +1176,7 @@ export function Player({ item, episode, startAt }: PlayerProps): React.JSX.Eleme
                 exit={{ height: 0, opacity: 0 }}
                 transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
               >
-                <div className={styles.episodeStrip}>
+                <div className={styles.episodeStrip} ref={stripRef}>
                   {episodeList.map((ep) => {
                     const number = ep.number === null ? null : String(ep.number).padStart(2, '0');
                     const epLabel = ep.title ?? `Episode ${number ?? '?'}`;
