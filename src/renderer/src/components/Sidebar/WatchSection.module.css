@@ -245,7 +245,12 @@
  */
 .synopsis {
   margin: 0;
-  padding: 2px 34px 12px 40px;
+  /*
+   * Top and bottom must match, and match .row's own 8px, or the block sits
+   * closer to the row above than the one below. It was 2px over 12px, which
+   * with the rows' padding either side read as 10px above and 20px below.
+   */
+  padding: 8px 34px 8px 40px;
   color: var(--text-muted);
   font-size: 11.5px;
   line-height: 1.6;
