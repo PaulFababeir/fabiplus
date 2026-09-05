@@ -127,13 +127,25 @@ git push --follow-tags
 
 The workflow's first real step compares the tag against `package.json` and
 refuses to build when they disagree, since that produces assets named for one
-version and a feed advertising another. `npm ci`, `npm test` and `npm run
-release` follow.
+version and a feed advertising another. `npm ci`, `npm test` and `npm run dist`
+follow, then a single `gh release create --draft` uploads all three assets.
 
-**6. Publish the draft.** electron-builder uploads the installer, `latest.yml`
-and the blockmap to a **draft** release. Drafts are invisible to
-`electron-updater`, so nothing reaches Settings → Check for updates until it is
-published.
+**CI builds with `--publish never` and uploads by hand, deliberately.** It used
+to run `npm run release` and let electron-builder publish. Its uploads run
+concurrently and each does a find-or-create for "the release at this tag" — but
+a draft has no real git tag until it is published, so GitHub allows several
+sharing a name and neither uploader finds the other's. Every release from 0.3.0
+to 0.3.5 came out as **two** drafts with the assets split across them, and the
+one holding the blockmap was always the one deleted by hand. That is why no
+release before this change ever shipped a blockmap, and why differential updates
+have never actually worked: `electron-updater` looks for `<installer>.blockmap`
+beside the installer, does not find it, and falls back to the full ~119 MB
+download every time. One `gh` call with all three files has nothing to race.
+
+**6. Publish the draft.** The workflow uploads the installer, `latest.yml` and
+the blockmap to a **draft** release — one draft, all three. Drafts are invisible
+to `electron-updater`, so nothing reaches Settings → Check for updates until it
+is published. That step stays manual on purpose.
 
 ```bash
 gh release edit v<version> --draft=false
@@ -143,9 +155,15 @@ gh release edit v<version> --draft=false
 executable. `%APPDATA%/movie-app/` is untouched by an upgrade, so the catalog,
 profiles and watch history carry over.
 
-`npm run release` does steps 3 and 5–6 locally instead, but needs `GH_TOKEN` set
-to a personal access token with `repo` scope. Inside Actions the built-in
-`GITHUB_TOKEN` covers it.
+`npm run release` still exists for publishing from this machine instead, but
+needs `GH_TOKEN` set to a personal access token with `repo` scope — and it
+carries the duplicate-draft behaviour described above, so prefer the tag. Inside
+Actions the built-in `GITHUB_TOKEN` covers the upload.
+
+`build.publish` in `package.json` names `owner`/`repo` explicitly rather than
+reading the git remote, so it does **not** follow a repository rename. It said
+`movie-app` for a while after the rename to `fabiplus` and only kept working on
+GitHub's redirect.
 
 **Anything pinned to `main` only updates once pushed.** `APP_ICON_URL` is the
 live example: Discord fetches `assets/icon.png` from the public repo, so a

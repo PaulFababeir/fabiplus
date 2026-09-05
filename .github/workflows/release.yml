@@ -45,9 +45,39 @@ jobs:
 
       - run: npm test
 
-      # `npm run release` runs tsc --build and electron-vite build first, then
-      # electron-builder --publish always. GITHUB_TOKEN is enough; no personal
-      # access token is needed from within Actions.
-      - run: npm run release
+      # `dist`, not `release` — `--publish never`, so electron-builder builds the
+      # installer, the blockmap and the update feed but uploads nothing.
+      #
+      # It used to publish directly. Its uploads run concurrently and each one
+      # does a find-or-create for "the release at this tag"; a draft has no real
+      # git tag until it is published, so GitHub happily allows several sharing
+      # a name and neither uploader found the other's. Every release since 0.3.0
+      # came out as two drafts with the assets split across them, and the one
+      # holding the blockmap was always the one deleted by hand — which is why
+      # no release has ever shipped one, and why differential updates have never
+      # actually worked.
+      - run: npm run dist
+
+      # One call, three assets, so there is nothing to race. `gh` is preinstalled
+      # on GitHub-hosted runners, which keeps this off a third-party action.
+      #
+      # Still a draft: drafts are invisible to electron-updater, so publishing
+      # stays a deliberate human step.
+      - name: Upload the draft release
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          assets=(
+            release/movie-app-*-setup.exe
+            release/movie-app-*-setup.exe.blockmap
+            release/latest.yml
+          )
+
+          # A re-run of the same tag adds to the draft that is already there
+          # rather than failing on "release already exists".
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" "${assets[@]}" --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" --draft --title "$GITHUB_REF_NAME" "${assets[@]}"
+          fi
