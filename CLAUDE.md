@@ -86,8 +86,9 @@ npm run preflight
 
 That is `scripts/preflight.mjs`: working tree, typecheck, tests (retried once,
 so a flaky test is named rather than hidden), production build and bundle
-budgets, `npm audit`, CSS module classes that do not exist, whole-store
-subscriptions, and a secret scan that compares this machine's real TMDB key
+budgets, the native binaries npm does not unpack (Electron, ffmpeg), `npm
+audit`, CSS module classes that do not exist, whole-store subscriptions, and a
+secret scan that compares this machine's real TMDB key
 against every tracked file and every commit — in memory, never printed. Exit 1
 means do not push. The `preflight` project skill in `.claude/skills/` says what
 each line means and what to do about it.
@@ -98,6 +99,15 @@ each line means and what to do about it.
 Electron half-installed. Close everything first, never use `--force`, rerun
 the gate, and commit the lockfile on its own. Electron is a devDependency but it
 is the runtime every user receives.
+
+**npm 11 runs a dependency's install script only if `package.json` approves
+it.** The `allowScripts` block approves `ffmpeg-static` and `esbuild`, pinned to
+exact versions, and declines `electron-winstaller` (Squirrel only; this app
+builds NSIS). `ffmpeg-static`'s script is what downloads `ffmpeg.exe`, so when
+it changes version the approval lapses, a fresh install comes without ffmpeg,
+and `npm run dist` ships an installer that cannot convert audio — with no error
+until a film fails to play. The gate's Native binaries line fails on exactly
+that; re-approve with `npm approve-scripts ffmpeg-static`.
 
 Worth a sweep at the same time: exports nothing imports, CSS module classes
 nothing references, dependencies nothing pulls in. Note the two standing false
@@ -423,6 +433,16 @@ see. The gate is a `[role="dialog"]` query rather than a list of open flags
 because the poster and backdrop pickers and the lightbox are owned by the
 sidebar's local state, not `useUi` — a flag list would have missed them.
 Escape now leaves the field and keeps the query; it used to clear it.
+
+**Electron 43.8 has no install script, and electron-vite does not know.** The
+binary and `node_modules/electron/path.txt` now arrive only when something
+first calls `require('electron')`, which downloads them. electron-vite reads
+`path.txt` itself and throws `Error: Electron uninstall` when it is absent, so
+it never triggers that download. The `npm audit fix` that took Electron from
+43.2 to 43.8.4 left `npm run dev` unable to start, and the blocked-scripts
+warning printed beside it pointed at other packages entirely. `predev` and
+`prestart` run `scripts/ensure-electron.mjs`, which requires the package once
+— instant when the binary is there, Electron's own download when it is not.
 
 **`net.fetch(file://)` ignores Range headers.** Video seeking requires 206
 partial responses, so `media-server.ts` parses Range and streams byte ranges by
