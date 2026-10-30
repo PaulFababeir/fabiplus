@@ -16,7 +16,8 @@
     "scan:report": "tsx scripts/scan-report.ts",
     "dist": "npm run build && electron-builder --win --publish never",
     "release": "npm run build && electron-builder --win --publish always",
-    "series:report": "tsx scripts/series-report.ts"
+    "series:report": "tsx scripts/series-report.ts",
+    "preflight": "node scripts/preflight.mjs"
   },
   "devDependencies": {
     "@types/node": "^26.1.2",
