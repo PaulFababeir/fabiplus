@@ -1,0 +1,65 @@
+/*
+ * Positioning and clipping only. Everything about how the control looks at
+ * rest comes from the class the call site passes, so a hold button is
+ * indistinguishable from its neighbours until someone presses it.
+ */
+.hold {
+  position: relative;
+  overflow: hidden;
+  /*
+   * The stacking context the fill's `z-index: -1` is measured against. Without
+   * it the fill escapes to the page's context and paints behind the button's
+   * own background, where nobody can see it — the same reason `.profile` sets
+   * this in TopBar.
+   */
+  isolation: isolate;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.hold[data-tone='danger'] {
+  --hold-fill: var(--danger);
+}
+
+.hold[data-tone='accent'] {
+  --hold-fill: var(--accent);
+}
+
+/*
+ * Grows from the centre outward. A circle rather than a horizontal wipe so one
+ * shape suits both the square icon button and a full-width bar: 71% of a
+ * clip-path circle's reference length is half the box's diagonal whatever its
+ * proportions, so it always ends exactly at the corners.
+ */
+.fill {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--hold-fill);
+  clip-path: circle(0% at 50% 50%);
+  /* Letting go drains it quickly, from wherever it had reached. */
+  transition: clip-path 260ms var(--ease-out);
+  pointer-events: none;
+}
+
+/* Linear, because the fill is a timer: half full means half the time is gone. */
+.hold[data-phase='holding'] .fill {
+  clip-path: circle(71% at 50% 50%);
+  transition: clip-path var(--hold-ms) linear;
+}
+
+.hold[data-phase='done'] .fill {
+  clip-path: circle(71% at 50% 50%);
+  transition: none;
+}
+
+/*
+ * The label sits at the centre, so it is the first thing the fill covers. The
+ * class is doubled to outrank the call site's own `:hover` colour regardless
+ * of which stylesheet the bundle happens to order first; a hold started from
+ * the keyboard has no hover state to lean on.
+ */
+.hold.hold[data-phase='holding'],
+.hold.hold[data-phase='done'] {
+  color: var(--text);
+}

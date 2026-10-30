@@ -28,7 +28,8 @@ export type IconName =
   | 'maximize'
   | 'image'
   | 'pencil'
-  | 'info';
+  | 'info'
+  | 'refresh';
 
 /** A value may be several paths when the mark cannot be drawn with one. */
 const PATHS: Record<IconName, string | string[]> = {
@@ -76,7 +77,18 @@ const PATHS: Record<IconName, string | string[]> = {
   pencil: ['M12 20h8', 'M16.2 3.8a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z'],
   /* Circle, dot, stem — drawn rather than an "i" glyph so it keeps its weight
      next to the other stroked controls in the player. */
-  info: ['M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z', 'M12 11v5', 'M12 7.8v.4']
+  info: ['M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z', 'M12 11v5', 'M12 7.8v.4'],
+  /*
+   * Lucide's refresh-cw, from the same family as the skip arrows above. Not a
+   * magnifying glass: that is the search field's own icon, and the two sit side
+   * by side in the top bar.
+   */
+  refresh: [
+    'M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8',
+    'M21 3v5h-5',
+    'M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16',
+    'M8 16H3v5'
+  ]
 };
 
 /** Icons drawn as filled shapes rather than strokes. */

@@ -27,6 +27,13 @@
   --accent: #88a34d;
   --accent-contrast: #10180a;
 
+  /*
+   * Irreversible actions — the hold-to-confirm fill on Remove key and Clear
+   * watch history. Light enough that `--text` on top of it still reads, which
+   * matters because the label sits at the centre the fill starts from.
+   */
+  --danger: #c94a4a;
+
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 16px;
