@@ -6,7 +6,7 @@ import { DISCORD_APP_ID } from '@shared/constants';
 import { IPC } from '@shared/ipc';
 import { isVtt, srtToVtt, subtitleFileName } from '@shared/subtitles';
 import type {
-  AppConfig,
+  RendererConfig,
   DiscordActivity,
   EnrichmentSummary,
   LibraryCatalog,
@@ -57,6 +57,7 @@ import {
   setWatchProgress
 } from './services/profiles.js';
 import { normalisePicks } from './services/profile-picks.js';
+import { toRendererConfig } from './services/renderer-config.js';
 import { rescanSubtitles, scanLibrary } from './services/scanner.js';
 import { findSubtitles, fetchSubtitle } from './services/subtitles/subtitlecat.js';
 
@@ -174,33 +175,36 @@ function findByVideoPath(
 }
 
 function registerIpc(): void {
-  ipcMain.handle(IPC.configGet, async (): Promise<AppConfig> => loadConfig());
+  ipcMain.handle(IPC.configGet, async (): Promise<RendererConfig> =>
+    toRendererConfig(await loadConfig())
+  );
 
-  ipcMain.handle(IPC.configSetTmdbKey, async (_event, key: unknown): Promise<AppConfig> => {
+  ipcMain.handle(IPC.configSetTmdbKey, async (_event, key: unknown): Promise<RendererConfig> => {
     const config = await loadConfig();
     const value = typeof key === 'string' && key.trim() !== '' ? key.trim() : null;
-    return saveConfig({ ...config, tmdbApiKey: value });
+    return toRendererConfig(await saveConfig({ ...config, tmdbApiKey: value }));
   });
 
-  ipcMain.handle(IPC.configSetLastProfile, async (_event, id: unknown): Promise<AppConfig> => {
+  ipcMain.handle(IPC.configSetLastProfile, async (_event, id: unknown): Promise<RendererConfig> => {
     const config = await loadConfig();
-    return saveConfig({ ...config, lastProfileId: typeof id === 'string' ? id : null });
+    const lastProfileId = typeof id === 'string' ? id : null;
+    return toRendererConfig(await saveConfig({ ...config, lastProfileId }));
   });
 
-  ipcMain.handle(IPC.configSetMovieRoots, async (_event, roots: unknown): Promise<AppConfig> => {
-    const config = await loadConfig();
-    const next = Array.isArray(roots)
-      ? [...new Set(roots.filter((r): r is string => typeof r === 'string' && r.trim() !== ''))]
-      : [];
-    return saveConfig({ ...config, movieRoots: next });
-  });
-
-  ipcMain.handle(IPC.configSetSeriesRoots, async (_event, roots: unknown): Promise<AppConfig> => {
+  ipcMain.handle(IPC.configSetMovieRoots, async (_event, roots: unknown): Promise<RendererConfig> => {
     const config = await loadConfig();
     const next = Array.isArray(roots)
       ? [...new Set(roots.filter((r): r is string => typeof r === 'string' && r.trim() !== ''))]
       : [];
-    return saveConfig({ ...config, seriesRoots: next });
+    return toRendererConfig(await saveConfig({ ...config, movieRoots: next }));
+  });
+
+  ipcMain.handle(IPC.configSetSeriesRoots, async (_event, roots: unknown): Promise<RendererConfig> => {
+    const config = await loadConfig();
+    const next = Array.isArray(roots)
+      ? [...new Set(roots.filter((r): r is string => typeof r === 'string' && r.trim() !== ''))]
+      : [];
+    return toRendererConfig(await saveConfig({ ...config, seriesRoots: next }));
   });
 
   ipcMain.handle(IPC.configPickFolder, async (): Promise<string | null> => {
@@ -214,22 +218,22 @@ function registerIpc(): void {
     return result.filePaths[0] ?? null;
   });
 
-  ipcMain.handle(IPC.configSetTranslucent, async (_event, on: unknown): Promise<AppConfig> => {
+  ipcMain.handle(IPC.configSetTranslucent, async (_event, on: unknown): Promise<RendererConfig> => {
     const config = await loadConfig();
     const enabled = on === true;
     for (const win of BrowserWindow.getAllWindows()) applyBackdrop(win, enabled);
-    return saveConfig({ ...config, translucentBackground: enabled });
+    return toRendererConfig(await saveConfig({ ...config, translucentBackground: enabled }));
   });
 
   ipcMain.handle(
     IPC.configSetVideoBrightness,
-    async (_event, value: unknown): Promise<AppConfig> => {
+    async (_event, value: unknown): Promise<RendererConfig> => {
       const config = await loadConfig();
       // Clamped so a bad value cannot render playback unwatchable.
       const next = typeof value === 'number' && Number.isFinite(value)
         ? Math.min(2, Math.max(0.5, value))
         : 1;
-      return saveConfig({ ...config, videoBrightness: next });
+      return toRendererConfig(await saveConfig({ ...config, videoBrightness: next }));
     }
   );
 
@@ -611,7 +615,7 @@ function registerIpc(): void {
 
   ipcMain.handle(
     IPC.configSetDiscord,
-    async (_event, enabled: unknown, appId: unknown): Promise<AppConfig> => {
+    async (_event, enabled: unknown, appId: unknown): Promise<RendererConfig> => {
       const config = await loadConfig();
       const on = enabled === true;
       const id = typeof appId === 'string' && appId.trim() !== '' ? appId.trim() : null;
@@ -621,7 +625,7 @@ function registerIpc(): void {
         presence.set(null);
         presence.disconnect();
       }
-      return saveConfig({ ...config, discordPresence: on, discordAppId: id });
+      return toRendererConfig(await saveConfig({ ...config, discordPresence: on, discordAppId: id }));
     }
   );
 

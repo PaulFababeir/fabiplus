@@ -413,6 +413,13 @@ export interface AppConfig {
   discordAppId: string | null;
 }
 
+/**
+ * Config as the renderer receives it: the TMDB key replaced by whether one is
+ * set. The renderer only ever asks that question, and it is treated as
+ * untrusted — see `toRendererConfig` in main.
+ */
+export type RendererConfig = Omit<AppConfig, 'tmdbApiKey'> & { hasTmdbKey: boolean };
+
 // ---------------------------------------------------------------------------
 // Sorting / filtering
 // ---------------------------------------------------------------------------

@@ -83,7 +83,13 @@ function FolderSection({
  */
 export function SettingsPanel(): React.JSX.Element {
   const { toggleSettings, translucent, setTranslucent, bumpPresence } = useUi();
-  const { busy, error, rescan, enrich, fetchNew } = useLibrary();
+  // Field by field: the dialog stays open through a task now, and a
+  // whole-store subscription would redraw all of it on every progress event.
+  const busy = useLibrary((s) => s.busy);
+  const error = useLibrary((s) => s.error);
+  const rescan = useLibrary((s) => s.rescan);
+  const enrich = useLibrary((s) => s.enrich);
+  const fetchNew = useLibrary((s) => s.fetchNew);
   const { state: profileState, clearProgress } = useProfile();
 
   const [hasKey, setHasKey] = useState(false);
@@ -97,7 +103,7 @@ export function SettingsPanel(): React.JSX.Element {
   const [seriesRoots, setSeriesRoots] = useState<string[]>([]);
 
   useEffect(() => {
-    void window.api.getConfig().then((config) => setHasKey(config.tmdbApiKey !== null));
+    void window.api.getConfig().then((config) => setHasKey(config.hasTmdbKey));
     void window.api.getAppVersion().then(setVersion);
     void window.api.getConfig().then((config) => {
       setDiscordOn(config.discordPresence);
@@ -182,7 +188,7 @@ export function SettingsPanel(): React.JSX.Element {
   const saveKey = async (): Promise<void> => {
     if (!keyDraft.trim()) return;
     const config = await window.api.setTmdbKey(keyDraft);
-    setHasKey(config.tmdbApiKey !== null);
+    setHasKey(config.hasTmdbKey);
     setKeyDraft('');
   };
 

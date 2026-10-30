@@ -2,7 +2,7 @@ import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
 
 import { IPC, type RendererApi } from '../shared/ipc.js';
 import type {
-  AppConfig,
+  RendererConfig,
   EnrichmentProgress,
   EnrichmentSummary,
   LibraryCatalog,
@@ -21,13 +21,13 @@ import type {
  * `ipcRenderer`. Every path that reaches the disk is validated in main.
  */
 const api: RendererApi = {
-  getConfig: () => ipcRenderer.invoke(IPC.configGet) as Promise<AppConfig>,
-  setTmdbKey: (key) => ipcRenderer.invoke(IPC.configSetTmdbKey, key) as Promise<AppConfig>,
-  setLastProfile: (id) => ipcRenderer.invoke(IPC.configSetLastProfile, id) as Promise<AppConfig>,
+  getConfig: () => ipcRenderer.invoke(IPC.configGet) as Promise<RendererConfig>,
+  setTmdbKey: (key) => ipcRenderer.invoke(IPC.configSetTmdbKey, key) as Promise<RendererConfig>,
+  setLastProfile: (id) => ipcRenderer.invoke(IPC.configSetLastProfile, id) as Promise<RendererConfig>,
   setTranslucent: (enabled) =>
-    ipcRenderer.invoke(IPC.configSetTranslucent, enabled) as Promise<AppConfig>,
+    ipcRenderer.invoke(IPC.configSetTranslucent, enabled) as Promise<RendererConfig>,
   setVideoBrightness: (value) =>
-    ipcRenderer.invoke(IPC.configSetVideoBrightness, value) as Promise<AppConfig>,
+    ipcRenderer.invoke(IPC.configSetVideoBrightness, value) as Promise<RendererConfig>,
 
   getLibrary: () => ipcRenderer.invoke(IPC.libraryGet) as Promise<LibraryCatalog>,
   scanLibrary: () => ipcRenderer.invoke(IPC.libraryScan) as Promise<LibraryCatalog>,
@@ -62,14 +62,14 @@ const api: RendererApi = {
   rescanSubtitles: (folderPath) =>
     ipcRenderer.invoke(IPC.subtitleRescan, folderPath) as Promise<SubtitleFile[]>,
   setMovieRoots: (roots) =>
-    ipcRenderer.invoke(IPC.configSetMovieRoots, roots) as Promise<AppConfig>,
+    ipcRenderer.invoke(IPC.configSetMovieRoots, roots) as Promise<RendererConfig>,
   setSeriesRoots: (roots) =>
-    ipcRenderer.invoke(IPC.configSetSeriesRoots, roots) as Promise<AppConfig>,
+    ipcRenderer.invoke(IPC.configSetSeriesRoots, roots) as Promise<RendererConfig>,
   pickFolder: () => ipcRenderer.invoke(IPC.configPickFolder) as Promise<string | null>,
   setDiscordActivity: (activity) =>
     ipcRenderer.invoke(IPC.discordSet, activity) as Promise<string | null>,
   setDiscordConfig: (enabled, appId) =>
-    ipcRenderer.invoke(IPC.configSetDiscord, enabled, appId) as Promise<AppConfig>,
+    ipcRenderer.invoke(IPC.configSetDiscord, enabled, appId) as Promise<RendererConfig>,
   checkForUpdate: () => ipcRenderer.invoke(IPC.updateCheck) as Promise<UpdateStatus>,
   downloadUpdate: () => ipcRenderer.invoke(IPC.updateDownload) as Promise<UpdateStatus>,
 

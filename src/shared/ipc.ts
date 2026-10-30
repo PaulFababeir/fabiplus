@@ -1,5 +1,5 @@
 import type {
-  AppConfig,
+  RendererConfig,
   DiscordActivity,
   EnrichmentProgress,
   EnrichmentSummary,
@@ -67,17 +67,17 @@ export const IPC = {
 
 /** The surface exposed on `window.api` by the preload script. */
 export interface RendererApi {
-  getConfig(): Promise<AppConfig>;
+  getConfig(): Promise<RendererConfig>;
   /** Returns the updated config; the key itself is never read back out. */
-  setTmdbKey(key: string | null): Promise<AppConfig>;
-  setLastProfile(profileId: string | null): Promise<AppConfig>;
+  setTmdbKey(key: string | null): Promise<RendererConfig>;
+  setLastProfile(profileId: string | null): Promise<RendererConfig>;
   /** Applies immediately — no restart needed. */
-  setTranslucent(enabled: boolean): Promise<AppConfig>;
-  setVideoBrightness(value: number): Promise<AppConfig>;
+  setTranslucent(enabled: boolean): Promise<RendererConfig>;
+  setVideoBrightness(value: number): Promise<RendererConfig>;
   /** Replaces the list of folders scanned for films. */
-  setMovieRoots(roots: string[]): Promise<AppConfig>;
+  setMovieRoots(roots: string[]): Promise<RendererConfig>;
   /** Folders scanned for shows; each show is one subfolder. */
-  setSeriesRoots(roots: string[]): Promise<AppConfig>;
+  setSeriesRoots(roots: string[]): Promise<RendererConfig>;
   /**
    * Opens the native folder chooser. Resolves to null if the user cancels —
    * which is not an error and must not clear the existing roots.
@@ -193,7 +193,7 @@ export interface RendererApi {
    * portal, so Discord is the only source for it — or null if not yet.
    */
   setDiscordActivity(activity: DiscordActivity | null): Promise<string | null>;
-  setDiscordConfig(enabled: boolean, appId: string | null): Promise<AppConfig>;
+  setDiscordConfig(enabled: boolean, appId: string | null): Promise<RendererConfig>;
 
   /** Subscribes to conversion progress, 0–1. Returns an unsubscribe function. */
   onPrepareProgress(listener: (fraction: number) => void): () => void;

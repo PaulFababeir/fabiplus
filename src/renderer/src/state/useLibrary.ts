@@ -189,7 +189,7 @@ export const useLibrary = create<LibraryStore>((set, get) => {
     quickCheck: async () => {
       if (get().busy) return;
       const config = await window.api.getConfig();
-      await (config.tmdbApiKey ? get().fetchNew() : get().rescan());
+      await (config.hasTmdbKey ? get().fetchNew() : get().rescan());
     },
 
     /*
