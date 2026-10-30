@@ -16,6 +16,7 @@
  */
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
+import { createRequire } from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
 import { performance } from 'node:perf_hooks';
@@ -141,6 +142,64 @@ if (QUICK) {
         : `JS ${js.toFixed(0)} / ${BUDGET_JS_KB} KB, CSS ${css.toFixed(0)} / ${BUDGET_CSS_KB} KB`
     );
   }
+}
+
+// --- Native binaries that arrive outside npm's own install ------------------
+{
+  /*
+   * Both of these are downloaded by something other than npm unpacking a
+   * package, so a successful install proves nothing about either.
+   *
+   * Electron 43.8 fetches its binary on first `require('electron')`;
+   * electron-vite reads path.txt directly and never triggers that, which is how
+   * `npm run dev` died with "Electron uninstall". `predev` repairs it, so a
+   * missing one is only a warning.
+   *
+   * ffmpeg.exe comes from ffmpeg-static's install script, which npm 11 runs only
+   * when package.json's `allowScripts` approves that exact version. Without it,
+   * `npm run dist` builds an installer that cannot convert audio and nothing
+   * errors until a film fails to play — so that one fails the gate.
+   */
+  const require = createRequire(path.join(ROOT, 'package.json'));
+  const problems = [];
+  let electronNote = '';
+
+  try {
+    const dir = path.dirname(require.resolve('electron'));
+    const wanted = JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf8')).version;
+    const pathTxt = path.join(dir, 'path.txt');
+    const versionFile = path.join(dir, 'dist', 'version');
+    const exe = fs.existsSync(pathTxt) ? path.join(dir, 'dist', fs.readFileSync(pathTxt, 'utf8')) : null;
+    const have = fs.existsSync(versionFile) ? fs.readFileSync(versionFile, 'utf8').trim() : null;
+    if (!exe || !fs.existsSync(exe)) problems.push(['WARN', 'Electron binary missing — npm run dev repairs it']);
+    else if (have !== wanted) problems.push(['WARN', `Electron binary is ${have}, package is ${wanted}`]);
+    else electronNote = `Electron ${have}`;
+  } catch {
+    problems.push(['WARN', 'electron package not installed']);
+  }
+
+  let ffmpegNote = '';
+  try {
+    const ffmpeg = require('ffmpeg-static');
+    if (!ffmpeg || !fs.existsSync(ffmpeg)) {
+      problems.push([
+        'FAIL',
+        'ffmpeg.exe missing — npm run dist would ship without audio conversion. ' +
+          'Approve its install script (npm approve-scripts ffmpeg-static), then npm rebuild ffmpeg-static'
+      ]);
+    } else {
+      ffmpegNote = `ffmpeg ${(fs.statSync(ffmpeg).size / 1024 / 1024).toFixed(0)} MB`;
+    }
+  } catch {
+    problems.push(['FAIL', 'ffmpeg-static not installed']);
+  }
+
+  const status = problems.some(([s]) => s === 'FAIL') ? 'FAIL' : problems.length ? 'WARN' : 'PASS';
+  record(
+    status,
+    'Native binaries',
+    problems.length ? problems.map(([, m]) => m).join('; ') : `${electronNote}, ${ffmpegNote} — both present`
+  );
 }
 
 // --- 5. Dependency audit ----------------------------------------------------

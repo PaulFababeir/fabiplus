@@ -30,6 +30,8 @@ Lead the report with PASS or FAIL, then quote the lines that are not PASS.
 | Tests — FAIL | Failed twice. | Fix before pushing. |
 | Build | The production bundle did not compile. | `npm run build` for the full output. |
 | Bundle size | The renderer bundle passed its budget. | Something new landed in the renderer — find the import. Raise `BUDGET_JS_KB`/`BUDGET_CSS_KB` in `scripts/preflight.mjs` only with a stated reason. |
+| Native binaries — WARN | The Electron binary is missing or does not match its package. | `npm run dev` repairs it (the `predev` step), or run `node scripts/ensure-electron.mjs`. |
+| Native binaries — FAIL | `ffmpeg.exe` is missing. `npm run dist` would ship an installer that cannot convert audio. | `npm approve-scripts ffmpeg-static`, then `npm rebuild ffmpeg-static`. Usually means ffmpeg-static changed version: approvals are pinned. |
 | Dependency audit | High or critical advisories. The line says which of them **ship to users**. | See below. |
 | CSS classes | A component reads `styles.x` and no `.x` exists. It renders `class="undefined"` and nothing errors. | Add the class or fix the name. |
 | Store subscriptions | `useLibrary()` called without a selector. It re-renders on every progress event — in `App.tsx` that once meant 132 renders per event. | Select each field: `useLibrary((s) => s.busy)`. |
@@ -44,9 +46,15 @@ Lead the report with PASS or FAIL, then quote the lines that are not PASS.
    interrupted extract can leave Electron half-installed. Ask the user to close
    it; never kill their process.
 2. `npm audit fix` — never `--force`, which takes major versions.
-3. Rerun the full gate. A dependency bump is exactly the change this exists to
-   catch.
-4. Commit the lockfile on its own: `fix: patch audited deps`.
+3. If npm warns that packages have install scripts not covered by
+   `allowScripts`, run `npm approve-scripts --allow-scripts-pending` and read
+   the list. Approve only what this app needs — today that is `ffmpeg-static`
+   and `esbuild` — with `npm approve-scripts <pkg>`, and decline the rest with
+   `npm deny-scripts <pkg>`. Approvals are pinned to the exact version, so an
+   updated package needs approving again.
+4. Rerun the full gate. A dependency bump is exactly the change this exists to
+   catch; the Native binaries line is the one that catches a blocked script.
+5. Commit `package.json` and the lockfile on their own: `fix: patch audited deps`.
 
 Electron is listed as a devDependency, but it is the runtime every user
 receives, which is why the gate reports it as shipping. Treat it that way.
