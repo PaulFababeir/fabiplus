@@ -203,8 +203,9 @@ $ npm run dev
 Other scripts worth knowing:
 
 ```bash
-$ npm test           # 323 tests, node:test via tsx
+$ npm test           # 327 tests, node:test via tsx
 $ npm run typecheck  # tsc --build
+$ npm run preflight  # every pre-push check in one table; exit 1 means don't push
 $ npm run dist       # NSIS installer into release/
 ```
 

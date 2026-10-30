@@ -11,8 +11,9 @@ everything it returns is cached to disk so the app runs with the network off.
 npm run dev          # electron-vite dev, HMR on the renderer
 npm start            # run the production build
 npm run build        # tsc --build && electron-vite build
-npm test             # 323 tests, node:test via tsx
+npm test             # 327 tests, node:test via tsx
 npm run typecheck    # tsc --build — see below, --noEmit checks nothing here
+npm run preflight    # pre-push gate: every check below, one table, exit 1 = don't push
 npm run scan:report  # print the parse table for every folder, no network
 npm run dist         # NSIS installer into release/ (~118 MB)
 npm run release      # same, published to GitHub Releases
@@ -26,7 +27,7 @@ under `src/main/` or `src/preload/` restarts the app; renderer edits hot-reload.
 
 ```
 src/main/          Electron main. Scanner, TMDB provider, matcher, stores.
-                   All 323 tests live here or in shared.
+                   All 327 tests live here or in shared.
 src/preload/       The entire renderer API surface (contextBridge).
 src/renderer/      React UI. No Node access.
 src/shared/        Types, constants, and pure logic both processes need.
@@ -80,11 +81,23 @@ because `npm version` refuses to run on a dirty tree and a bump commit that also
 carries fixes is a bad thing to bisect later.
 
 ```bash
-npm run typecheck        # tsc --build; --noEmit checks nothing here
-npm test
-npm audit                # keep it at zero
-git status --short       # must be empty
+npm run preflight
 ```
+
+That is `scripts/preflight.mjs`: working tree, typecheck, tests (retried once,
+so a flaky test is named rather than hidden), production build and bundle
+budgets, `npm audit`, CSS module classes that do not exist, whole-store
+subscriptions, and a secret scan that compares this machine's real TMDB key
+against every tracked file and every commit — in memory, never printed. Exit 1
+means do not push. The `preflight` project skill in `.claude/skills/` says what
+each line means and what to do about it.
+
+**Fixing a failing audit needs the app closed.** `npm audit fix` replaces
+`node_modules/electron/dist/electron.exe`, which Windows will not do while
+`npm run dev` or the installed app holds it; an interrupted extract can leave
+Electron half-installed. Close everything first, never use `--force`, rerun
+the gate, and commit the lockfile on its own. Electron is a devDependency but it
+is the runtime every user receives.
 
 Worth a sweep at the same time: exports nothing imports, CSS module classes
 nothing references, dependencies nothing pulls in. Note the two standing false
@@ -392,6 +405,17 @@ started one. Task failures go to `outcome` — kept up until dismissed, because
 auto-clearing an error nobody saw is how failures go unnoticed — and **not** to
 `error`, which is now only load and re-match failures. Re-match is deliberately
 not a task: one lookup, made from inside its own dialog.
+
+**Select store fields; never subscribe to a whole store that changes often.**
+`useLibrary()` with no selector re-renders its component on every change to
+the store, and enrichment changes it once per title. `App.tsx` did exactly
+that — and being the root, it redrew the whole window, grid and sidebar and
+cast included, on every progress event: 132 component renders per event,
+counted with a React commit hook, to update a card that was the only thing
+showing the change. Selecting field by field brought it to 5. It went unnoticed
+while a refetch held the window behind a modal; once the card left the app
+usable during one, it was the frame you scroll. `npm run preflight` flags any
+bare `useLibrary()`.
 
 **"/" is ignored whenever a dialog or the player is up.** Both sit over the
 search field, and focusing it would send keystrokes into a box the user cannot
@@ -716,6 +740,13 @@ becoming file-system access.
   not one is wrong wherever it would land. The guard sits inside
   `profileStatePath` rather than at its three call sites, because a check any
   caller could forget is one that eventually gets forgotten.
+- **Config reaches the renderer without the TMDB key.** Every IPC handler that
+  returns config passes it through `toRendererConfig`, which replaces
+  `tmdbApiKey` with `hasTmdbKey: boolean`. The renderer only ever asked
+  whether a key was set, yet it was receiving the key itself on every
+  `config:get`; a secret it never uses is one it can only leak. The field does
+  not exist on `RendererConfig`, so renderer code cannot come to depend on it.
+  A new handler that returns config must go through it too.
 
 `npm audit` is clean; keep it that way before tagging a release.
 
