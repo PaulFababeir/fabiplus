@@ -154,37 +154,6 @@
   background: var(--border);
 }
 
-/* Pinned below the scrolling body so progress is never scrolled out of view. */
-.footer {
-  flex: 0 0 auto;
-  padding: 12px 20px 14px;
-  border-top: 1px solid var(--border);
-  background: var(--bg-elevated);
-}
-
-.progressRow {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 8px;
-}
-
-.progressLabel {
-  overflow: hidden;
-  color: var(--text-muted);
-  font-size: 12.5px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.progressCount {
-  flex: 0 0 auto;
-  color: var(--text-dim);
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-}
-
 .label {
   display: block;
   margin-bottom: 6px;
@@ -206,13 +175,6 @@
 
 .input:focus {
   border-color: var(--accent);
-}
-
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 16px;
 }
 
 .button {
@@ -244,6 +206,64 @@
 
 .primary:hover:not(:disabled) {
   filter: brightness(1.08);
+}
+
+/*
+ * The folder list's own "next slot": full width, the height of one folder row
+ * (8px padding either side of the 22px remove button), and the rows' own 6px
+ * gap above it so it reads as part of the list. Dashed while it is the quiet
+ * option; the filled accent button when the list is empty and it is the only
+ * thing to do.
+ */
+.addFolder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 38px;
+  margin-top: 6px;
+}
+
+.addFolder:not(.primary) {
+  border-style: dashed;
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.addFolder:not(.primary):hover:not(:disabled) {
+  border-style: solid;
+  background: var(--surface);
+  color: var(--text);
+}
+
+/* Below the empty-list note there is no row gap to match, so it needs its own. */
+.note + .addFolder {
+  margin-top: 12px;
+}
+
+/* Sits in a settings row's control column beside Save, so it cannot be 100%. */
+.keyInput {
+  width: 210px;
+}
+
+/*
+ * The four library actions stack, so their left edges have to line up too —
+ * at their natural widths (64–77px) the right edges met and the left ones
+ * zig-zagged down the column. One width just past the widest label.
+ */
+.rowAction {
+  min-width: 80px;
+}
+
+/* A button that takes the full row — Clear watch history, and only that. */
+.wide {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 38px;
+  margin-top: 10px;
 }
 
 .note {
@@ -290,60 +310,6 @@
   margin: 12px 0 0;
   color: #ff8080;
   font-size: 12.5px;
-}
-
-.progress {
-  margin: 14px 0 0;
-  color: var(--text-muted);
-  font-size: 12.5px;
-}
-
-.bar {
-  position: relative;
-  height: 4px;
-  margin-top: 8px;
-  overflow: hidden;
-  border-radius: 2px;
-  background: var(--surface);
-}
-
-.barFill {
-  height: 100%;
-  background: var(--accent);
-  transition: width 200ms var(--ease-out);
-}
-
-/*
- * Scanning emits no progress events — it is one pass over the folder tree with
- * nothing to count until it finishes. That is also the slow half of "Check for
- * new films", so a 0% bar there reads as a frozen dialog. This runs until the
- * first real count arrives and the bar switches to a determinate fill.
- */
-.barIndeterminate::after {
-  content: '';
-  position: absolute;
-  inset-block: 0;
-  width: 40%;
-  border-radius: inherit;
-  background: var(--accent);
-  animation: barSlide 1.15s var(--ease-out) infinite;
-}
-
-@keyframes barSlide {
-  from {
-    transform: translateX(-100%);
-  }
-  to {
-    transform: translateX(250%);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .barIndeterminate::after {
-    animation: none;
-    width: 100%;
-    opacity: 0.4;
-  }
 }
 
 /* --- Re-match list -------------------------------------------------------- */

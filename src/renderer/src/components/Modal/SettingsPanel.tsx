@@ -5,7 +5,10 @@ import type { UpdateStatus } from '@shared/types';
 import { useLibrary } from '@renderer/state/useLibrary';
 import { useProfile } from '@renderer/state/useProfile';
 import { useUi } from '@renderer/state/useUi';
+import { HoldButton } from '@renderer/components/ui/HoldButton';
+import { Icon } from '@renderer/components/ui/Icon';
 import { IconButton } from '@renderer/components/ui/IconButton';
+import { SettingRow } from '@renderer/components/ui/SettingRow';
 import { Toggle } from '@renderer/components/ui/Toggle';
 import styles from './Modal.module.css';
 
@@ -53,29 +56,39 @@ function FolderSection({
         </ul>
       )}
 
-      <div className={styles.actions}>
-        <button
-          type="button"
-          className={`${styles.button} ${paths.length === 0 ? styles.primary : ''}`}
-          disabled={busy}
-          onClick={onAdd}
-        >
-          Add folder…
-        </button>
-      </div>
+      {/*
+        The full width of the list it adds to, so it reads as the list's next
+        slot rather than a stray button parked at the left edge. The call to
+        action while the list is empty; quiet once there is something above it.
+      */}
+      <button
+        type="button"
+        className={`${styles.button} ${styles.addFolder} ${paths.length === 0 ? styles.primary : ''}`}
+        disabled={busy}
+        onClick={onAdd}
+      >
+        <Icon name="plus" size={14} />
+        Add folder…
+      </button>
     </>
   );
 }
 
-/** Library maintenance: the TMDB key, rescanning, and metadata refresh. */
+/**
+ * Library maintenance: folders, the TMDB key, rescans and metadata refresh.
+ *
+ * Every section is the same shape now — what a thing is and does on the left,
+ * the control hugging the right — matching the Appearance and Discord rows,
+ * which were the only ones laid out that way before.
+ */
 export function SettingsPanel(): React.JSX.Element {
   const { toggleSettings, translucent, setTranslucent, bumpPresence } = useUi();
-  const { busy, error, progress, summary, rescan, enrich, fetchNew } = useLibrary();
+  const { busy, error, rescan, enrich, fetchNew } = useLibrary();
   const { state: profileState, clearProgress } = useProfile();
 
   const [hasKey, setHasKey] = useState(false);
   const [keyDraft, setKeyDraft] = useState('');
-  const [confirmingClear, setConfirmingClear] = useState(false);
+  const [clearing, setClearing] = useState(false);
   const [version, setVersion] = useState('');
   const [discordOn, setDiscordOn] = useState(false);
   const [update, setUpdate] = useState<UpdateStatus | null>(null);
@@ -167,6 +180,7 @@ export function SettingsPanel(): React.JSX.Element {
   };
 
   const saveKey = async (): Promise<void> => {
+    if (!keyDraft.trim()) return;
     const config = await window.api.setTmdbKey(keyDraft);
     setHasKey(config.tmdbApiKey !== null);
     setKeyDraft('');
@@ -177,17 +191,22 @@ export function SettingsPanel(): React.JSX.Element {
     setHasKey(false);
   };
 
-  const percent =
-    progress && progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0;
-
   const watched = Object.keys(profileState?.watch ?? {}).length;
 
-  /** Wipes this profile's watch history. Irreversible, so it confirms first. */
+  /**
+   * Wipes this profile's watch history. Irreversible, so it is held rather than
+   * clicked; `clearing` stops a second hold starting another pass over entries
+   * the first is still removing.
+   */
   const clearHistory = async (): Promise<void> => {
-    for (const movieId of Object.keys(profileState?.watch ?? {})) {
-      await clearProgress(movieId);
+    setClearing(true);
+    try {
+      for (const movieId of Object.keys(profileState?.watch ?? {})) {
+        await clearProgress(movieId);
+      }
+    } finally {
+      setClearing(false);
     }
-    setConfirmingClear(false);
   };
 
   return (
@@ -203,6 +222,12 @@ export function SettingsPanel(): React.JSX.Element {
           <IconButton icon="close" label="Close" onClick={toggleSettings} />
         </div>
 
+        {/*
+          No progress footer any more. Library work reports to the card at the
+          bottom right of the window, which stays up after this dialog closes —
+          so starting a refetch no longer means sitting in front of a modal
+          until it is done.
+        */}
         <div className={styles.body}>
           <FolderSection
             label="Movie folders"
@@ -226,40 +251,44 @@ export function SettingsPanel(): React.JSX.Element {
 
           <div className={styles.divider} />
 
-          <label className={styles.label} htmlFor="tmdb-key">
-            TMDB API key
-          </label>
-          {hasKey ? (
-            <div className={styles.actions} style={{ marginTop: 0 }}>
-              <span style={{ alignSelf: 'center', color: 'var(--text-muted)', fontSize: 12.5 }}>
-                A key is saved.
-              </span>
-              <button type="button" className={styles.button} onClick={() => void clearKey()}>
+          <label className={styles.label}>TMDB</label>
+
+          <SettingRow
+            label="API key"
+            hint={
+              hasKey
+                ? 'A key is saved. Hold the button to remove it.'
+                : 'A free key from themoviedb.org — a v3 API key or a v4 read token.'
+            }
+          >
+            {hasKey ? (
+              <HoldButton tone="danger" className={styles.button} onConfirm={() => void clearKey()}>
                 Remove key
-              </button>
-            </div>
-          ) : (
-            <>
-              <input
-                id="tmdb-key"
-                className={styles.input}
-                type="password"
-                value={keyDraft}
-                placeholder="v3 API key or v4 read token"
-                onChange={(e) => setKeyDraft(e.target.value)}
-              />
-              <div className={styles.actions}>
+              </HoldButton>
+            ) : (
+              <>
+                <input
+                  className={`${styles.input} ${styles.keyInput}`}
+                  type="password"
+                  value={keyDraft}
+                  placeholder="Paste your key"
+                  aria-label="TMDB API key"
+                  onChange={(e) => setKeyDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') void saveKey();
+                  }}
+                />
                 <button
                   type="button"
                   className={`${styles.button} ${styles.primary}`}
                   disabled={!keyDraft.trim()}
                   onClick={() => void saveKey()}
                 >
-                  Save key
+                  Save
                 </button>
-              </div>
-            </>
-          )}
+              </>
+            )}
+          </SettingRow>
 
           <p className={styles.note}>
             Stored in config.json under your app data folder — never in the project. It is used
@@ -271,75 +300,87 @@ export function SettingsPanel(): React.JSX.Element {
 
           <label className={styles.label}>Library</label>
 
-          <p className={styles.note} style={{ marginTop: 0 }}>
-            <strong>Check for new films</strong> rescans and then looks up only the titles that
-            were not in the catalog before, so adding one film costs one lookup rather than a pass
-            over the whole library.
-          </p>
-
-          <div className={styles.actions}>
+          <SettingRow
+            label="Check for new films"
+            hint={
+              hasKey
+                ? 'Rescans, then looks up only the titles that were not in the catalog before — one new film costs one lookup, not a pass over the whole library.'
+                : 'Needs a TMDB key. The quick check in the top bar still finds new folders without one, under the names parsed from them.'
+            }
+          >
             <button
               type="button"
-              className={`${styles.button} ${styles.primary}`}
+              className={`${styles.button} ${styles.primary} ${styles.rowAction}`}
               disabled={busy || !hasKey}
               onClick={() => void fetchNew()}
             >
-              Check for new films
+              Check
             </button>
+          </SettingRow>
+
+          <SettingRow
+            label="Rescan library"
+            hint="Re-reads your folders for films added, moved or removed. Nothing is looked up online."
+          >
             <button
               type="button"
-              className={styles.button}
+              className={`${styles.button} ${styles.rowAction}`}
               disabled={busy}
               onClick={() => void rescan()}
             >
-              Rescan library
+              Rescan
             </button>
+          </SettingRow>
+
+          <SettingRow
+            label="Fetch missing metadata"
+            hint="Looks up details and artwork for titles that have none yet."
+          >
             <button
               type="button"
-              className={styles.button}
+              className={`${styles.button} ${styles.rowAction}`}
               disabled={busy || !hasKey}
               onClick={() => void enrich(false)}
             >
-              Fetch missing metadata
+              Fetch
             </button>
+          </SettingRow>
+
+          <SettingRow
+            label="Refetch all"
+            hint="Downloads details and artwork again for every title. Slow — for when the library looks out of date."
+          >
             <button
               type="button"
-              className={styles.button}
+              className={`${styles.button} ${styles.rowAction}`}
               disabled={busy || !hasKey}
               onClick={() => void enrich(true)}
             >
-              Refetch all
+              Refetch
             </button>
-          </div>
+          </SettingRow>
 
           {watched > 0 && (
-            <div className={styles.actions}>
-              {confirmingClear ? (
-                <>
-                  <span style={{ alignSelf: 'center', color: 'var(--text-muted)', fontSize: 12.5 }}>
-                    Clear {watched} {watched === 1 ? 'entry' : 'entries'}? This cannot be undone.
-                  </span>
-                  <button type="button" className={styles.button} onClick={() => void clearHistory()}>
-                    Clear
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.button}
-                    onClick={() => setConfirmingClear(false)}
-                  >
-                    Cancel
-                  </button>
-                </>
-              ) : (
-                <button
-                  type="button"
-                  className={styles.button}
-                  onClick={() => setConfirmingClear(true)}
-                >
-                  Clear watch history
-                </button>
-              )}
-            </div>
+            <>
+              {/*
+                The full width, unlike the rows above: it is the one action here
+                that destroys something that cannot be regenerated, and it
+                should not look like a peer of Rescan. Held rather than clicked —
+                the old flow was a click then a second "Clear" click, which is
+                the same motion an accidental double click is made of.
+              */}
+              <HoldButton
+                tone="danger"
+                className={`${styles.button} ${styles.wide}`}
+                disabled={clearing}
+                onConfirm={() => void clearHistory()}
+              >
+                Hold to clear watch history · {watched} {watched === 1 ? 'entry' : 'entries'}
+              </HoldButton>
+              <p className={styles.note}>
+                Only this profile&apos;s progress, for every film and episode. This cannot be undone.
+              </p>
+            </>
           )}
 
           <div className={styles.divider} />
@@ -375,10 +416,11 @@ export function SettingsPanel(): React.JSX.Element {
           <div className={styles.divider} />
 
           <label className={styles.label}>About</label>
-          <div className={styles.actions} style={{ marginTop: 0 }}>
-            <span style={{ alignSelf: 'center', color: 'var(--text-muted)', fontSize: 12.5 }}>
-              Version {version || '…'}
-            </span>
+
+          <SettingRow
+            label={`Version ${version || '…'}`}
+            hint={update ? updateMessage(update) : 'Updates are checked only when you ask.'}
+          >
             <button
               type="button"
               className={styles.button}
@@ -397,9 +439,7 @@ export function SettingsPanel(): React.JSX.Element {
                 Download
               </button>
             )}
-          </div>
-
-          {update && <p className={styles.note}>{updateMessage(update)}</p>}
+          </SettingRow>
 
           <p className={styles.note}>
             Nothing is checked automatically — this is the only thing here that reaches the
@@ -409,48 +449,6 @@ export function SettingsPanel(): React.JSX.Element {
 
           {error && <p className={styles.error}>{error}</p>}
         </div>
-
-        {/*
-          Outside the scrolling body on purpose. Sitting inside it, progress
-          was pushed below the fold by the settings above and looked missing
-          exactly when it mattered.
-        */}
-        {(busy || progress) && (
-          <div className={styles.footer}>
-            <div className={styles.progressRow}>
-              <span className={styles.progressLabel}>
-                {progress ? progress.current : 'Scanning library…'}
-              </span>
-              <span className={styles.progressCount}>
-                {progress ? `${progress.done}/${progress.total}` : ''}
-              </span>
-            </div>
-            {/*
-              Indeterminate until the first progress event. Waiting for one left
-              the footer hidden through the entire scan — the slow part — so the
-              dialog looked frozen and then flashed a single film at the end.
-            */}
-            {progress ? (
-              <div className={styles.bar}>
-                <div className={styles.barFill} style={{ width: `${percent}%` }} />
-              </div>
-            ) : (
-              <div className={`${styles.bar} ${styles.barIndeterminate}`} />
-            )}
-          </div>
-        )}
-
-        {summary && !busy && (
-          <div className={styles.footer}>
-            <span className={styles.progressLabel}>
-              {summary.total === 0
-                ? 'No new films found.'
-                : `${summary.total} processed in ${(summary.durationMs / 1000).toFixed(1)}s — ` +
-                  `${summary.matched} matched, ${summary.needsReview} need review, ` +
-                  `${summary.failed} failed.`}
-            </span>
-          </div>
-        )}
       </div>
     </div>
   );

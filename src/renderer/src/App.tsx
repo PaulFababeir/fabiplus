@@ -4,6 +4,7 @@ import { AnimatePresence } from 'motion/react';
 import { ContinueWatching } from '@renderer/components/ContinueWatching/ContinueWatching';
 import { FilterRow } from '@renderer/components/FilterRow/FilterRow';
 import { MovieGrid } from '@renderer/components/Grid/MovieGrid';
+import { LibraryProgress } from '@renderer/components/LibraryProgress/LibraryProgress';
 import { RematchDialog } from '@renderer/components/Modal/RematchDialog';
 import { SettingsPanel } from '@renderer/components/Modal/SettingsPanel';
 import { Player } from '@renderer/components/Player/Player';
@@ -200,6 +201,15 @@ export default function App(): React.JSX.Element {
 
       {settingsOpen && <SettingsPanel />}
       {rematchOpen && <RematchDialog />}
+
+      {/*
+        At the root, not in the content column: `.body` is its own stacking
+        context at z-index 10, so anything inside it can never rise above the
+        settings scrim — and a task started from Settings has to show while
+        the dialog is still open. The sidebar only takes space when it has an
+        item to show, which is what the card needs to clear.
+      */}
+      <LibraryProgress sidebarOpen={sidebarOpen && selected !== null} />
     </div>
   );
 }
