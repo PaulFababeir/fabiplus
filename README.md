@@ -56,6 +56,10 @@
 * **Scans what you already have**
   - Release-tagged folder names are parsed for title and year, so most
     collections work as they are. Nothing is moved, renamed, or modified.
+* **Picks up new films without leaving the library**
+  - Hold the refresh button in the top bar and anything added to your folders
+    is found and matched, with progress in a corner card while you keep
+    browsing. Press `/` to jump to search.
 * **Films and shows alike**
   - Seasons read from the folder tree, per-episode resume, next-episode
     autoplay, and episode stills.

@@ -355,6 +355,51 @@ registered with `{ passive: false }`; an `onWheel` prop logs a console warning
 and does nothing. A trackpad's own sideways gesture arrives as `deltaX` and is
 deliberately left alone, or it would be applied twice.
 
+**Irreversible actions are held, not confirmed.** Remove key, Clear watch
+history and the top bar's quick check go through `ui/HoldButton`: two seconds
+held, the fill growing from the centre, any early release cancelling. It
+replaced a click-then-"Clear" confirm, which is the same motion an accidental
+double click is made of. Three things about it are easy to break:
+
+- **The fill is a CSS transition, not a frame loop.** The timer and the
+  transition start in the same event so they end together, and a transition
+  reversed mid-flight drains from wherever it reached with no bookkeeping. It
+  is a `clip-path: circle()` from 0% to 71% because 71% of a circle's reference
+  length is half the box's diagonal whatever its proportions — one shape ends
+  exactly at the corners of the square icon button and the full-width bar.
+- **Every way of letting go must cancel.** Pointer up, sliding off, blur, and
+  the window losing focus: alt-tab mid-hold never delivers a pointerup, so
+  without the window `blur` listener the timer runs out and fires an action the
+  user walked away from.
+- **React's `onPointerLeave` is synthesised from `pointerout`, not native
+  `pointerleave`.** A test that dispatches `pointerleave` to simulate sliding
+  off reports a hold that failed to cancel. Dispatch `pointerout` with a
+  `relatedTarget`, which is what a real mouse produces.
+
+**Library work reports to one card, at the app root.** `LibraryProgress`
+replaced the settings dialog's progress footer, which held the window behind a
+modal for the length of a refetch. It renders at the root rather than in the
+content column because `.body` is its own stacking context at z-index 10 —
+nothing inside it can rise above the settings scrim, and a task started from
+Settings has to show while the dialog is open. So it sits at 120: above the
+scrim (100), below the player (200), so it never covers a film. It clears the
+sidebar by animating `right`, not a transform, because motion owns the
+transform for the enter and exit.
+
+The store drives it through `task` and `outcome`, set only by `begin` and
+`finish` in `useLibrary`, so the card cannot show a finished task or miss a
+started one. Task failures go to `outcome` — kept up until dismissed, because
+auto-clearing an error nobody saw is how failures go unnoticed — and **not** to
+`error`, which is now only load and re-match failures. Re-match is deliberately
+not a task: one lookup, made from inside its own dialog.
+
+**"/" is ignored whenever a dialog or the player is up.** Both sit over the
+search field, and focusing it would send keystrokes into a box the user cannot
+see. The gate is a `[role="dialog"]` query rather than a list of open flags
+because the poster and backdrop pickers and the lightbox are owned by the
+sidebar's local state, not `useUi` — a flag list would have missed them.
+Escape now leaves the field and keeps the query; it used to clear it.
+
 **`net.fetch(file://)` ignores Range headers.** Video seeking requires 206
 partial responses, so `media-server.ts` parses Range and streams byte ranges by
 hand. Do not "simplify" this back to `net.fetch`.
@@ -451,6 +496,12 @@ belongs in the component or the divergence starts again.
 
 ### CSS traps
 
+- **Settings rows share one stylesheet.** `ui/SettingRow.module.css` holds a
+  row's padding, gap and text metrics; `Toggle` applies those classes beside its
+  own, which carry only what makes the row a button. Every section — folders
+  aside — is now a `SettingRow` or a `Toggle`, so a switch and a button line up
+  exactly. Restating any of those numbers in another stylesheet starts the drift
+  this exists to prevent.
 - **Scrollbars are defined once**, in `tokens.css`, as `*::-webkit-scrollbar`.
   Four components had grown near-copies of the same rules at three widths and
   four thumb alphas, and every scroller nobody had thought to style — the
@@ -743,7 +794,9 @@ the series episode list with stills, per-episode resume and a per-episode
 synopsis accordion, next-episode autoplay, the player (seek, external and
 embedded subtitles with `V` cycling, hover scrub preview, ±10s, speed,
 brightness, on-demand audio conversion, subtitle search and download), the
-player's cast panel and episode drawer, acrylic translucency.
+player's cast panel and episode drawer, a quick check for new films in the top
+bar, library progress in a corner card that leaves the app usable, hold-to-
+confirm on the irreversible actions, "/" to search, acrylic translucency.
 
 **Known gaps:**
 
@@ -793,6 +846,18 @@ Two earlier assumptions were wrong and should not be repeated:
   `copyFile`, and Windows `CopyFileW` carries the source timestamps across, so a
   recovery done that way leaves `library.json` stamped older than its contents.
   "Reverted with its original mtime" is what a restore-from-backup looks like.
+
+**Seen again on 2026-10-30, and it is not only the catalog.** `library.json`
+held the 2026-08-09 contents with the 2026-08-09 timestamp — byte for byte the
+1,860,167-byte file from that recovery — while `library.backup.json` held
+2,864,051 bytes written the previous evening. `profiles.json` had gone the same
+way: back to its 2026-08-01 contents and timestamp, listing one profile, while
+the profile actually in use — its state file written the night before, already
+on schema 3, so loaded from that list by a build released after 2026-09-01 —
+was no longer in it. A file the app rewrites gets a current timestamp; contents
+and timestamps rolling back together means something outside the app is
+restoring older copies of whole files. Windows Defender and OneDrive were the
+only security or sync software running.
 
 What is solid: `backupLibrary` copies `library.json`, so a backup holding data
 the catalog does not means the catalog held it at that moment and lost it after.
