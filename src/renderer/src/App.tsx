@@ -40,7 +40,18 @@ const EMPTY_COPY: Record<KindFilter, { title: string; body: string }> = {
 };
 
 export default function App(): React.JSX.Element {
-  const { catalog, loading, error, load, setProgress } = useLibrary();
+  /*
+   * Field by field, never `useLibrary()` whole. A whole-store subscription
+   * re-renders on every change to the store, and enrichment changes it once per
+   * title — this is the root, so each of those redrew the entire app, grid and
+   * sidebar included: 132 component renders per progress event, measured. Only
+   * the progress card reads `progress`, so only the card should pay for it.
+   */
+  const catalog = useLibrary((s) => s.catalog);
+  const loading = useLibrary((s) => s.loading);
+  const error = useLibrary((s) => s.error);
+  const load = useLibrary((s) => s.load);
+  const setProgress = useLibrary((s) => s.setProgress);
   const { state: profileState, load: loadProfiles } = useProfile();
   const {
     kind,

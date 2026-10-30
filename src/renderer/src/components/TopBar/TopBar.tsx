@@ -35,7 +35,11 @@ function isTyping(target: EventTarget | null): boolean {
  * not a dialog, so nothing stops the library being used while it runs.
  */
 function QuickCheck(): React.JSX.Element {
-  const { busy, task, quickCheck } = useLibrary();
+  // Selected field by field so a progress event — several a second during
+  // enrichment — does not redraw the top bar; see App.tsx.
+  const busy = useLibrary((s) => s.busy);
+  const task = useLibrary((s) => s.task);
+  const quickCheck = useLibrary((s) => s.quickCheck);
   const tipId = useId();
 
   return (

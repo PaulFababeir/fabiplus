@@ -18,7 +18,9 @@ import styles from './Modal.module.css';
  */
 export function RematchDialog(): React.JSX.Element {
   const { rematchTargetId, setRematchOpen } = useUi();
-  const { catalog, busy, rematch } = useLibrary();
+  const catalog = useLibrary((s) => s.catalog);
+  const busy = useLibrary((s) => s.busy);
+  const rematch = useLibrary((s) => s.rematch);
 
   const items = catalog?.items ?? [];
   const target = rematchTargetId ? items.find((i) => i.id === rematchTargetId) : undefined;

@@ -29,7 +29,12 @@ interface LibraryProgressProps {
  * a card over a film is a distraction, and the task keeps running underneath.
  */
 export function LibraryProgress({ sidebarOpen }: LibraryProgressProps): React.JSX.Element {
-  const { task, outcome, progress, dismissOutcome } = useLibrary();
+  // The one component that should re-render per progress event — and only for
+  // these fields, not for the catalog swap that ends every task.
+  const task = useLibrary((s) => s.task);
+  const outcome = useLibrary((s) => s.outcome);
+  const progress = useLibrary((s) => s.progress);
+  const dismissOutcome = useLibrary((s) => s.dismissOutcome);
   const [hovered, setHovered] = useState(false);
 
   // A result clears itself unless it is being read. A failure is left up, since
