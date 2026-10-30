@@ -1,3 +1,4 @@
+import rowStyles from './SettingRow.module.css';
 import styles from './Toggle.module.css';
 
 interface ToggleProps {
@@ -15,6 +16,10 @@ interface ToggleProps {
  * `role="switch"` rather than a styled checkbox: screen readers announce it as
  * on/off, and the whole row is the hit target — a 40px switch alone is a mean
  * thing to aim at.
+ *
+ * The row's layout comes from `SettingRow`'s stylesheet, so a switch lines up
+ * with the button rows around it; this module adds only what makes the row a
+ * button and the switch itself.
  */
 export function Toggle({
   checked,
@@ -28,13 +33,13 @@ export function Toggle({
       type="button"
       role="switch"
       aria-checked={checked}
-      className={styles.row}
+      className={`${rowStyles.row} ${styles.row}`}
       disabled={disabled}
       onClick={() => onChange(!checked)}
     >
-      <span className={styles.text}>
-        <span className={styles.label}>{label}</span>
-        {hint && <span className={styles.hint}>{hint}</span>}
+      <span className={rowStyles.text}>
+        <span className={rowStyles.label}>{label}</span>
+        {hint && <span className={rowStyles.hint}>{hint}</span>}
       </span>
 
       <span className={styles.track} data-on={checked} aria-hidden="true">
